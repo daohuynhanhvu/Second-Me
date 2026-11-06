@@ -1,0 +1,6 @@
+{
+  "name": "SECOND ME",
+  "description": "A 2D top-down sci-fi puzzle game where you record your movements and cooperate with an Echo of your past self to solve temporal laboratory puzzles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

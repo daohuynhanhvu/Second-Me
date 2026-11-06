@@ -1,0 +1,136 @@
+export type Language = 'en' | 'vi';
+let currentLanguage: Language = 'en';
+export function setCurrentLanguage(language: Language) { currentLanguage = language; }
+export function getCurrentLanguage() { return currentLanguage; }
+
+// Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
+const pairs: [string, string][] = [
+  ['Enter the forest', 'BƯỚC VÀO KHU RỪNG'], ['Awakening the forest', 'ĐANG ĐÁNH THỨC KHU RỪNG'],
+  ['THE ANCIENT PATH REMEMBERS', 'LỐI XƯA CÒN GHI NHỚ'], ['CHAPTER II · THE EMBERFORGE', 'CHƯƠNG II · LÒ RÈN LỬA'],
+  ['Echoes of the Wild', 'TIẾNG VỌNG NƠI HOANG DÃ'], ['ENTER / SPACE', 'ENTER / PHÍM CÁCH'],
+  ['THE EMBERFORGE', 'LÒ RÈN LỬA'], ['THE OVERGROWN RUINS / CHAPTER II', 'PHẾ TÍCH RÊU PHỦ / CHƯƠNG II'],
+  ['ECHOES OF THE WILD', 'TIẾNG VỌNG NƠI HOANG DÃ'], ['The wizard', 'Nhân vật pháp sư'],
+  ['The trails are appearing...', 'Những lối mòn đang hiện ra...'], ['Prepare your Echo and listen to the memories.', 'Chuẩn bị Echo và lắng nghe ký ức.'],
+  ['GAME SETTINGS', 'CÀI ĐẶT TRÒ CHƠI'], ['Adjust your experience', 'Điều chỉnh trải nghiệm'],
+  ['Volume', 'Âm lượng'], ['Effects and ambient sound', 'Âm thanh hiệu ứng và môi trường'],
+  ['Mute', 'Tắt âm'], ['Mute all game audio', 'Tắt toàn bộ âm thanh trò chơi'],
+  ['Reduce motion', 'Giảm chuyển động'], ['Reduce fog, shake and repeated effects', 'Giảm sương, rung và hiệu ứng lặp'],
+  ['In-game hints', 'Hướng dẫn trong màn'], ['Show trap labels and control hints', 'Hiện nhãn bẫy và gợi ý điều khiển'],
+  ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
+  ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
+  ['GAME NEWS', 'THÔNG BÁO TRÒ CHƠI'], ['New echoes in the forest', 'Tiếng vọng mới trong rừng'],
+  ['NEW · EMBERFORGE 1.5', 'MỚI · LÒ RÈN 1.5'], ['Timed trails', 'Thử thách từng chặng'],
+  ['The first five levels now give you 10 seconds per leg. A time shard drops nearby every 3 seconds and adds 4 seconds when collected. Crushers and rocks hold you for 0.25 seconds; vines slow you across a full lane.', 'Năm màn đầu có 10 giây mỗi chặng. Mỗi 3 giây, mảnh thời gian rơi gần bạn; nhặt được cộng 4 giây. Bẫy dập và đá rơi giữ chân 0,25 giây; dây leo làm chậm cả một dải.'],
+  ['The journey lobby is open', 'Sảnh hành trình đã mở'],
+  ['Choose levels, view progress, adjust settings and replay any level after finishing the campaign.', 'Chọn màn, xem tiến độ, điều chỉnh cài đặt và chơi lại bất kỳ màn nào sau khi hoàn thành chiến dịch.'],
+  ['NEWS', 'THÔNG BÁO'], ['SETTINGS', 'CÀI ĐẶT'], ['ECHO CAMP', 'TRẠI NGHỈ ECHO'],
+  ['The forest has awakened.', 'Khu rừng đã thức giấc.'], ['The journey still calls.', 'Hành trình vẫn đang gọi.'], ['The first trail awaits.', 'Lối mòn đầu tiên đang chờ.'],
+  ['All memories are free. You can revisit any level.', 'Toàn bộ ký ức đã được giải phóng. Bạn có thể quay lại bất kỳ màn nào.'],
+  ['Collect five relics, forge the Echo Blade and face the Frost Guardian.', 'Thu hồi năm di vật, rèn Kiếm Echo và đối mặt với Thủ Vệ Băng.'],
+  ['START LEVEL 01', 'BẮT ĐẦU MÀN 01'], ['CAMPAIGN COMPLETE', 'CHIẾN DỊCH HOÀN TẤT'], ['6 / 6 LEVELS UNLOCKED', '6 / 6 MÀN ĐÃ MỞ'],
+  ['NEW JOURNEY', 'HÀNH TRÌNH MỚI'], ['TRAIL MAP', 'BẢN ĐỒ LỐI MÒN'], ['SELECT A LEVEL TO REPLAY', 'CHỌN MÀN ĐỂ CHƠI LẠI'],
+  ['Settings', 'Cài đặt'],
+  ['STAGE', 'CHẶNG'], ['CLEARED', 'ĐÃ HOÀN THÀNH'], ['READY', 'SẴN SÀNG'], ['LOCKED', 'CHƯA MỞ'],
+  ['NEW UPDATE', 'THÔNG BÁO MỚI'], ['10-second challenge', 'Thử thách 10 giây'], ['View game changes', 'Xem thay đổi trò chơi'],
+  ['English', 'Tiếng Anh'], ['Vietnamese', 'Tiếng Việt'],
+  ['RELICS RECOVERED', 'DI VẬT ĐÃ THU HỒI'], ['ECHO BLADE · AWAKENED', 'ECHO BLADE · ĐÃ THỨC TỈNH'], ['THE ANCIENT FORGE AWAITS', 'LỬA THIÊNG ĐANG CHỜ'],
+  ['MEMORY · FLAME · BLADE', 'KÝ ỨC · LỬA THIÊNG · LƯỠI KIẾM'], ['Let the past lead the way.', 'Để quá khứ dẫn lối.'],
+  ['Recover five relics. Forge the blade. Awaken the forest.', 'Thu hồi năm di vật. Rèn kiếm. Đánh thức khu rừng.'],
+  ['CONTINUE JOURNEY', 'TIẾP TỤC HÀNH TRÌNH'], ['BEGIN JOURNEY', 'BẮT ĐẦU HÀNH TRÌNH'], ['LEVELS', 'CÁC MÀN CHƠI'], ['HOW TO PLAY', 'CÁCH CHƠI'],
+  ['5 PUZZLE LEVELS', '5 MÀN GIẢI ĐỐ'], ['1 FORGE', '1 LÒ RÈN'], ['1 BOSS FIGHT', '1 TRẬN BOSS'],
+  ['YOUR JOURNEY', 'HÀNH TRÌNH CỦA BẠN'], ['TRACES OF THE PAST', 'DẤU VẾT CỦA QUÁ KHỨ'], ['CLOSE ×', 'ĐÓNG ×'],
+  ['The winding trails', 'Những lối mòn'], ['Work with your past self', 'Hợp tác với chính mình'],
+  ['/ arrow keys: move.', '/ phím mũi tên: di chuyển.'],
+  ['start recording; press again to save. Echo stays at the endpoint.', 'bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.'],
+  ['summon Echo. Let it hold a switch while you cross the gate.', 'gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng.'],
+  ['First five levels: 10 seconds to each numbered rune, then 10 seconds to the exit. Collect a time shard every 3 seconds for +4 seconds. Only the player reaching a new rune refills the clock; old runes and Echo do not.', '5 màn đầu: 10 giây tới từng ấn thạch theo số, rồi 10 giây tới cổng thoát. Nhặt mảnh thời gian xuất hiện mỗi 3 giây để cộng 4 giây. Chỉ nhân vật chạm điểm mới được nạp giờ; nút cũ và Echo không nạp giờ.'],
+  ['Crushers and falling rocks warn with a yellow outline, cost one health and root you for 0.25 seconds. Vines slow you 45% across a full lane; you can go around.', 'Bẫy dập và đá rơi có viền vàng báo trước, gây mất 1 máu và giữ chân 0,25 giây khi trúng. Dây leo làm chậm 45% trên cả dải; có thể đi vòng.'],
+  ['Each level grants a different relic. After level 5, combine all five at the forge.', 'Mỗi màn nhận một di vật khác nhau. Xong màn 5, ghép đủ năm di vật tại lò rèn.'],
+  ['slash with the blade.', 'chém kiếm.'], ['dash to dodge;', 'lướt né;'], ['pause.', 'tạm dừng.'],
+  ['The boss warns of attacks with an icy blue ring. Dodge away; Echo holding the rune empowers your blade.', 'Boss báo trước đòn đánh bằng vòng băng xanh. Né ra ngoài; Echo giữ ấn sẽ tăng sức mạnh.'],
+  ['WASD / ↑↓←→ move', 'WASD / ↑↓←→ di chuyển'], ['Esc pause', 'Esc tạm dừng'],
+  ['J / Space slash · Shift dodge', 'J / Space chém · Shift né'], ['R record · E summon Echo · Q dismiss', 'R ghi · E gọi Echo · Q xóa'],
+  ['LEVEL', 'MÀN'], ['HEALTH', 'MÁU'], ['RECOVERED RELICS', 'TÚI DI VẬT'], ['FORGED', 'ĐÃ RÈN'], ['ECHO BLADE EQUIPPED', 'KIẾM ECHO ĐÃ TRANG BỊ'],
+  ['CONTINUE · LEVEL', 'TIẾP TỤC · MÀN'], ['RECOVERED IN LEVEL 0', 'THU HỒI TỪ MÀN 0'],
+  ['REACH EXIT', 'ĐẾN CỔNG THOÁT'], ['VINES · SPEED −45%', 'DÂY LEO · TỐC ĐỘ −45%'], ['Next rune +10s · Echo holds gates', 'Điểm mới +10s · Echo giữ cổng'],
+  ['Time to next checkpoint', 'Thời gian đến điểm kế tiếp'], ['Material bag', 'Túi nguyên liệu'], ['Toggle audio', 'Bật tắt âm thanh'],
+  ['Restart level', 'Chơi lại màn'], ['Pause game', 'Tạm dừng'], ['Boss health', 'Máu boss'], ['Echo Blade', 'Kiếm Echo'], ['Ancient forge', 'Lò rèn cổ'],
+  ['FROST GUARDIAN', 'THỦ VỆ BĂNG'], ['PHASE', 'GIAI ĐOẠN'], ['RECORD PATH', 'GHI ĐƯỜNG ĐI'], ['STOP RECORDING', 'DỪNG GHI'],
+  ['Path saved', 'Đã lưu đường đi'], ['Up to 8 seconds', 'Tối đa 8 giây'], ['REPLAY ECHO', 'GỌI LẠI ECHO'], ['SUMMON ECHO', 'GỌI ECHO'],
+  ['Holding position', 'Đang giữ vị trí'], ['Replaying', 'Đang phát lại'], ['A copy of your past', 'Bản sao của quá khứ'],
+  ['Dismiss Echo', 'Xóa Echo'], ['STRIKE', 'CHÉM'], ['DASH', 'LƯỚT'], ['Recovering…', 'Hồi đòn…'],
+  ['A memory awakened', 'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC'], ['The trail is open', 'Lối mòn đã mở'],
+  ['RELIC FOUND', 'NHẬN ĐƯỢC DI VẬT'], ['RELIC ALREADY OWNED', 'DI VẬT ĐÃ CÓ TRONG TÚI'],
+  ['Blade crafting materials', 'Nguyên liệu chế tạo kiếm'], ['GO TO THE FORGE', 'ĐẾN LÒ RÈN CỔ'], ['RETRY LEVEL', 'CHƠI LẠI MÀN'],
+  ['REST STOP / AFTER LEVEL 05', 'TRẠM NGHỈ / SAU MÀN 05'], ['ANCIENT FORGE', 'LÒ RÈN CỔ'],
+  ['One blade.\nFive memories.', 'Một lưỡi kiếm.\nNăm ký ức.'], ['From fragments,\nforge the light.', 'Từ những mảnh vỡ,\nrèn nên ánh sáng.'],
+  ['The Echo Blade is awake. Beyond the final gate, the Frost Guardian awaits.', 'Kiếm Echo đã thức tỉnh. Phía sau cánh cổng cuối, Thủ Vệ Băng đang chờ bạn.'],
+  ['Five trails led you to this flame. Combine the relics into the only blade that can touch the Frost Guardian.', 'Năm lối mòn đưa bạn đến ngọn lửa này. Ghép các di vật để tạo thanh kiếm duy nhất có thể chạm tới Thủ Vệ Băng.'],
+  ['DAMAGE', 'SÁT THƯƠNG'], ['ECHO RESONANCE', 'CỘNG HƯỞNG ECHO'], ['Equipped · J / Space to strike · Shift to dash', 'Đã trang bị · J / Space chém · Shift lướt né'],
+  ['5 / 5 relics · Craft once for this journey', 'Đủ 5 / 5 di vật · Chế tạo một lần cho hành trình này'],
+  ['ENTER THE ARENA', 'BƯỚC VÀO ĐẤU TRƯỜNG'], ['FORGE ECHO BLADE', 'RÈN KIẾM ECHO'],
+  ['JOURNEY COMPLETE / 06', 'HÀNH TRÌNH HOÀN TẤT / 06'], ['THE MEMORY REMAINS', 'KÝ ỨC VẪN CÒN Ở ĐÂY'],
+  ['The forest awakens.', 'Khu rừng thức giấc.'], ['Time is up.', 'Hết thời gian.'], ['Rise again.', 'Đứng dậy lần nữa.'],
+  ['READY', 'Sẵn sàng'], ['BOSS', 'TRÙM'], ['MENU', 'TRÌNH ĐƠN'],
+  ['The Frost Guardian has fallen. All six levels are now open in the lobby for free replay.', 'Thủ Vệ Băng đã gục ngã. Toàn bộ sáu màn giờ đã mở trong sảnh để bạn tự do chơi lại.'],
+  ['You have 10 seconds per leg. Reach the numbered runes to refill time; collect +4-second shards, use Echo to hold gates and avoid vines. Collected relics remain yours.', 'Bạn có 10 giây cho mỗi chặng. Chạm ấn thạch theo số để nạp lại giờ; nhặt mảnh thời gian +4 giây, dùng Echo giữ cổng và tránh dây leo. Di vật đã thu thập vẫn được giữ lại.'],
+  ['Materials and the blade remain yours. Wait for the attack warning, then dash away and counterattack.', 'Nguyên liệu và thanh kiếm vẫn được giữ lại. Đợi vòng báo đòn xuất hiện, rồi lướt ra ngoài để phản công.'],
+  ['Collected relics remain yours. Avoid traps when the yellow warning appears; vines slow you without damage.', 'Di vật đã thu thập vẫn được giữ lại. Tránh vùng bẫy khi viền vàng báo trước; dây leo làm chậm nhưng không mất máu.'],
+  ['BACK TO LEVEL SELECT', 'VỀ SẢNH CHỌN MÀN'], ['TRY AGAIN', 'THỬ LẠI'], ['BACK TO LOBBY', 'VỀ SẢNH'],
+  ['WASD to move · R to record a path · E to summon Echo on a switch.', 'WASD để di chuyển · R ghi đường đi · E gọi Echo giữ nút.'],
+  ['J / Space: slash · Shift: dash · Echo on the rune empowers your blade.', 'J / Space: chém · Shift: lướt né · Echo giữ ấn sẽ tăng sức mạnh.'],
+  ['Path saved! Press E to summon Echo.', 'Đã lưu đường đi! Nhấn E để gọi Echo.'],
+  ['RECORDING… Reach the target, then press R again.', 'ĐANG GHI… Đi tới mục tiêu, rồi nhấn R lần nữa.'],
+  ['No recording yet. Press R to record a path first.', 'Chưa có bản ghi. Nhấn R để ghi đường đi trước.'],
+  ['Echo has appeared and is replaying your path.', 'Echo đã xuất hiện và đang phát lại đường đi.'],
+  ['Echo dismissed.', 'Đã xóa Echo.'], ['Eight seconds recorded. Press E to summon Echo.', 'Đã ghi đủ 8 giây. Nhấn E để gọi Echo.'],
+  ['+4s · Time shard collected', '+4 giây · Đã nhặt mảnh thời gian'], ['+10s · Reach the exit!', '+10 giây · Đến cổng thoát!'],
+  ['A quiet moment', 'MỘT KHOẢNG LẶNG'], ['Paused', 'Tạm dừng'], ['RESUME', 'TIẾP TỤC'],
+  ['Ancient iron shard', 'Mảnh sắt cổ'], ['Metal still warm beneath the moss.', 'Kim loại còn ấm dưới lớp rêu.'],
+  ['Spiritwood', 'Gỗ linh mộc'], ['Heartwood for the sword grip.', 'Lõi gỗ dùng làm chuôi kiếm.'],
+  ['Echo crystal', 'Tinh thể Echo'], ['Holds the forest’s memories.', 'Lưu giữ ký ức của khu rừng.'],
+  ['Sacred ember', 'Than lửa thiêng'], ['A flame that never fades.', 'Ngọn lửa không bao giờ tắt.'],
+  ['Ancient rune', 'Ấn thạch cổ'], ['The final shard that awakens the blade.', 'Mảnh cuối để đánh thức thanh kiếm.'],
+  ['VINES', 'DÂY LEO'], ['WATCH OUT!', 'CẨN THẬN!'], ['CRUSHER', 'BẪY DẬP'], ['FALLING ROCKS', 'ĐÁ RƠI'], ['SLOW 45%', 'CHẬM 45%'], ['DODGE!', 'NÉ!'],
+  ['ECHO GROVE', 'RỪNG VỌNG ÂM'], ['ROOTBOUND PASSAGE', 'LỐI RỄ CHẰNG CHỊT'], ['WHISPERING RUINS', 'PHẾ TÍCH THÌ THẦM'], ['THORNBOUND LABYRINTH', 'MÊ CUNG GAI'], ['THE LAST EMBER', 'ĐỐM LỬA CUỐI'],
+];
+
+const en = new Map(pairs.map(([english, vietnamese]) => [vietnamese, english]));
+const vi = new Map(pairs.map(([english, vietnamese]) => [english, vietnamese]));
+
+export function translate(value: string, language: Language): string {
+  const leading = value.match(/^\s*/)?.[0] ?? '';
+  const trailing = value.match(/\s*$/)?.[0] ?? '';
+  const key = value.trim();
+  const lookup = language === 'en' ? en : vi;
+  let result = lookup.get(key);
+  if (!result) {
+    const dynamic: [RegExp, (match: RegExpMatchArray) => string][] = language === 'en' ? [
+      [/^TIẾP TỤC · MÀN 0?(\d+)$/, m => `CONTINUE · LEVEL ${m[1]}`],
+      [/^TIẾP TỤC · MÀN (\d+)$/, m => `CONTINUE · LEVEL ${m[1]}`],
+      [/^MÀN (\d+)$/, m => `LEVEL ${m[1]}`],
+      [/^CHẶNG (\d+)$/, m => `STAGE ${m[1]}`],
+      [/^ĐẾN ẤN THẠCH (\d+) \/ (\d+)$/, m => `REACH RUNE ${m[1]} / ${m[2]}`],
+      [/^THU HỒI TỪ MÀN 0?(\d+)$/, m => `RECOVERED IN LEVEL ${m[1]}`],
+      [/^(\d+) \/ 6 HOÀN THÀNH$/, m => `${m[1]} / 6 COMPLETE`],
+      [/^(\d+) trên 5 máu$/, m => `${m[1]} of 5 health`],
+      [/^(\d+\.\d+)s còn lại$/, m => `${m[1]}s remaining`],
+      [/^Bắt đầu lại (.+)$/, m => `Restarted ${m[1]}`],
+      [/^LEVEL 0(\d+)$/, m => `LEVEL 0${m[1]}`],
+    ] : [
+      [/^CONTINUE · LEVEL (\d+)$/, m => `TIẾP TỤC · MÀN ${m[1]}`],
+      [/^LEVEL (\d+)$/, m => `MÀN ${m[1]}`],
+      [/^STAGE (\d+)$/, m => `CHẶNG ${m[1]}`],
+      [/^REACH RUNE (\d+) \/ (\d+)$/, m => `ĐẾN ẤN THẠCH ${m[1]} / ${m[2]}`],
+      [/^(\d+) \/ 6 COMPLETE$/, m => `${m[1]} / 6 HOÀN THÀNH`],
+      [/^(\d+) of 5 health$/, m => `${m[1]} trên 5 máu`],
+      [/^\+10s · Reach rune (\d+)!$/, m => `+10 giây · Đến ấn thạch ${m[1]}!`],
+      [/^LEVEL 0(\d+)$/, m => `MÀN 0${m[1]}`],
+      [/^Bắt đầu lại LEVEL 0(\d+)$/, m => `Bắt đầu lại màn 0${m[1]}`],
+      [/^LEVEL 0(\d+): (.+)$/, m => `MÀN 0${m[1]}: ${vi.get(m[2]) ?? m[2]}`],
+      [/^10 seconds per leg · (\d+) runes\..*$/, m => `10 giây mỗi chặng · ${m[1]} ấn thạch. Echo giữ cổng; né bẫy dập, đá rơi và dây leo làm chậm.`],
+    ];
+    for (const [pattern, replacement] of dynamic) { const match = key.match(pattern); if (match) { result = replacement(match); break; } }
+  }
+  return leading + (result ?? key) + trailing;
+}

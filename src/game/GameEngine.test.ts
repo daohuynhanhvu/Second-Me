@@ -1,0 +1,211 @@
+import test, { type TestContext } from 'node:test';
+import assert from 'node:assert/strict';
+import { GameEngine } from './GameEngine.ts';
+import { sounds } from './logic/sound.ts';
+import { LEVELS } from './logic/levels.ts';
+
+sounds.setMuted(true);
+
+function mockDocument(t: TestContext) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const document = { body: { dataset: { state: 'gameover' } } };
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: document });
+  t.after(() => {
+    if (previous) Object.defineProperty(globalThis, 'document', previous);
+    else Reflect.deleteProperty(globalThis, 'document');
+  });
+  return document;
+}
+
+function setup() {
+  const engine = new GameEngine();
+  engine.screen = 'playing';
+  const controls = engine as unknown as {
+    update(dt: number): void;
+    handleKeyDown(event: KeyboardEvent): void;
+    handleKeyUp(event: KeyboardEvent): void;
+    heldKeys: Set<string>;
+  };
+  function advance(seconds: number) {
+    while (seconds > 0.000001) {
+      const dt = Math.min(0.05, seconds);
+      controls.update(dt);
+      seconds -= dt;
+    }
+  }
+  function walk(code: string, seconds: number) {
+    controls.heldKeys.add(code);
+    advance(seconds);
+    controls.heldKeys.delete(code);
+    advance(0.05);
+  }
+  function recordToPlate() {
+    engine.toggleRecording();
+    walk('KeyW', 0.775);
+    walk('KeyD', 1.225);
+  }
+  return { engine, controls, advance, walk, recordToPlate };
+}
+
+test('R stops on the plate: walking away cannot extend the saved path', () => {
+  const { engine, advance, walk, recordToPlate } = setup();
+  recordToPlate();
+  engine.toggleRecording();
+  const saved = structuredClone(engine.recorder.getSamples());
+  walk('KeyS', 0.6);
+  engine.spawnEcho();
+  advance(5);
+  assert.deepEqual(engine.recorder.getSamples(), saved);
+  assert.ok(Math.abs(engine.echo!.x - 465) < 0.001);
+  assert.ok(Math.abs(engine.echo!.y - 205) < 0.001);
+  assert.equal(engine.echo!.status, 'finished');
+  assert.equal(engine.currentLevel.plates[0].isPressed, true);
+  assert.equal(engine.currentLevel.doors[0].openProgress, 1);
+});
+
+test('E finishes an active recording before the player walks away', () => {
+  const { engine, advance, walk, recordToPlate } = setup();
+  recordToPlate();
+  engine.spawnEcho();
+  assert.equal(engine.recorder.getStatus(), 'recorded');
+  walk('KeyS', 0.6);
+  advance(5);
+  assert.ok(Math.abs(engine.echo!.y - 205) < 0.001);
+  assert.equal(engine.currentLevel.plates[0].isPressed, true);
+});
+
+test('an existing Echo holds its original destination during a new recording', () => {
+  const { engine, advance, walk, recordToPlate } = setup();
+  recordToPlate();
+  engine.toggleRecording();
+  engine.spawnEcho();
+  advance(5);
+  engine.toggleRecording();
+  walk('KeyS', 0.6);
+  engine.toggleRecording();
+  advance(5);
+  assert.ok(Math.abs(engine.echo!.y - 205) < 0.001);
+  assert.equal(engine.echo!.status, 'finished');
+  assert.equal(engine.echo!.isMoving, false);
+  assert.equal(engine.currentLevel.plates[0].isPressed, true);
+});
+
+test('holding R cannot stop and restart a recording through key repeat', () => {
+  const { engine, controls, advance } = setup();
+  const event = (repeat: boolean) => ({
+    code: 'KeyR', key: 'r', repeat, preventDefault() {},
+  }) as KeyboardEvent;
+  controls.handleKeyDown(event(false));
+  advance(0.1);
+  controls.handleKeyDown(event(true));
+  assert.equal(engine.recorder.getStatus(), 'recording');
+  controls.handleKeyUp(event(false));
+  controls.handleKeyDown(event(false));
+  controls.handleKeyDown(event(true));
+  assert.equal(engine.recorder.getStatus(), 'recorded');
+});
+
+test('retry after the final victory closes the overlay and starts a playable fresh level', t => {
+  const document = mockDocument(t);
+  const { engine, controls, advance } = setup();
+  engine.campaign.award(1);
+  engine.campaign.award(2);
+  engine.selectLevel(2);
+  engine.toggleRecording();
+  advance(0.1);
+  engine.spawnEcho();
+  engine.currentLevel.plates[0].isPressed = true;
+  engine.currentLevel.doors[0].openProgress = 1;
+  engine.player.x = engine.currentLevel.exit.x;
+  controls.heldKeys.add('KeyD');
+  engine.screen = 'victory';
+  let hudScreen = '';
+  engine.onHUDChange = hud => { hudScreen = hud.screen; };
+  engine.restartLevel();
+  assert.equal(engine.screen, 'playing');
+  assert.equal(document.body.dataset.state, 'playing');
+  assert.equal(hudScreen, 'playing');
+  assert.equal(engine.currentLevelIdx, 2);
+  assert.equal(engine.player.x, LEVELS[2].playerSpawn.x);
+  assert.equal(engine.player.y, LEVELS[2].playerSpawn.y);
+  assert.equal(engine.echo, null);
+  assert.equal(engine.recorder.getStatus(), 'idle');
+  assert.equal(engine.currentLevel.plates.some(plate => plate.isPressed), false);
+  assert.equal(engine.currentLevel.doors.some(door => door.openProgress > 0), false);
+  assert.equal(controls.heldKeys.size, 0);
+  advance(0.1);
+  assert.equal(engine.screen, 'playing');
+  assert.equal(engine.player.x, LEVELS[2].playerSpawn.x);
+});
+
+test('restart from pause resumes the level rather than leaving the pause overlay open', t => {
+  const document = mockDocument(t);
+  const { engine } = setup();
+  engine.screen = 'paused';
+  engine.restartLevel();
+  assert.equal(engine.screen, 'playing');
+  assert.equal(document.body.dataset.state, 'playing');
+});
+
+test('advancing after the last level immediately starts a new run at level one', t => {
+  const document = mockDocument(t);
+  const { engine } = setup();
+  engine.currentLevelIdx = LEVELS.length - 1;
+  engine.screen = 'victory';
+  engine.nextLevel();
+  assert.equal(engine.currentLevelIdx, 0);
+  assert.equal(engine.currentLevel.id, LEVELS[0].id);
+  assert.equal(engine.screen, 'playing');
+  assert.equal(document.body.dataset.state, 'playing');
+  assert.equal(engine.player.x, LEVELS[0].playerSpawn.x);
+});
+
+test('an animation frame timestamp before startup cannot move the game clock backwards', t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'requestAnimationFrame');
+  Object.defineProperty(globalThis,'requestAnimationFrame',{configurable:true,value:()=>1});
+  t.after(()=>original?Object.defineProperty(globalThis,'requestAnimationFrame',original):Reflect.deleteProperty(globalThis,'requestAnimationFrame'));
+  const { engine } = setup();
+  const clock=engine as unknown as {lastTimestamp:number;elapsedLevelTime:number;loop(timestamp:number):void};
+  clock.lastTimestamp=100;
+  clock.loop(99);
+  assert.equal(clock.elapsedLevelTime,0);
+});
+
+test('intro opens loading lobby without resetting saved progress', t => {
+  const document = mockDocument(t);
+  const engine = new GameEngine();
+  engine.campaign.completed = [1,2];
+  engine.openLobby();
+  assert.equal(engine.screen,'loading');
+  assert.equal(document.body.dataset.state,'loading');
+  engine.finishLoading();
+  assert.equal(engine.screen,'lobby');
+  assert.deepEqual(engine.campaign.completed,[1,2]);
+});
+
+test('pressing Y four times unlocks every trail for the current dev session', t => {
+  mockDocument(t);
+  const engine = new GameEngine();
+  engine.screen='lobby';
+  const controls=engine as unknown as {handleKeyDown(event:KeyboardEvent):void};
+  const event={key:'y',code:'KeyY',repeat:false,preventDefault(){}} as KeyboardEvent;
+  for(let i=0;i<3;i++)controls.handleKeyDown(event);
+  assert.equal(engine.devUnlocked,false);
+  controls.handleKeyDown(event);
+  assert.equal(engine.devUnlocked,true);
+  assert.deepEqual(engine.campaign.completed,[1,2,3,4,5]);
+  assert.equal(engine.campaign.forged,true);
+  engine.selectLevel(5);
+  assert.equal(engine.currentLevelIdx,5);
+  assert.equal(engine.screen,'playing');
+});
+
+test('completed campaign can replay any level from lobby',t=>{
+  mockDocument(t);
+  const engine=new GameEngine();
+  engine.campaign.completed=[1,2,3,4,5];engine.campaign.forged=true;engine.campaign.bossDefeated=true;
+  engine.goToLobby();engine.selectLevel(1);
+  assert.equal(engine.currentLevelIdx,1);assert.equal(engine.screen,'playing');
+  engine.goToLobby();engine.selectLevel(5);
+  assert.equal(engine.currentLevelIdx,5);assert.ok(engine.boss);
+});
