@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, type HUDState } from './game/GameEngine.ts';
-import { Intro, Loading, Lobby, Shop, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
+import { Intro, Loading, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
 import { localize } from './localize.tsx';
 
 const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:'ECHO GROVE', recordingStatus:'idle',
@@ -22,11 +22,12 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     return () => window.clearTimeout(timer);
   }, [hud.screen]);
   const engine = ref.current;
-  return localize(<main className="adventure-app"><div className="game-stage"><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
+  return localize(<main className="adventure-app" lang={hud.language}><div className="game-stage"><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
     {hud.screen === 'intro' && <Intro engine={engine}/>}
     {hud.screen === 'loading' && <Loading/>}
     {hud.screen === 'lobby' && <Lobby engine={engine} hud={hud}/>}
     {hud.screen === 'shop' && <Shop engine={engine} hud={hud}/>}
+    {hud.screen === 'characters' && <Characters engine={engine} hud={hud}/>}
     {hud.screen === 'playing' && <AdventureHUD engine={engine} hud={hud}/>}
     {hud.screen === 'victory' && <Completion engine={engine} hud={hud}/>}
     {hud.screen === 'forge' && <Forge engine={engine} hud={hud}/>}

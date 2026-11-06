@@ -250,8 +250,9 @@ export class GameEngine {
     this.notifyHUD();
   }
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
+  public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
-  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby') return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
+  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || !this.campaign.useTimeItem()) return false; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 
@@ -269,7 +270,7 @@ export class GameEngine {
     this.screen = 'playing';
     document.body.dataset.state = 'playing';
     this.restartLevel();
-    this.showBanner('WASD để di chuyển · R ghi đường đi · E gọi Echo giữ nút.');
+    this.showBanner('WASD di chuyển · E ghi đường đi · Q gọi Echo · Chuột phải dùng kỹ năng.');
   }
 
   public continueGame() {
@@ -389,7 +390,7 @@ export class GameEngine {
     if (this.screen !== 'forge' || !this.campaign.forged) return;
     this.currentLevelIdx = 5;
     this.restartLevel();
-    this.showBanner('Chuột trái: tấn công · Space: kỹ năng · Shift: lướt né.', 6);
+    this.showBanner('Chuột trái: tấn công · Chuột phải: kỹ năng · Shift: lướt né.', 6);
   }
 
   private finishBossHit() {
@@ -621,7 +622,7 @@ export class GameEngine {
       return;
     }
     if (this.screen === 'loading') return;
-    if (this.screen === 'shop') { if (code === 'Escape') this.goToLobby(); return; }
+    if (this.screen === 'shop' || this.screen === 'characters') { if (code === 'Escape') this.goToLobby(); return; }
     if (this.screen === 'lobby') return;
 
     // Victory screen start next
@@ -683,17 +684,21 @@ export class GameEngine {
   };
 
   private handleCanvasMouseDown = (e: MouseEvent) => {
-    if (e.button !== 0 || !this.canvas || this.screen !== 'playing') return;
+    if ((e.button !== 0 && e.button !== 2) || !this.canvas || this.screen !== 'playing') return;
     const bounds = this.canvas.getBoundingClientRect();
-    this.attack({ x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
-      y: (e.clientY - bounds.top) * this.canvas.height / bounds.height });
+    const target = { x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
+      y: (e.clientY - bounds.top) * this.canvas.height / bounds.height };
+    if (e.button === 2) { e.preventDefault(); this.useSkill(target); }
+    else this.attack(target);
   };
+  private handleCanvasContextMenu = (e: MouseEvent) => { if (this.screen === 'playing') e.preventDefault(); };
 
   private bindInputs() {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('blur', this.handleWindowBlur);
     this.canvas?.addEventListener('mousedown', this.handleCanvasMouseDown);
+    this.canvas?.addEventListener('contextmenu', this.handleCanvasContextMenu);
   }
 
   private unbindInputs() {
@@ -701,6 +706,7 @@ export class GameEngine {
     window.removeEventListener('keyup', this.handleKeyUp);
     window.removeEventListener('blur', this.handleWindowBlur);
     this.canvas?.removeEventListener('mousedown', this.handleCanvasMouseDown);
+    this.canvas?.removeEventListener('contextmenu', this.handleCanvasContextMenu);
   }
 
   // --- Game Loop ---

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
-import { ArrowRight, RotateCcw, Home, Pause, Volume2, VolumeX, Lock, Sword, Hammer, Check, Shield, Flame, Backpack, Bell, Settings, Map, Play, Leaf, X, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, RotateCcw, Home, Pause, Volume2, VolumeX, Lock, Sword, Hammer, Check, Shield, Flame, Backpack, Bell, Settings, Map, Play, X, SlidersHorizontal } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { MATERIALS } from '../game/logic/campaign.ts';
 import { LEVELS } from '../game/logic/levels.ts';
 
+const wizardImage = `${import.meta.env.BASE_URL}assets/blue-wizard/idle/00.png`;
+function WizardAvatar({className=''}:{className?:string}) { return <span className={`wizard-avatar ${className}`}><img src={wizardImage} alt="Pháp sư Echo"/></span>; }
+
 export function Intro({ engine }: { engine: GameEngine | null }) {
   return localize(<div className="intro-screen overlay"><div className="mist mist-one"/><div className="mist mist-two"/>
-    <div className="intro-mark"><Leaf size={28}/><span>THE ANCIENT PATH REMEMBERS</span></div>
+    <div className="intro-mark"><WizardAvatar/><span>THE ANCIENT PATH REMEMBERS</span></div>
     <div className="intro-copy"><span className="eyebrow gold">CHAPTER II · THE EMBERFORGE</span><h1>SECOND<br/><em>ME</em></h1><p>Echoes of the Wild</p>
       <button className="intro-enter" onClick={() => engine?.openLobby()}>BƯỚC VÀO KHU RỪNG <ArrowRight size={18}/></button><small>ENTER / SPACE</small></div>
     <div className="intro-runes">◇　✦　◈　✺　◆</div>
@@ -16,7 +19,7 @@ export function Intro({ engine }: { engine: GameEngine | null }) {
 }
 
 export function Loading() {
-  return localize(<div className="loading-screen overlay"><div className="loading-sigil"><Leaf size={34}/><i/><i/><i/></div><span className="eyebrow gold">ĐANG ĐÁNH THỨC KHU RỪNG</span><h2>Những lối mòn đang hiện ra...</h2><div className="loading-line"><i/></div><p>Chuẩn bị Echo và lắng nghe ký ức.</p></div>);
+  return localize(<div className="loading-screen overlay"><div className="loading-sigil"><WizardAvatar/><i/><i/><i/></div><span className="eyebrow gold">ĐANG ĐÁNH THỨC KHU RỪNG</span><h2>Những lối mòn đang hiện ra...</h2><div className="loading-line"><i/></div><p>Chuẩn bị Echo và lắng nghe ký ức.</p></div>);
 }
 
 export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | null; hud: HUDState; close: () => void }) {
@@ -38,11 +41,12 @@ export function Notifications({ close }: { close: () => void }) {
 
 export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
   const [panel, setPanel] = useState<'none'|'news'|'settings'>('none');
+  const [bag, setBag] = useState(false);
   const complete = engine?.campaign.bossDefeated === true;
   const next = Math.min(hud.completed.length, 5);
-  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><span className="hero-avatar"><img src={`${import.meta.env.BASE_URL}assets/blue-wizard/idle/00.png`} alt="Nhân vật pháp sư"/></span><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
+  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><button className="character-entry" onClick={()=>engine?.openCharacters()} aria-label="Nhân vật và class" title="Nhân vật và class"><WizardAvatar/></button><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button onClick={()=>engine?.openCharacters()}><WizardAvatar/> {hud.language==='vi'?'NHÂN VẬT':'CHARACTERS'}</button><button onClick={()=>setBag(true)}><Backpack size={17}/> {hud.language==='vi'?'TÚI ĐỒ':'INVENTORY'}</button><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
     <div className="lobby-layout"><aside className="lobby-welcome"><span className="eyebrow gold">TRẠI NGHỈ ECHO</span><h1>{complete ? 'Khu rừng đã thức giấc.' : hud.completed.length ? 'Hành trình vẫn đang gọi.' : 'Lối mòn đầu tiên đang chờ.'}</h1><p>{complete ? 'Toàn bộ ký ức đã được giải phóng. Bạn có thể quay lại bất kỳ màn nào.' : 'Thu hồi năm di vật, rèn vũ khí của class và đối mặt với Thủ Vệ Băng.'}</p>
-      <div className="class-picker"><span className="eyebrow gold">CHỌN CLASS</span><div><button className={hud.characterClass==='mage'?'selected':''} onClick={()=>engine?.selectClass('mage')}>✦ {hud.language==='vi'?'Pháp sư · Trượng phép':'Mage · Magic staff'}</button><button className={hud.characterClass==='swordsman'?'selected':''} onClick={()=>engine?.selectClass('swordsman')}>⚔ {hud.language==='vi'?'Kiếm sĩ · Kiếm':'Swordsman · Sword'}</button></div></div>
+      <button className="secondary lobby-character-link" onClick={()=>engine?.openCharacters()}>{hud.language==='vi'?'NHÂN VẬT & CLASS':'CHARACTERS & CLASSES'} <ArrowRight size={15}/></button>
       {!complete && <button className="primary lobby-continue" onClick={()=>hud.completed.length ? engine?.continueGame() : engine?.selectLevel(0)}><Play size={18}/>{hud.completed.length ? `TIẾP TỤC · MÀN 0${next+1}` : 'BẮT ĐẦU MÀN 01'}</button>}
       <button className="secondary lobby-shop-link" onClick={()=>engine?.openShop()}>✦ {hud.language==='vi'?'CỬA HÀNG':'SHOP'} · {hud.coins} {hud.language==='vi'?'XU':'COINS'}</button>
       {complete && <div className="campaign-seal"><Sword size={24}/><span>CHIẾN DỊCH HOÀN TẤT<small>6 / 6 MÀN ĐÃ MỞ</small></span></div>}
@@ -54,12 +58,37 @@ export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       return <button key={level.id} disabled={!unlocked} className={`map-node node-${index+1} ${cleared?'cleared':''}`} onClick={()=>engine?.selectLevel(index)}><span className="node-number">0{level.id}</span><div><small>{index===5?'BOSS':`CHẶNG ${index+1}`}</small><strong>{level.subtitle}</strong><em>{cleared?'ĐÃ HOÀN THÀNH':unlocked?'SẴN SÀNG':'CHƯA MỞ'}</em><span className="level-stars">{'★'.repeat(hud.bestStars[level.id]??0)}{'☆'.repeat(3-(hud.bestStars[level.id]??0))}</span></div>{unlocked?<ArrowRight size={17}/>:<Lock size={16}/>}</button>;
     })}</div></section>
     <aside className="lobby-side"><button className="lobby-card shop-card" onClick={()=>engine?.openShop()}><span className="shop-icon">✦</span><span><small>CỬA HÀNG</small><b>{hud.coins} {hud.language==='vi'?'xu':'coins'}</b><em>{hud.language==='vi'?'Mua vật phẩm thời gian':'Buy time items'}</em></span><ArrowRight size={16}/></button><button className="lobby-card news-card" onClick={()=>setPanel('news')}><Bell size={21}/><span><small>THÔNG BÁO MỚI</small><b>Thử thách 10 giây</b><em>Xem thay đổi trò chơi</em></span><ArrowRight size={16}/></button><div className="relic-card"><Backpack size={20}/><span><small>DI VẬT ĐÃ THU HỒI</small><b>{hud.completed.length} / 5</b></span><div>{MATERIALS.map((m,i)=><i key={m.id} className={hud.completed.includes(i+1)?'found':''}>{m.icon}</i>)}</div></div></aside></div>
+    {bag&&<div className="modal-backdrop" onClick={()=>setBag(false)}><div className="panel inventory-modal" onClick={e=>e.stopPropagation()}><Inventory hud={hud} close={()=>setBag(false)}/></div></div>}
     {panel==='news'&&<Notifications close={()=>setPanel('none')}/>} {panel==='settings'&&<SettingsPanel engine={engine} hud={hud} close={()=>setPanel('none')}/>}</div>);
 }
 
 export function Shop({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
   const vi = hud.language === 'vi';
   return <div className="modal-backdrop shop-screen"><div className="panel shop-panel"><span className="eyebrow gold">{vi?'CỬA HÀNG TRẠI NGHỈ':'CAMP SHOP'}</span><h2>{vi?'Kho báu thời gian':'Time supplies'}</h2><p className="muted">{vi?'Xu nhận khi hoàn thành màn: 3 sao = 12 xu · 2 sao = 8 xu · 1 sao = 4 xu.':'Earn coins by finishing levels: 3 stars = 12 · 2 stars = 8 · 1 star = 4.'}</p><div className="shop-balance">✦ {hud.coins} {vi?'xu':'coins'}</div><div className="shop-item"><div className="shop-item-art">✧<small>+2s</small></div><div><h3>{vi?'Bình thời gian':'Time potion'}</h3><p>{vi?'Dùng một lần để cộng 2 giây cho chặng hiện tại. Nhấn F trong màn chơi.':'Single use: add 2 seconds to the current leg. Press F while playing.'}</p><small>{vi?'Đang có':'Owned'}: {hud.timeItems}</small></div><button className="primary" disabled={hud.coins < 5} onClick={()=>engine?.buyTimeItem()}>{vi?'MUA · 5 XU':'BUY · 5 COINS'}</button></div><button className="secondary" onClick={()=>engine?.goToLobby()}>{vi?'VỀ SẢNH':'BACK TO LOBBY'}</button></div></div>;
+}
+
+export function Inventory({ hud, close }: { hud: HUDState; close: () => void }) {
+  const vi = hud.language === 'vi';
+  return <div className="inventory-content"><div className="panel-top"><span className="eyebrow gold">{vi?'TÚI ĐỒ':'INVENTORY'}</span><button className="icon-close" aria-label={vi?'Đóng túi đồ':'Close inventory'} onClick={close}><X size={18}/></button></div><h2>{vi?'Vật phẩm của bạn':'Your items'}</h2><div className="inventory-currency"><span>✦</span><strong>{vi?'Xu':'Coins'}</strong><b>{hud.coins}</b></div><div className="inventory-currency"><span>✧</span><strong>{vi?'Bình thời gian +2 giây':'Time potion +2 seconds'}</strong><b>× {hud.timeItems}</b></div><span className="eyebrow gold">{vi?'DI VẬT':'RELICS'}</span>{MATERIALS.map((m,i)=><div className={'inventory-item '+(hud.completed.includes(i+1)?'found':'')} key={m.id}><span style={{color:m.color}}>{m.icon}</span><strong>{translate(m.name,hud.language)}</strong><small>{hud.completed.includes(i+1)?'× 1':'—'}</small></div>)}{hud.forged&&<div className="equipped">{hud.weapon==='staff'?'✦':'⚔'} {vi?'ĐÃ TRANG BỊ':'EQUIPPED'} · {hud.weapon==='staff'?(vi?'Trượng Echo':'Echo staff'):(vi?'Kiếm Echo':'Echo sword')}</div>}</div>;
+}
+
+const classOptions = [
+  {id:'mage', icon:'✦', en:'Mage', vi:'Pháp sư', weaponEn:'Magic staff', weaponVi:'Trượng phép', ready:true},
+  {id:'ranger', icon:'⌁', en:'Ranger', vi:'Xạ thủ', ready:false},
+  {id:'swordsman', icon:'⚔', en:'Swordsman', vi:'Kiếm sĩ', weaponEn:'Sword', weaponVi:'Kiếm', ready:true},
+  {id:'tank', icon:'⬡', en:'Tank', vi:'Đỡ đòn', ready:false},
+  {id:'assassin', icon:'◇', en:'Assassin', vi:'Sát thủ', ready:false},
+  {id:'mechanical', icon:'⚙', en:'Mechanic', vi:'Cơ giới', ready:false},
+  {id:'beast', icon:'◆', en:'Beast', vi:'Dã thú', ready:false},
+] as const;
+
+function SwordsmanPortrait() { return <svg className="swordsman-portrait" viewBox="0 0 260 320" role="img" aria-label="Kiếm sĩ"><defs><linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#abb8b0"/><stop offset="1" stopColor="#394f4f"/></linearGradient></defs><ellipse cx="130" cy="291" rx="88" ry="18" fill="#091b19"/><path d="M65 267 73 163 100 138h60l27 25 8 104Z" fill="#31413e" stroke="#d1b77d" strokeWidth="5"/><path d="m72 166 28-32 30 25 30-25 28 32-22 68h-72Z" fill="url(#armor)" stroke="#d6bf8e" strokeWidth="5"/><path d="M103 143V80q27-38 54 0v63Z" fill="#ab9270"/><path d="M89 98q1-63 41-68 40 5 41 68l-10 9H99Z" fill="url(#armor)" stroke="#d7d0b4" strokeWidth="5"/><path d="M100 87h60v16h-60Z" fill="#1b2d32"/><path d="M105 95h50" stroke="#a7e7e1" strokeWidth="4"/><path d="M130 31v-20" stroke="#e3c388" strokeWidth="7"/><path d="m95 201 36 19 34-19" fill="none" stroke="#e0c28b" strokeWidth="8"/><path d="M189 241 209 95l7-32 7 32-16 146Z" fill="#c4e5df" stroke="#fff7d8" strokeWidth="4"/><path d="M181 244h48" stroke="#d8af69" strokeWidth="10"/></svg>; }
+
+export function Characters({engine,hud}:{engine:GameEngine|null;hud:HUDState}) {
+  const vi=hud.language==='vi';
+  const [selected,setSelected]=useState<string>(hud.characterClass);
+  const choice=classOptions.find(c=>c.id===selected)!;
+  return <div className="characters-screen overlay"><div className="characters-shell"><header><span className="eyebrow gold">{vi?'NHÂN VẬT':'CHARACTERS'}</span><button className="secondary" onClick={()=>engine?.goToLobby()}>{vi?'VỀ SẢNH':'BACK TO LOBBY'}</button></header><div className="characters-layout"><aside className="class-sidebar"><h2>{vi?'Chọn class':'Choose a class'}</h2>{classOptions.map(c=><button key={c.id} className={selected===c.id?'selected':''} onClick={()=>{setSelected(c.id);if(c.ready)engine?.selectClass(c.id);}}><span>{c.icon}</span><strong>{vi?c.vi:c.en}</strong><small>{c.ready?(vi?'SẴN SÀNG':'READY'):(vi?'ĐANG THI CÔNG':'IN DEVELOPMENT')}</small></button>)}</aside><section className="character-detail"><div className="character-portrait">{choice.id==='mage'?<img src={wizardImage} alt={vi?'Pháp sư':'Mage'}/>:choice.id==='swordsman'?<SwordsmanPortrait/>:<span className="future-character">{choice.icon}</span>}</div><div className="character-description"><span className="eyebrow gold">{choice.ready?(vi?'NHÂN VẬT ĐÃ MỞ':'AVAILABLE CHARACTER'):(vi?'ĐANG TRONG TIẾN TRÌNH THI CÔNG':'UNDER CONSTRUCTION')}</span><h1>{vi?choice.vi:choice.en}</h1>{choice.ready?<><p>{vi?'Vũ khí cố định':'Fixed weapon'}: <strong>{vi?choice.weaponVi:choice.weaponEn}</strong></p><p>{choice.id==='mage'?(vi?'Tấn công bằng ma pháp từ trượng Echo.':'Casts magic through the Echo staff.'):(vi?'Cận chiến bằng kiếm Echo.':'Fights up close with the Echo sword.')}</p><span className="class-selected">{hud.characterClass===choice.id?(vi?'ĐANG ĐƯỢC CHỌN':'SELECTED'):(vi?'BẤM CLASS ĐỂ CHỌN':'CLICK CLASS TO SELECT')}</span></>:<div className="construction-notice"><strong>{vi?'Đang trong tiến trình thi công':'In development'}</strong><p>{vi?'Class này chưa thể vào trận. Hãy chọn Pháp sư hoặc Kiếm sĩ để chơi.':'This class is not playable yet. Choose Mage or Swordsman to play.'}</p></div>}</div></section></div></div></div>;
 }
 
 export function StaffArt({ large = false }: { large?: boolean }) {
@@ -107,7 +136,7 @@ export function Title({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       {tab === 'trails' ? <><h2>Những lối mòn</h2><div className="trail-list">{LEVELS.map((level, index) => {
         const unlocked = index <= hud.completed.length && (index < 5 || hud.forged);
         return <button key={level.id} disabled={!unlocked} onClick={() => engine?.selectLevel(index)} className="trail-item"><span className="trail-number">0{level.id}</span><span><strong>{level.subtitle}</strong><small>{level.description}</small></span>{!unlocked ? <Lock size={17}/> : hud.completed.includes(level.id) ? <Check size={18}/> : <ArrowRight size={18}/>}</button>;
-      })}</div></> : <><h2>Hợp tác với chính mình</h2><div className="help-grid"><p><kbd>W A S D</kbd> / phím mũi tên: di chuyển.</p><p><kbd>E</kbd> bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.</p><p><kbd>Q</kbd> gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng. <kbd>X</kbd> xóa Echo.</p><p>5 màn đầu: 10 giây tới từng ấn thạch theo số, rồi 10 giây tới cổng thoát. Nhặt mảnh thời gian xuất hiện mỗi 3 giây để cộng 4 giây. Chỉ nhân vật chạm điểm mới được nạp giờ; nút cũ và Echo không nạp giờ.</p><p>Bẫy dập và đá rơi có viền vàng báo trước, gây mất 1 máu và giữ chân 0,25 giây khi trúng. Dây leo làm chậm 45% trên cả dải; có thể đi vòng.</p><p>Mỗi màn nhận một di vật khác nhau. Xong màn 5, ghép đủ năm di vật tại lò rèn.</p><p>Chuột trái tấn công; <kbd>Space</kbd> dùng kỹ năng class; <kbd>F</kbd> dùng vật phẩm +2 giây. <kbd>Shift</kbd> lướt né; <kbd>Esc</kbd> tạm dừng.</p><p>Boss báo trước đòn đánh bằng vòng băng xanh. Né ra ngoài; Echo giữ ấn sẽ tăng sức mạnh.</p></div></>}
+      })}</div></> : <><h2>Hợp tác với chính mình</h2><div className="help-grid"><p><kbd>W A S D</kbd> / phím mũi tên: di chuyển.</p><p><kbd>E</kbd> bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.</p><p><kbd>Q</kbd> gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng. <kbd>X</kbd> xóa Echo.</p><p>5 màn đầu: 10 giây tới từng ấn thạch theo số, rồi 10 giây tới cổng thoát. Nhặt mảnh thời gian xuất hiện mỗi 3 giây để cộng 4 giây. Chỉ nhân vật chạm điểm mới được nạp giờ; nút cũ và Echo không nạp giờ.</p><p>Bẫy dập và đá rơi có viền vàng báo trước, gây mất 1 máu và giữ chân 0,25 giây khi trúng. Dây leo làm chậm 45% trên cả dải; có thể đi vòng.</p><p>Mỗi màn nhận một di vật khác nhau. Xong màn 5, ghép đủ năm di vật tại lò rèn.</p><p>Chuột trái tấn công; chuột phải hoặc <kbd>Space</kbd> dùng kỹ năng class; <kbd>F</kbd> dùng vật phẩm +2 giây. <kbd>Shift</kbd> lướt né; <kbd>Esc</kbd> tạm dừng.</p><p>Boss báo trước đòn đánh bằng vòng băng xanh. Né ra ngoài; Echo giữ ấn sẽ tăng sức mạnh.</p></div></>}
     </div></div>}
   </div>);
 }
@@ -123,14 +152,14 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
     {hud.legTimeRemaining !== null && <div className={'leg-clock ' + (hud.legTimeRemaining <= 2 ? 'urgent' : '')} role="timer" aria-label="Thời gian đến điểm kế tiếp"><div><span>{hud.checkpointIndex < hud.checkpointCount ? `ĐẾN ẤN THẠCH ${hud.checkpointIndex+1} / ${hud.checkpointCount}` : 'ĐẾN CỔNG THOÁT'}</span><strong>{hud.legTimeRemaining.toFixed(1)}<small>s</small></strong></div><div className="leg-track"><i style={{width: `${Math.min(100,hud.legTimeRemaining/10*100)}%`}}/></div><p>{hud.slowed ? 'DÂY LEO · TỐC ĐỘ −45%' : 'Điểm mới +10s · Echo giữ cổng'}</p></div>}
     {boss && <div className="boss-bar"><div><span>THỦ VỆ BĂNG</span><small>{hud.bossHp} / 240 · {translate('GIAI ĐOẠN',hud.language)} {hud.bossPhase} / 3</small></div><div className="health-track" role="progressbar" aria-label="Máu boss" aria-valuenow={hud.bossHp} aria-valuemin={0} aria-valuemax={240}><i style={{ width: `${hud.bossHp/240*100}%` }}/></div></div>}
     {hud.bannerMessage && <div className={'hud-banner ' + (boss ? 'boss-banner' : 'trail-banner')}>{hud.bannerMessage}</div>}
-    {bag && <div className="inventory-panel"><div className="panel-top"><span className="eyebrow gold">TÚI DI VẬT</span><button className="text-button" onClick={() => setBag(false)}>×</button></div>{MATERIALS.map((m,i) => <div className={'inventory-item ' + (hud.completed.includes(i+1) ? 'found':'')} key={m.id}><span style={{color:m.color}}>{m.icon}</span><strong>{m.name}</strong><small>{hud.completed.includes(i+1) ? hud.forged ? 'ĐÃ RÈN' : '× 1' : `MÀN ${i+1}`}</small></div>)}{hud.forged && <div className="equipped"><Sword size={18}/> {hud.weapon==='staff'?'TRƯỢNG ECHO':'KIẾM ECHO'} ĐÃ TRANG BỊ</div>}</div>}
+    {bag && <div className="inventory-panel"><Inventory hud={hud} close={()=>setBag(false)}/></div>}
     <div className="hud-bottom"><div className="action-dock">
       <button className={hud.recordingStatus === 'recording' ? 'recording' : ''} onClick={() => engine?.toggleRecording()}><kbd>E</kbd><span>{hud.recordingStatus === 'recording' ? 'DỪNG GHI' : 'GHI ĐƯỜNG ĐI'}<small>{hud.recordingStatus === 'recording' ? `${(hud.recordingTimeRemaining/1000).toFixed(1)}s còn lại` : hud.recordingStatus === 'recorded' ? 'Đã lưu đường đi' : 'Tối đa 8 giây'}</small></span></button>
       <button onClick={() => engine?.spawnEcho()}><kbd>Q</kbd><span>{hud.echoCount ? 'GỌI LẠI ECHO' : 'GỌI ECHO'}<small>{hud.echoStatus === 'finished' ? 'Đang giữ vị trí' : hud.echoStatus === 'replaying' ? 'Đang phát lại' : 'Bản sao của quá khứ'}</small></span></button>
       {hud.echoCount > 0 && <button className="compact" title="Xóa Echo" onClick={() => engine?.dismissEcho()}><kbd>X</kbd></button>}
       {hud.legTimeRemaining !== null && <button disabled={hud.timeItems===0} onClick={()=>engine?.useTimeItem()}><kbd>F</kbd><span>+2 GIÂY<small>× {hud.timeItems}</small></span></button>}
-      <button className="combat-action" onClick={() => engine?.attack()}>{hud.weapon==='staff'?<span className="magic-action-icon">✦</span>:<Sword size={20}/>}<span>{hud.weapon==='staff'?'PHÉP':'CHÉM'} <kbd>🖱</kbd><small>{hud.attackCooldown > 0 ? 'Hồi đòn…' : hud.weapon==='staff'?'Trượng Echo':'Kiếm Echo'}</small></span></button><button onClick={() => engine?.useSkill()}><kbd>Space</kbd><span>KỸ NĂNG<small>{hud.skillCooldown > 0 ? `${hud.skillCooldown.toFixed(1)}s` : 'Sẵn sàng'}</small></span></button>{boss && <button onClick={() => engine?.dodge()}><Shield size={20}/><span>LƯỚT <kbd>Shift</kbd><small>{hud.dodgeCooldown > 0 ? `${hud.dodgeCooldown.toFixed(1)}s` : 'Sẵn sàng'}</small></span></button>}
-    </div>{hud.showHints && <p>WASD / ↑↓←→ di chuyển <span>·</span> E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Space kỹ năng · F +2s <span>·</span> Esc tạm dừng</p>}</div>
+      <button className="combat-action" onClick={() => engine?.attack()}>{hud.weapon==='staff'?<span className="magic-action-icon">✦</span>:<Sword size={20}/>}<span>{hud.weapon==='staff'?'PHÉP':'CHÉM'} <kbd>LMB</kbd><small>{hud.attackCooldown > 0 ? 'Hồi đòn…' : hud.weapon==='staff'?'Trượng Echo':'Kiếm Echo'}</small></span></button><button onClick={() => engine?.useSkill()}><kbd>RMB</kbd><span>KỸ NĂNG<small>{hud.skillCooldown > 0 ? `${hud.skillCooldown.toFixed(1)}s` : 'Space / Chuột phải'}</small></span></button>{boss && <button onClick={() => engine?.dodge()}><Shield size={20}/><span>LƯỚT <kbd>Shift</kbd><small>{hud.dodgeCooldown > 0 ? `${hud.dodgeCooldown.toFixed(1)}s` : 'Sẵn sàng'}</small></span></button>}
+    </div>{hud.showHints && <p>WASD / ↑↓←→ di chuyển <span>·</span> E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Chuột phải / Space kỹ năng · F +2s <span>·</span> Esc tạm dừng</p>}</div>
     {settings && <SettingsPanel engine={engine} hud={hud} close={()=>setSettings(false)}/>} 
   </div>);
 }
@@ -153,7 +182,7 @@ export function Forge({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       <div className="recipe-list">{MATERIALS.map((m,i)=><div className="recipe-item" key={m.id}><span className="recipe-icon" style={{color:m.color}}>{m.icon}</span><div><strong>{m.name}</strong><small>THU HỒI TỪ MÀN 0{i+1}</small></div><Check size={16}/></div>)}</div>
       <div className="sword-stats"><span>SÁT THƯƠNG <strong>15</strong></span><span>CỘNG HƯỞNG ECHO <strong>24</strong></span></div>
     </div><ForgeArt forged={hud.forged} weapon={hud.weapon}/></div>
-    <div className="forge-footer"><p>{hud.forged ? 'Đã trang bị · Chuột trái tấn công · Space kỹ năng' : 'Đủ 5 / 5 di vật · Chế tạo một lần cho hành trình này'}</p><button className="primary" disabled={!hud.forged && hud.completed.length < 5} onClick={() => hud.forged ? engine?.enterBoss() : engine?.forgeWeapon()}>{hud.forged ? <>BƯỚC VÀO ĐẤU TRƯỜNG <ArrowRight size={18}/></> : <><Hammer size={18}/> RÈN {hud.weapon==='staff'?'TRƯỢNG':'KIẾM'} ECHO</>}</button></div>
+    <div className="forge-footer"><p>{hud.forged ? 'Đã trang bị · Chuột trái tấn công · Chuột phải / Space kỹ năng' : 'Đủ 5 / 5 di vật · Chế tạo một lần cho hành trình này'}</p><button className="primary" disabled={!hud.forged && hud.completed.length < 5} onClick={() => hud.forged ? engine?.enterBoss() : engine?.forgeWeapon()}>{hud.forged ? <>BƯỚC VÀO ĐẤU TRƯỜNG <ArrowRight size={18}/></> : <><Hammer size={18}/> RÈN {hud.weapon==='staff'?'TRƯỢNG':'KIẾM'} ECHO</>}</button></div>
   </div></div>);
 }
 

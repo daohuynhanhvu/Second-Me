@@ -127,6 +127,36 @@ test('E records, Q summons, Space uses skill, and F spends one time item', t => 
   assert.equal(engine.attackCooldown,0);
 });
 
+test('right mouse uses skill, left mouse attacks, and the game suppresses its context menu', t => {
+  mockDocument(t);
+  const {engine} = setup();
+  engine.restartLevel();
+  const canvas = {width:1280,height:720,getBoundingClientRect:()=>({left:10,top:20,width:640,height:360})};
+  (engine as unknown as {canvas:unknown}).canvas=canvas;
+  const input=engine as unknown as {handleCanvasMouseDown(e:MouseEvent):void;handleCanvasContextMenu(e:MouseEvent):void};
+  let prevented=false;
+  input.handleCanvasMouseDown({button:2,clientX:110,clientY:120,preventDefault(){prevented=true;}} as MouseEvent);
+  assert.equal(prevented,true);
+  assert.equal(engine.skillCooldown,4);
+  assert.equal(engine.magicShots[0].targetX,200);
+  assert.equal(engine.magicShots[0].targetY,200);
+  input.handleCanvasMouseDown({button:0,clientX:110,clientY:120,preventDefault(){}} as MouseEvent);
+  assert.equal(engine.attackCooldown,.55);
+  prevented=false;
+  input.handleCanvasContextMenu({preventDefault(){prevented=true;}} as MouseEvent);
+  assert.equal(prevented,true);
+});
+
+test('character screen selects only playable classes and returns to lobby', t => {
+  mockDocument(t);
+  const engine=new GameEngine();engine.goToLobby();engine.openCharacters();
+  assert.equal(engine.screen,'characters');
+  engine.selectClass('swordsman');
+  assert.equal(engine.weapon,'sword');
+  engine.goToLobby();
+  assert.equal(engine.screen,'lobby');
+});
+
 test('retry after the final victory closes the overlay and starts a playable fresh level', t => {
   const document = mockDocument(t);
   const { engine, controls, advance } = setup();

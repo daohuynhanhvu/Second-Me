@@ -1,9 +1,9 @@
 export const MATERIALS = [
   { id: 'iron', name: 'Mảnh sắt cổ', detail: 'Kim loại còn ấm dưới lớp rêu.', icon: '◆', color: '#bbc8cf' },
-  { id: 'wood', name: 'Gỗ linh mộc', detail: 'Lõi gỗ dùng làm chuôi kiếm.', icon: '✦', color: '#b5c987' },
+  { id: 'wood', name: 'Gỗ linh mộc', detail: 'Lõi gỗ dùng để rèn vũ khí Echo.', icon: '✦', color: '#b5c987' },
   { id: 'crystal', name: 'Tinh thể Echo', detail: 'Lưu giữ ký ức của khu rừng.', icon: '◈', color: '#6ce5e8' },
   { id: 'ember', name: 'Than lửa thiêng', detail: 'Ngọn lửa không bao giờ tắt.', icon: '✺', color: '#ffaf70' },
-  { id: 'rune', name: 'Ấn thạch cổ', detail: 'Mảnh cuối để đánh thức thanh kiếm.', icon: '◇', color: '#dac18e' },
+  { id: 'rune', name: 'Ấn thạch cổ', detail: 'Mảnh cuối để đánh thức vũ khí Echo.', icon: '◇', color: '#dac18e' },
 ] as const;
 
 export type CharacterClass = 'mage' | 'swordsman';

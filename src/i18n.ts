@@ -5,6 +5,16 @@ export function getCurrentLanguage() { return currentLanguage; }
 
 // Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
 const pairs: [string, string][] = [
+  ['Character and class', 'Nhân vật và class'], ['Characters', 'NHÂN VẬT'], ['Inventory', 'TÚI ĐỒ'],
+  ['CHARACTERS & CLASSES', 'NHÂN VẬT & CLASS'],
+  ['WASD to move · E to record · Q to summon Echo · Right click for skill.', 'WASD di chuyển · E ghi đường đi · Q gọi Echo · Chuột phải dùng kỹ năng.'],
+  ['Left click: attack · Right click: skill · Shift: dodge.', 'Chuột trái: tấn công · Chuột phải: kỹ năng · Shift: lướt né.'],
+  ['Left click to attack; right click or', 'Chuột trái tấn công; chuột phải hoặc'],
+  ['Equipped · Left click attack · Right click / Space skill', 'Đã trang bị · Chuột trái tấn công · Chuột phải / Space kỹ năng'],
+  ['E record · Q summon Echo · X dismiss · Left click attack · Right click / Space skill · F +2s', 'E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Chuột phải / Space kỹ năng · F +2s'],
+  ['Space / Right click', 'Space / Chuột phải'],
+  ['Spiritwood heartwood for an Echo weapon.', 'Lõi gỗ dùng để rèn vũ khí Echo.'],
+  ['The final shard that awakens the Echo weapon.', 'Mảnh cuối để đánh thức vũ khí Echo.'],
   ['Choose class', 'CHỌN CLASS'], ['SHOP', 'CỬA HÀNG'], ['Magic staff', 'Trượng phép'], ['Echo staff', 'Trượng Echo'],
   ['Collect five relics, forge your class weapon and face the Frost Guardian.', 'Thu hồi năm di vật, rèn vũ khí của class và đối mặt với Thủ Vệ Băng.'],
   ['start recording; press again to save. Echo stays at the endpoint.', 'bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.'],
