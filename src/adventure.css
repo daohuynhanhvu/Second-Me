@@ -40,3 +40,44 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 @media(max-width:620px){.soldier-profile{transform:scale(3)}.boss-armor{font-size:7px}.combat-buff{top:170px}}
 .soldier-profile{transform:scale(6.5)}
 @media(max-width:600px){.soldier-profile{transform:scale(3.8)}}
+
+/* Let both built-in languages fit without browser translation or fixed-position collisions. */
+.adventure-app{font-family:system-ui,'Segoe UI',Arial,sans-serif}
+.eyebrow{font-family:system-ui,'Segoe UI',Arial,sans-serif;letter-spacing:.1em;line-height:1.5;overflow-wrap:anywhere}
+.primary,.secondary{min-width:0;line-height:1.4;text-align:center;white-space:normal;overflow-wrap:anywhere}
+.intro-screen{flex-direction:column;justify-content:flex-start;gap:clamp(8px,2vh,22px);overflow-x:hidden;overflow-y:auto;padding:clamp(12px,3vh,28px) 24px}
+.intro-mark{position:relative;top:auto;flex:none;max-width:100%;min-height:48px;margin:0 auto;justify-content:center;font-family:system-ui,'Segoe UI',Arial,sans-serif;line-height:1.4;letter-spacing:.1em;white-space:normal}
+.intro-copy{width:min(100%,680px);max-width:100%;flex:none;margin:auto 0}
+.intro-copy h1{font-size:clamp(48px,min(10vw,18vh),125px);line-height:1.05!important;overflow-wrap:anywhere}
+.intro-copy>p{font-family:system-ui,'Segoe UI',Arial,sans-serif;letter-spacing:.14em;line-height:1.5;overflow-wrap:anywhere}
+.intro-enter{max-width:100%;margin:clamp(10px,3vh,35px) auto 8px;line-height:1.4;white-space:normal}
+.intro-runes{position:relative;bottom:auto;flex:none;margin:0 auto;white-space:nowrap}
+.title-screen{justify-content:flex-start;gap:16px;overflow-x:hidden;overflow-y:auto}
+.title-top,.title-footer{position:relative;inset:auto;max-width:100%;flex:none}
+.title-top{width:100%;gap:12px}
+.title-top>span{min-width:0;overflow-wrap:anywhere}
+.title-lockup{width:min(100%,520px);max-width:100%;margin:auto 0;flex:none}
+.title-sub{font-family:system-ui,'Segoe UI',Arial,sans-serif;letter-spacing:.12em;line-height:1.5;overflow-wrap:anywhere}
+.title-footer{margin:0 auto;text-align:center;line-height:1.5;overflow-wrap:anywhere}
+.loading-screen{overflow-y:auto;padding:16px}
+.lobby-screen{display:flex;flex-direction:column}
+.lobby-header{flex:none;gap:10px}
+.lobby-header>div,.lobby-header nav{min-width:0}
+.lobby-layout{flex:1;min-height:0;height:auto;overflow-y:auto}
+.map-title{height:auto;min-height:36px;gap:8px;flex-wrap:wrap}
+.map-title small{text-align:right}
+.map-node strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.35}
+.hud-top,.hud-tools,.action-dock{min-width:0}
+.hud-tools{flex-wrap:wrap;justify-content:flex-end}
+.hud-tools button{min-width:36px;justify-content:center}
+.action-dock{flex-wrap:wrap;justify-content:center;max-width:100%}
+.hud-bottom>p{max-width:100%;line-height:1.5;overflow-wrap:anywhere;text-align:center}
+.characters-layout{overflow:hidden}
+.character-detail{min-width:0;min-height:0;overflow-y:auto}
+.character-description{min-width:0;overflow-wrap:anywhere}
+@media(max-width:1050px){.boss-bar{top:90px;left:50%;width:min(370px,90%)}.boss-banner{top:190px}}
+@media(max-width:850px){.lobby-header nav .wizard-avatar{display:inline-flex}}
+@media(max-width:720px){.game-stage{width:100vw;height:100dvh;max-height:none;aspect-ratio:auto}.lobby-header{padding:10px 13px;min-height:67px;height:auto}.lobby-header nav{flex-wrap:wrap;justify-content:flex-end}.lobby-layout{grid-template-columns:1fr;grid-auto-rows:max-content;align-content:start;align-items:start}.lobby-welcome{min-height:0}.trail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.intro-screen{padding-inline:14px}.intro-mark{font-size:8px;letter-spacing:.06em}.intro-copy h1{font-size:clamp(42px,12vw,68px)}.intro-runes{letter-spacing:7px}.trail-grid{grid-template-columns:1fr}.lobby-header b{font-size:11px;letter-spacing:.08em}}
+@media(max-height:500px){.intro-screen{gap:7px}.intro-mark{min-height:36px;font-size:8px}.intro-mark .wizard-avatar{width:30px;height:34px}.intro-mark .wizard-avatar img{width:90px;height:90px;left:-30px;top:-22px}.intro-copy h1{font-size:clamp(36px,12vh,60px);margin:5px 0;line-height:1!important}.intro-copy>p{font-size:9px}.intro-enter{min-height:38px;padding:8px 16px;margin:10px auto 5px}.intro-runes{font-size:10px;line-height:1}.title-screen{gap:8px}.title-lockup h1{font-size:clamp(32px,10vh,52px)}.title-rule{margin:10px auto}.title-actions{margin:12px auto 0;gap:5px}.title-description{line-height:1.5}.title-footer{font-size:8px}}
+@media(max-height:400px){.action-dock button{padding:6px 7px;gap:4px}.action-dock button>span{font-size:8px}.action-dock small{display:none}.hud-bottom>p{font-size:7px}.leg-clock{padding:6px 10px}.leg-clock p{margin-top:3px}}
