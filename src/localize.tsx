@@ -6,7 +6,7 @@ export function localize(node: React.ReactNode): React.ReactNode {
   const language = getCurrentLanguage();
   const visit = (value: React.ReactNode): React.ReactNode => {
     if (typeof value === 'string') return translate(value, language);
-    if (Array.isArray(value)) return value.map(visit);
+    if (Array.isArray(value)) return React.Children.toArray(value).map(visit);
     if (!React.isValidElement(value)) return value;
     const props = value.props as Record<string, unknown>;
     const changed: Record<string, unknown> = {};
