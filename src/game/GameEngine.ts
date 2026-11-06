@@ -26,7 +26,7 @@ import {
 import { LEVELS } from './logic/levels.ts';
 import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
-import { Campaign, createBoss, swordHit, updateBoss, type BossState } from './logic/campaign.ts';
+import { Campaign, createBoss, swordHit, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 
@@ -60,6 +60,13 @@ export interface HUDState {
   showHints: boolean;
   devUnlocked: boolean;
   language: Language;
+  characterClass: CharacterClass;
+  weapon: 'staff' | 'sword';
+  coins: number;
+  timeItems: number;
+  bestStars: Record<number, number>;
+  lastRating: { stars: number; coins: number } | null;
+  skillCooldown: number;
 }
 
 export class GameEngine {
@@ -112,6 +119,10 @@ export class GameEngine {
   public showHints = true;
   public devUnlocked = false;
   public language: Language = 'en';
+  public characterClass: CharacterClass = 'mage';
+  public lastRating: { stars: number; coins: number } | null = null;
+  public skillCooldown = 0;
+  public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
   private devKeyCount = 0;
   private lastDevKeyAt = 0;
 
@@ -153,6 +164,7 @@ export class GameEngine {
       this.reducedMotion = value.reducedMotion === true;
       this.showHints = value.showHints !== false;
       this.language = value.language === 'vi' ? 'vi' : 'en';
+      this.characterClass = value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
       setCurrentLanguage(this.language);
       if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', this.reducedMotion);
     } catch { /* Defaults keep the game playable. */ }
@@ -160,7 +172,7 @@ export class GameEngine {
 
   private saveSettings() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-settings-v1', JSON.stringify({
-      muted: sounds.getMuted(), volume: sounds.getVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language,
+      muted: sounds.getMuted(), volume: sounds.getVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
     })); } catch { /* Ignore unavailable storage. */ }
   }
 
@@ -237,6 +249,11 @@ export class GameEngine {
     document.body.dataset.state = 'lobby';
     this.notifyHUD();
   }
+  public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
+  public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
+  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby') return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
+  public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
+  public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || !this.campaign.useTimeItem()) return false; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 
   public stop() {
     if (this.animFrameId !== null) {
@@ -298,6 +315,9 @@ export class GameEngine {
     this.health = 5;
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
+    this.magicShots = [];
+    this.skillCooldown = 0;
+    this.lastRating = null;
     this.bossDeathElapsed = 0;
     this.bossDeathPending = false;
     this.lastReward = null;
@@ -369,25 +389,59 @@ export class GameEngine {
     if (this.screen !== 'forge' || !this.campaign.forged) return;
     this.currentLevelIdx = 5;
     this.restartLevel();
-    this.showBanner('J / Space: chém · Shift: lướt né · Echo giữ ấn sẽ tăng sức mạnh.', 6);
+    this.showBanner('Chuột trái: tấn công · Space: kỹ năng · Shift: lướt né.', 6);
   }
 
-  public attack() {
-    if (this.screen !== 'playing' || !this.boss || this.bossDeathPending || !this.campaign.forged || this.attackCooldown > 0) return;
+  private finishBossHit() {
+    if (!this.boss) return;
+    this.renderer.emitMagic('sparkle', this.boss.x, this.boss.y, 80);
+    sounds.playPlateActivate();
+    if (this.boss.hp <= 0) {
+      this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
+      this.campaign.bossDefeated = true;
+      this.campaign.save();
+      this.bossDeathPending = true;
+      this.bossDeathElapsed = 0;
+      this.heldKeys.clear();
+      sounds.playVictory();
+    }
+    this.notifyHUD();
+  }
+
+  private magicDamage(amount: number) {
+    if (!this.boss || this.bossDeathPending || this.boss.hp <= 0) return;
+    this.boss.hp = Math.max(0, this.boss.hp - amount);
+    this.boss.hitFlash = 0.18;
+    this.finishBossHit();
+  }
+
+  public attack(target?: { x: number; y: number }) {
+    if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
     this.attackCooldown = 0.55;
-    this.attackFlash = 0.22;
-    const empowered = this.currentLevel.plates.some(p => p.isPressed);
-    if (swordHit(this.boss, this.player.x, this.player.y, empowered)) {
-      this.renderer.emitMagic('sparkle', this.boss.x, this.boss.y, 80);
-      sounds.playPlateActivate();
-      if (this.boss.hp <= 0) {
-        this.campaign.bossDefeated = true;
-        this.campaign.save();
-        this.bossDeathPending = true;
-        this.bossDeathElapsed = 0;
-        this.heldKeys.clear();
-        sounds.playVictory();
-      }
+    if (this.characterClass === 'mage') {
+      const fallback = this.boss ? { x: this.boss.x, y: this.boss.y } : { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+      const aim = target ?? fallback;
+      const reach = Math.hypot(aim.x - this.player.x, aim.y - this.player.y);
+      const scale = Math.min(1, 450 / Math.max(1, reach));
+      this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: this.player.x + (aim.x - this.player.x) * scale, targetY: this.player.y + (aim.y - this.player.y) * scale, age: 0, skill: false });
+      this.renderer.emitMagic('summon', this.player.x, this.player.y - 10, 38);
+    } else {
+      this.attackFlash = 0.22;
+      if (this.boss && swordHit(this.boss, this.player.x, this.player.y, this.currentLevel.plates.some(p => p.isPressed))) this.finishBossHit();
+    }
+    this.notifyHUD();
+  }
+
+  public useSkill(target?: { x: number; y: number }) {
+    if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
+    this.skillCooldown = 4;
+    if (this.characterClass === 'mage') {
+      const aim = target ?? (this.boss ? { x: this.boss.x, y: this.boss.y } : { x: this.player.x, y: this.player.y - 180 });
+      this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: aim.x, targetY: aim.y, age: 0, skill: true });
+      this.renderer.emitMagic('rune', this.player.x, this.player.y - 10, 70);
+    } else {
+      this.attackFlash = 0.3;
+      if (this.boss && Math.hypot(this.boss.x - this.player.x, this.boss.y - this.player.y) <= 145) this.magicDamage(40);
     }
     this.notifyHUD();
   }
@@ -567,6 +621,7 @@ export class GameEngine {
       return;
     }
     if (this.screen === 'loading') return;
+    if (this.screen === 'shop') { if (code === 'Escape') this.goToLobby(); return; }
     if (this.screen === 'lobby') return;
 
     // Victory screen start next
@@ -601,13 +656,14 @@ export class GameEngine {
 
     // In playing state
     if (this.screen === 'playing') {
-      if (code === 'Space' || code === 'KeyJ') { this.attack(); return; }
+      if (code === 'Space') { this.useSkill(); return; }
       if (code === 'ShiftLeft' || code === 'ShiftRight') { this.dodge(); return; }
-      if (key === 'r') {
+      if (key === 'f') { this.useTimeItem(); return; }
+      if (key === 'e') {
         this.toggleRecording();
-      } else if (key === 'e') {
-        this.spawnEcho();
       } else if (key === 'q') {
+        this.spawnEcho();
+      } else if (key === 'x') {
         this.dismissEcho();
       }
     }
@@ -626,16 +682,25 @@ export class GameEngine {
     this.pauseGame();
   };
 
+  private handleCanvasMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0 || !this.canvas || this.screen !== 'playing') return;
+    const bounds = this.canvas.getBoundingClientRect();
+    this.attack({ x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
+      y: (e.clientY - bounds.top) * this.canvas.height / bounds.height });
+  };
+
   private bindInputs() {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('blur', this.handleWindowBlur);
+    this.canvas?.addEventListener('mousedown', this.handleCanvasMouseDown);
   }
 
   private unbindInputs() {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
     window.removeEventListener('blur', this.handleWindowBlur);
+    this.canvas?.removeEventListener('mousedown', this.handleCanvasMouseDown);
   }
 
   // --- Game Loop ---
@@ -704,6 +769,14 @@ export class GameEngine {
     }
     this.invulnerability = Math.max(0, this.invulnerability - dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    for (const shot of this.magicShots) {
+      shot.age += dt;
+      if (shot.age >= 0.3 && this.boss && Math.hypot(shot.targetX - this.boss.x, shot.targetY - this.boss.y) < (shot.skill ? 110 : 55)) {
+        this.magicDamage(shot.skill ? 40 : 15);
+      }
+    }
+    this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
     this.attackFlash = Math.max(0, this.attackFlash - dt);
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.dodgeTime = Math.max(0, this.dodgeTime - dt);
@@ -913,6 +986,7 @@ export class GameEngine {
   }
 
   private handleVictory() {
+    this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
     this.lastReward = this.campaign.award(this.currentLevel.id) ? this.currentLevel.id : null;
     this.screen = 'victory';
     document.body.dataset.state = 'gameover';
@@ -984,6 +1058,13 @@ export class GameEngine {
         showHints: this.showHints,
         devUnlocked: this.devUnlocked,
         language: this.language,
+        characterClass: this.characterClass,
+        weapon: this.weapon,
+        coins: this.campaign.coins,
+        timeItems: this.campaign.timeItems,
+        bestStars: { ...this.campaign.bestStars },
+        lastRating: this.lastRating,
+        skillCooldown: this.skillCooldown,
       });
     }
   }

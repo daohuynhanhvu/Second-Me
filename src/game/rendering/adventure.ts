@@ -64,7 +64,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
     const walking = boss.mode === 'stalking' && Math.hypot(game.player.x - boss.x, game.player.y - boss.y) > 85;
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
-    if (game.campaign.forged) {
+    if (game.campaign.forged && game.characterClass === 'swordsman') {
       ctx.save(); ctx.translate(game.player.x, game.player.y);
       const angle = game.player.direction === 'left' ? -1.5 : game.player.direction === 'up' ? -2.7 : game.player.direction === 'down' ? .4 : -0.8;
       ctx.rotate(angle + (game.attackFlash > 0 ? (0.22 - game.attackFlash) * 18 : 0));
@@ -76,6 +76,25 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       }
       ctx.restore();
     }
+  }
+  if (game.characterClass === 'swordsman') {
+    ctx.save(); ctx.translate(game.player.x, game.player.y - 8);
+    ctx.fillStyle = '#735e4a'; ctx.strokeStyle = '#d4b986'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-17,-17); ctx.lineTo(0,-34); ctx.lineTo(17,-17); ctx.lineTo(13,16); ctx.lineTo(-13,16); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#c8d2d1'; ctx.fillRect(-12,-29,24,14); ctx.fillStyle = '#3c5558'; ctx.fillRect(-10,-20,20,4);
+    ctx.restore();
+  }
+  if (game.characterClass === 'mage' && game.campaign.forged) {
+    ctx.save(); ctx.translate(game.player.x+17, game.player.y);
+    ctx.strokeStyle='#b69262'; ctx.lineWidth=7; ctx.beginPath();ctx.moveTo(0,11);ctx.lineTo(3,-39);ctx.stroke();
+    ctx.shadowColor='#84fff2';ctx.shadowBlur=20;ctx.fillStyle='#80f5e9';ctx.beginPath();ctx.arc(3,-46,11,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  for (const shot of game.magicShots) {
+    const t = Math.min(1, shot.age / 0.3);
+    const x = shot.x + (shot.targetX-shot.x)*t, y=shot.y+(shot.targetY-shot.y)*t;
+    ctx.save();ctx.shadowColor=shot.skill?'#f7dc83':'#82fff4';ctx.shadowBlur=25;
+    ctx.fillStyle=shot.skill?'#ffe7a4':'#b5fff7';ctx.beginPath();ctx.arc(x,y,shot.skill?18:9,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   if (game.invulnerability > 0) {
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);

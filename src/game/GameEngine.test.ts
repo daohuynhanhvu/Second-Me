@@ -47,7 +47,7 @@ function setup() {
   return { engine, controls, advance, walk, recordToPlate };
 }
 
-test('R stops on the plate: walking away cannot extend the saved path', () => {
+test('E stops on the plate: walking away cannot extend the saved path', () => {
   const { engine, advance, walk, recordToPlate } = setup();
   recordToPlate();
   engine.toggleRecording();
@@ -63,7 +63,7 @@ test('R stops on the plate: walking away cannot extend the saved path', () => {
   assert.equal(engine.currentLevel.doors[0].openProgress, 1);
 });
 
-test('E finishes an active recording before the player walks away', () => {
+test('Q finishes an active recording before the player walks away', () => {
   const { engine, advance, walk, recordToPlate } = setup();
   recordToPlate();
   engine.spawnEcho();
@@ -90,10 +90,10 @@ test('an existing Echo holds its original destination during a new recording', (
   assert.equal(engine.currentLevel.plates[0].isPressed, true);
 });
 
-test('holding R cannot stop and restart a recording through key repeat', () => {
+test('holding E cannot stop and restart a recording through key repeat', () => {
   const { engine, controls, advance } = setup();
   const event = (repeat: boolean) => ({
-    code: 'KeyR', key: 'r', repeat, preventDefault() {},
+    code: 'KeyE', key: 'e', repeat, preventDefault() {},
   }) as KeyboardEvent;
   controls.handleKeyDown(event(false));
   advance(0.1);
@@ -103,6 +103,28 @@ test('holding R cannot stop and restart a recording through key repeat', () => {
   controls.handleKeyDown(event(false));
   controls.handleKeyDown(event(true));
   assert.equal(engine.recorder.getStatus(), 'recorded');
+});
+
+test('E records, Q summons, Space uses skill, and F spends one time item', t => {
+  mockDocument(t);
+  const { engine, controls } = setup();
+  engine.restartLevel();
+  const press = (key: string, code: string) => controls.handleKeyDown({key,code,repeat:false,preventDefault(){}} as KeyboardEvent);
+  press('e','KeyE');
+  assert.equal(engine.recorder.getStatus(),'recording');
+  press('e','KeyE');
+  assert.equal(engine.recorder.getStatus(),'recorded');
+  press('q','KeyQ');
+  assert.ok(engine.echo);
+  press(' ','Space');
+  assert.ok(engine.skillCooldown > 0);
+  engine.campaign.timeItems=1;
+  const before=engine.legTimeRemaining!;
+  press('f','KeyF');
+  assert.equal(engine.campaign.timeItems,0);
+  assert.equal(engine.legTimeRemaining,before+2);
+  press('j','KeyJ');
+  assert.equal(engine.attackCooldown,0);
 });
 
 test('retry after the final victory closes the overlay and starts a playable fresh level', t => {

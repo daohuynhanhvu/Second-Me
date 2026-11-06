@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Campaign, createBoss, swordHit, updateBoss } from './campaign.ts';
+import { Campaign, createBoss, swordHit, updateBoss, levelRating } from './campaign.ts';
 import { GameEngine } from '../GameEngine.ts';
 import { LEVELS } from './levels.ts';
 import { sounds } from './sound.ts';
@@ -23,11 +23,54 @@ test('each of five trails grants a unique material; replay cannot duplicate it',
   assert.equal(campaign.forged, false);
 });
 
+test('star thresholds pay the correct coins and time items are single use', () => {
+  assert.deepEqual([15, 15.01, 20, 20.01, 25, 25.01].map(levelRating), [
+    {stars:3,coins:12},{stars:2,coins:8},{stars:2,coins:8},
+    {stars:1,coins:4},{stars:1,coins:4},{stars:0,coins:0},
+  ]);
+  const campaign = new Campaign();
+  campaign.completeLevel(1, 14);
+  assert.equal(campaign.coins, 12);
+  assert.equal(campaign.buyTimeItem(), true);
+  assert.equal(campaign.buyTimeItem(), true);
+  assert.equal(campaign.buyTimeItem(), false);
+  assert.equal(campaign.coins, 2);
+  assert.equal(campaign.timeItems, 2);
+  assert.equal(campaign.useTimeItem(), true);
+  assert.equal(campaign.useTimeItem(), true);
+  assert.equal(campaign.useTimeItem(), false);
+  campaign.completeLevel(1, 24);
+  assert.equal(campaign.bestStars[1], 3);
+});
+
+test('mage magic and class skill damage the boss, while the class fixes the weapon', t => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
+  t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
+  const game = new GameEngine();
+  assert.equal(game.weapon, 'staff');
+  for(let i=1;i<=5;i++)game.campaign.award(i);
+  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  const update = (game as unknown as {update(dt:number):void}).update.bind(game);
+  game.player.x=game.boss!.x-200;game.player.y=game.boss!.y;
+  const target = {x:game.boss!.x,y:game.boss!.y};
+  game.attack(target);
+  assert.equal(game.boss!.hp,240);
+  for(let i=0;i<7;i++)update(.05);
+  assert.equal(game.boss!.hp,225);
+  game.useSkill({x:game.boss!.x,y:game.boss!.y});
+  for(let i=0;i<7;i++)update(.05);
+  assert.equal(game.boss!.hp,185);
+  game.goToLobby();game.selectClass('swordsman');
+  assert.equal(game.weapon,'sword');
+});
+
 test('all five wins unlock the forge, forging gates the boss, and the boss gates the ending', t => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=> previous ? Object.defineProperty(globalThis,'document',previous) : Reflect.deleteProperty(globalThis,'document'));
   const game = new GameEngine();
+  game.screen='lobby';game.selectClass('swordsman');
   const controls = game as unknown as { update(dt:number):void; handleVictory():void };
   game.startGame();
   game.selectLevel(5);
@@ -103,6 +146,7 @@ test('attack cooldown prevents duplicate hits and a dodge prevents immediate dam
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
+  game.screen='lobby';game.selectClass('swordsman');
   game.screen='forge';game.forgeWeapon();game.enterBoss();
   game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;
   game.attack();game.attack();assert.equal(game.boss!.hp,225);

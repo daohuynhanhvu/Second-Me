@@ -5,6 +5,21 @@ export function getCurrentLanguage() { return currentLanguage; }
 
 // Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
 const pairs: [string, string][] = [
+  ['Choose class', 'CHỌN CLASS'], ['SHOP', 'CỬA HÀNG'], ['Magic staff', 'Trượng phép'], ['Echo staff', 'Trượng Echo'],
+  ['Collect five relics, forge your class weapon and face the Frost Guardian.', 'Thu hồi năm di vật, rèn vũ khí của class và đối mặt với Thủ Vệ Băng.'],
+  ['start recording; press again to save. Echo stays at the endpoint.', 'bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.'],
+  ['summon Echo. Let it hold a switch while you cross the gate.', 'gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng.'],
+  ['dismiss Echo.', 'xóa Echo.'],
+  ['Left click to attack;', 'Chuột trái tấn công;'], ['use class skill;', 'dùng kỹ năng class;'], ['use a +2 second item.', 'dùng vật phẩm +2 giây.'],
+  ['CAST', 'PHÉP'], ['SLASH', 'CHÉM'], ['SKILL', 'KỸ NĂNG'], ['+2 SECONDS', '+2 GIÂY'],
+  ['Left click: attack · Space: skill · Shift: dodge.', 'Chuột trái: tấn công · Space: kỹ năng · Shift: lướt né.'],
+  ['Time potion purchased', 'Đã mua bình thời gian'], ['Not enough coins', 'Không đủ xu'], ['+2s · Time potion used', '+2 giây · Đã dùng bình thời gian'],
+  ['Materials for staff', 'Nguyên liệu chế tạo trượng'], ['Materials for sword', 'Nguyên liệu chế tạo kiếm'],
+  ['One staff.\nFive memories.', 'Một cây trượng.\nNăm ký ức.'],
+  ['Equipped · Left click to attack · Space for skill', 'Đã trang bị · Chuột trái tấn công · Space kỹ năng'],
+  ['FORGE ECHO STAFF', 'RÈN TRƯỢNG ECHO'], ['FORGE ECHO SWORD', 'RÈN KIẾM ECHO'],
+  ['ECHO STAFF · AWAKENED', 'ECHO STAFF · ĐÃ THỨC TỈNH'],
+  ['E record · Q summon Echo · X dismiss · Left click attack · Space skill · F +2s', 'E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Space kỹ năng · F +2s'],
   ['Enter the forest', 'BƯỚC VÀO KHU RỪNG'], ['Awakening the forest', 'ĐANG ĐÁNH THỨC KHU RỪNG'],
   ['THE ANCIENT PATH REMEMBERS', 'LỐI XƯA CÒN GHI NHỚ'], ['CHAPTER II · THE EMBERFORGE', 'CHƯƠNG II · LÒ RÈN LỬA'],
   ['Echoes of the Wild', 'TIẾNG VỌNG NƠI HOANG DÃ'], ['ENTER / SPACE', 'ENTER / PHÍM CÁCH'],

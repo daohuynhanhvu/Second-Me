@@ -79,6 +79,6 @@ export interface Trap extends Rect {
   offset: number;
 }
 
-export type GameScreen = 'intro' | 'loading' | 'lobby' | 'playing' | 'paused' | 'victory' | 'forge' | 'defeat' | 'ending';
+export type GameScreen = 'intro' | 'loading' | 'lobby' | 'shop' | 'playing' | 'paused' | 'victory' | 'forge' | 'defeat' | 'ending';
 export type RecordingStatus = 'idle' | 'recording' | 'recorded';
 export type EchoStatus = 'none' | 'replaying' | 'finished';
