@@ -70,10 +70,16 @@ export interface BossState {
   mode: 'stalking' | 'warning' | 'strike' | 'recover'; timer: number;
   targetX: number; targetY: number; hitFlash: number;
   projectiles: { x: number; y: number; vx: number; vy: number; life: number }[];
+  pillars: { x: number; y: number; hp: number; maxHp: number }[];
+  armor: number;
+  burstCooldown: number; burstRemaining: number; burstPulse: number;
+  burstAreas: { x: number; y: number; radius: number; timer: number; struck: boolean }[];
 }
 export function createBoss(): BossState {
   return { x: 890, y: 350, hp: 240, maxHp: 240, phase: 1, mode: 'stalking', timer: 2,
-    targetX: 0, targetY: 0, hitFlash: 0, projectiles: [] };
+    targetX: 0, targetY: 0, hitFlash: 0, projectiles: [],
+    pillars: [[130,125],[1150,125],[130,595],[1150,595]].map(([x,y])=>({x,y,hp:60,maxHp:60})),
+    armor: 100, burstCooldown: 5, burstRemaining: 0, burstPulse: 0, burstAreas: [], };
 }
 
 export function swordHit(boss: BossState, x: number, y: number, empowered = false): number {
@@ -89,6 +95,29 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+  const activePillars = boss.pillars.filter(p=>p.hp>0).length;
+  boss.armor = activePillars * 25;
+  if (activePillars) boss.hp = Math.min(boss.maxHp, boss.hp + activePillars * 2 * dt);
+  boss.burstCooldown -= dt;
+  if (boss.burstCooldown <= 0) { boss.burstCooldown += 5; boss.burstRemaining = 2; boss.burstPulse = 0; }
+  if (boss.burstRemaining > 0) {
+    boss.burstRemaining = Math.max(0,boss.burstRemaining-dt);
+    boss.burstPulse -= dt;
+    if (boss.burstPulse <= 0) {
+      boss.burstPulse += .22;
+      for(let i=0;i<5;i++) {
+        const angle=Math.PI*2*(i/5)+Math.random()*.22;
+        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*210,vy:Math.sin(angle)*210,life:3.2});
+      }
+      for(let i=0;i<2;i++)boss.burstAreas.push({x:Math.max(85,Math.min(1195,player.x+(Math.random()-.5)*260)),y:Math.max(85,Math.min(635,player.y+(Math.random()-.5)*220)),radius:50,timer:.55,struck:false});
+    }
+  }
+  let burstHit=false;
+  for(const area of boss.burstAreas) {
+    area.timer-=dt;
+    if(area.timer<=0 && !area.struck) { area.struck=true; if(Math.hypot(player.x-area.x,player.y-area.y)<area.radius+12)burstHit=true; }
+  }
+  boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
   boss.timer -= dt;
   let hit = false;
   if (boss.mode === 'stalking') {
@@ -122,5 +151,5 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     if (Math.hypot(shot.x - player.x, shot.y - player.y) < 19) { shot.life = 0; hit = true; }
   }
   boss.projectiles = boss.projectiles.filter(s => s.life > 0 && s.x > 40 && s.x < 1240 && s.y > 40 && s.y < 680);
-  return hit;
+  return hit || burstHit;
 }

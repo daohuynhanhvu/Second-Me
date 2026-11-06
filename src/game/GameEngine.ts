@@ -26,9 +26,12 @@ import {
 import { LEVELS } from './logic/levels.ts';
 import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
-import { Campaign, createBoss, swordHit, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
+import { Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
+
+export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | 'wave';
+const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'] };
 
 export interface HUDState {
   screen: GameScreen;
@@ -67,6 +70,10 @@ export interface HUDState {
   bestStars: Record<number, number>;
   lastRating: { stars: number; coins: number } | null;
   skillCooldown: number;
+  bossArmor: number;
+  pillarsRemaining: number;
+  activeBuff: string;
+  skillDrop: CombatSkill | null;
 }
 
 export class GameEngine {
@@ -93,6 +100,10 @@ export class GameEngine {
     elapsedMs: number;
     status: 'replaying' | 'finished';
     samples: MovementSample[];
+    combatLife?: number;
+    aggroTime?: number;
+    attackTimer?: number;
+    characterClass?: CharacterClass;
   } | null = null;
 
   // Recording
@@ -123,6 +134,14 @@ export class GameEngine {
   public lastRating: { stars: number; coins: number } | null = null;
   public skillCooldown = 0;
   public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
+  public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
+  public skillDropTimer = 5;
+  public stoneShield = 0;
+  public armorShield = 0;
+  public hasteTime = 0;
+  public fireBurnTime = 0;
+  public fireBurnTick = 0;
+  public combatFlash: { x:number;y:number;kind:CombatSkill;time:number } | null = null;
   private devKeyCount = 0;
   private lastDevKeyAt = 0;
 
@@ -317,6 +336,9 @@ export class GameEngine {
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.magicShots = [];
+    this.skillDrop = null; this.skillDropTimer = 5;
+    this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
+    this.combatFlash = null;
     this.skillCooldown = 0;
     this.lastRating = null;
     this.bossDeathElapsed = 0;
@@ -409,18 +431,69 @@ export class GameEngine {
     this.notifyHUD();
   }
 
-  private magicDamage(amount: number) {
-    if (!this.boss || this.bossDeathPending || this.boss.hp <= 0) return;
-    this.boss.hp = Math.max(0, this.boss.hp - amount);
-    this.boss.hitFlash = 0.18;
-    this.finishBossHit();
+  private combatAim() {
+    const pillar = this.boss?.pillars.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
+    return pillar ? {x:pillar.x,y:pillar.y} : this.boss ? {x:this.boss.x,y:this.boss.y} : null;
+  }
+
+  private damageCombatTarget(x:number,y:number,amount:number,radius=65) {
+    if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
+    const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
+    if(pillar) {
+      pillar.hp=Math.max(0,pillar.hp-amount);
+      this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
+      this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
+      if(pillar.hp===0)this.showBanner(this.boss.armor===0
+        ? (this.language==='vi'?'Bốn trụ đã bị phá · Boss mất giáp!':'All four pillars destroyed · Boss armor broken!')
+        : (this.language==='vi'?`Đã phá trụ · Còn ${this.boss.armor/25} trụ`:`Pillar destroyed · ${this.boss.armor/25} remaining`));
+      this.notifyHUD(); return true;
+    }
+    if(Math.hypot(this.boss.x-x,this.boss.y-y)>radius) return false;
+    if(this.boss.pillars.some(p=>p.hp>0)) { this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,35); return false; }
+    this.boss.hp=Math.max(0,this.boss.hp-amount);
+    this.boss.hitFlash=.18;
+    this.finishBossHit(); return true;
+  }
+
+  private spawnCombatSkill() {
+    if(!this.boss)return;
+    const skills=CLASS_SKILLS[this.characterClass];
+    const kind=skills[Math.floor(Math.random()*skills.length)];
+    const angle=Math.random()*Math.PI*2;
+    const x=Math.max(80,Math.min(1200,this.player.x+Math.cos(angle)*105));
+    const y=Math.max(85,Math.min(630,this.player.y+Math.sin(angle)*105));
+    this.skillDrop={kind,x,y,fall:0};
+    this.showBanner(this.language==='vi'?'Ô kỹ năng đã rơi xuống!':'A skill pickup has landed!');
+  }
+
+  private collectCombatSkill(kind:CombatSkill) {
+    const aim=this.combatAim();
+    const names:Record<CombatSkill,[string,string]>={
+      fire:['Fire bolt: 35 damage + burn','Đạn lửa: 35 sát thương + đốt'],
+      lightning:['Lightning: 50 damage','Tia sét: 50 sát thương'],
+      stone:['Stone shield: block 2 hits','Khiên đá: chặn 2 đòn'],
+      haste:['Haste: attack twice as fast for 6s','Tăng tốc chém gấp đôi trong 6 giây'],
+      armor:['Armor: block 1 hit','Giáp: chặn 1 đòn'],
+      wave:['Sword wave: 55 damage','Kiếm quang: 55 sát thương'],
+    };
+    this.showBanner(names[kind][this.language==='vi'?1:0],3);
+    this.combatFlash={x:this.player.x,y:this.player.y,kind,time:.65};
+    if(kind==='stone')this.stoneShield=2;
+    else if(kind==='armor')this.armorShield=1;
+    else if(kind==='haste')this.hasteTime=6;
+    else if(aim) {
+      const damage=kind==='fire'?35:kind==='lightning'?50:55;
+      if(this.damageCombatTarget(aim.x,aim.y,damage,65) && kind==='fire' && this.boss?.armor===0) { this.fireBurnTime=3; this.fireBurnTick=1; }
+      this.combatFlash={x:aim.x,y:aim.y,kind,time:.65};
+    }
+    this.notifyHUD();
   }
 
   public attack(target?: { x: number; y: number }) {
     if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
-    this.attackCooldown = 0.55;
+    this.attackCooldown = this.hasteTime>0 ? .27 : .55;
     if (this.characterClass === 'mage') {
-      const fallback = this.boss ? { x: this.boss.x, y: this.boss.y } : { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+      const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
       const aim = target ?? fallback;
       const reach = Math.hypot(aim.x - this.player.x, aim.y - this.player.y);
       const scale = Math.min(1, 450 / Math.max(1, reach));
@@ -428,7 +501,9 @@ export class GameEngine {
       this.renderer.emitMagic('summon', this.player.x, this.player.y - 10, 38);
     } else {
       this.attackFlash = 0.22;
-      if (this.boss && swordHit(this.boss, this.player.x, this.player.y, this.currentLevel.plates.some(p => p.isPressed))) this.finishBossHit();
+      const aim=target ?? this.combatAim();
+      if(aim && Math.hypot(aim.x-this.player.x,aim.y-this.player.y)<=112)
+        this.damageCombatTarget(aim.x,aim.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,55);
     }
     this.notifyHUD();
   }
@@ -437,12 +512,13 @@ export class GameEngine {
     if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
     this.skillCooldown = 4;
     if (this.characterClass === 'mage') {
-      const aim = target ?? (this.boss ? { x: this.boss.x, y: this.boss.y } : { x: this.player.x, y: this.player.y - 180 });
+      const aim = target ?? this.combatAim() ?? { x: this.player.x, y: this.player.y - 180 };
       this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: aim.x, targetY: aim.y, age: 0, skill: true });
       this.renderer.emitMagic('rune', this.player.x, this.player.y - 10, 70);
     } else {
       this.attackFlash = 0.3;
-      if (this.boss && Math.hypot(this.boss.x - this.player.x, this.boss.y - this.player.y) <= 145) this.magicDamage(40);
+      const aim=target ?? this.combatAim();
+      if(aim && Math.hypot(aim.x-this.player.x,aim.y-this.player.y)<=145)this.damageCombatTarget(aim.x,aim.y,40,60);
     }
     this.notifyHUD();
   }
@@ -456,6 +532,8 @@ export class GameEngine {
 
   private takeDamage() {
     if (this.invulnerability > 0) return;
+    if(this.stoneShield>0) { this.stoneShield--; this.invulnerability=.3; this.notifyHUD(); return; }
+    if(this.armorShield>0) { this.armorShield--; this.invulnerability=.3; this.notifyHUD(); return; }
     this.health = Math.max(0, this.health - 1);
     this.invulnerability = 1.3;
     this.renderer.particles.emit(this.player.x, this.player.y, 18, '#fb7185', 75, 4, 0.6);
@@ -513,7 +591,7 @@ export class GameEngine {
         3,
         0.5
       );
-      this.showBanner('ĐANG GHI… Đi tới mục tiêu, rồi nhấn R lần nữa.');
+      this.showBanner(this.language==='vi'?'ĐANG GHI… Đi tới mục tiêu, rồi nhấn E lần nữa.':'RECORDING… Reach the target, then press E again.');
     }
     this.notifyHUD();
   }
@@ -533,7 +611,7 @@ export class GameEngine {
     // An Echo owns its recording; a later recording cannot move its destination.
     const samples = this.recorder.getSamples().map(sample => ({ ...sample }));
     if (samples.length === 0) {
-      this.showBanner('Chưa có bản ghi. Nhấn R để ghi đường đi trước.');
+      this.showBanner(this.language==='vi'?'Chưa có bản ghi. Nhấn E để ghi đường đi trước.':'No recording yet. Press E to record a path.');
       return;
     }
 
@@ -550,6 +628,10 @@ export class GameEngine {
       elapsedMs: 0,
       status: 'replaying',
       samples,
+      combatLife: this.boss ? 8 : undefined,
+      aggroTime: this.boss ? 3 : undefined,
+      attackTimer: 0,
+      characterClass: this.characterClass,
     };
 
     sounds.playEchoSpawn();
@@ -776,11 +858,24 @@ export class GameEngine {
     this.invulnerability = Math.max(0, this.invulnerability - dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    this.hasteTime=Math.max(0,this.hasteTime-dt);
+    if(this.combatFlash) { this.combatFlash.time-=dt; if(this.combatFlash.time<=0)this.combatFlash=null; }
+    if(this.boss) {
+      this.skillDropTimer-=dt;
+      if(this.skillDropTimer<=0) { this.skillDropTimer+=5; this.spawnCombatSkill(); }
+      if(this.skillDrop) {
+        this.skillDrop.fall=Math.min(1,this.skillDrop.fall+dt/.7);
+        if(this.skillDrop.fall>=1 && Math.hypot(this.player.x-this.skillDrop.x,this.player.y-this.skillDrop.y)<34) {
+          const kind=this.skillDrop.kind;this.skillDrop=null;this.collectCombatSkill(kind);
+        }
+      }
+      if(this.fireBurnTime>0) { this.fireBurnTime=Math.max(0,this.fireBurnTime-dt);this.fireBurnTick-=dt;
+        if(this.fireBurnTick<=0) { this.fireBurnTick+=1; this.damageCombatTarget(this.boss.x,this.boss.y,5,70); }
+      }
+    }
     for (const shot of this.magicShots) {
       shot.age += dt;
-      if (shot.age >= 0.3 && this.boss && Math.hypot(shot.targetX - this.boss.x, shot.targetY - this.boss.y) < (shot.skill ? 110 : 55)) {
-        this.magicDamage(shot.skill ? 40 : 15);
-      }
+      if (shot.age >= 0.3) this.damageCombatTarget(shot.targetX,shot.targetY,shot.skill?40:15,shot.skill?110:55);
     }
     this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
     this.attackFlash = Math.max(0, this.attackFlash - dt);
@@ -857,6 +952,10 @@ export class GameEngine {
       this.player.x = resolved.x;
       this.player.y = resolved.y;
     }
+    if(this.boss?.hp && this.screen==='playing') {
+      const dx=this.boss.x-this.player.x,dy=this.boss.y-this.player.y;
+      this.player.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+    }
 
     // 2. Update Recording if active
     if (this.recorder.getStatus() === 'recording') {
@@ -915,6 +1014,17 @@ export class GameEngine {
         );
       }
     }
+    if(this.boss && this.echo) {
+      this.echo.combatLife=(this.echo.combatLife??8)-dt;
+      this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
+      this.echo.attackTimer=(this.echo.attackTimer??0)-dt;
+      if(this.echo.combatLife<=0) this.echo=null;
+      else if(this.echo.attackTimer<=0) {
+        const target=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-this.echo!.x,p.y-this.echo!.y)<=120)
+          ?? (this.boss.pillars.every(p=>p.hp<=0) && Math.hypot(this.boss.x-this.echo.x,this.boss.y-this.echo.y)<=120 ? this.boss : null);
+        if(target) { this.damageCombatTarget(target.x,target.y,(this.currentLevel.plates.some(p=>p.isPressed)?24:15)*.7,60); this.echo.attackTimer=.65; }
+      }
+    }
 
     // 4. Update Renderer animations & particles
     this.renderer.update(dt, this.player.isMoving);
@@ -931,8 +1041,8 @@ export class GameEngine {
     }
     const plateUpdates = updatePressurePlates(
       this.currentLevel.plates,
-      this.player,
-      this.echo,
+      this.characterClass==='swordsman'?{...this.player,x:-1000,y:-1000}:this.player,
+      this.echo && this.echo.characterClass==='swordsman'?{...this.echo,x:-1000,y:-1000}:this.echo,
       dt
     );
     if (plateUpdates.activatedIds.length > 0) {
@@ -984,7 +1094,11 @@ export class GameEngine {
     }
     if (this.screen !== 'playing') return;
     if (this.boss) {
-      if (updateBoss(this.boss, this.player, dt, this.currentLevel.plates.some(p => p.isPressed))) this.takeDamage();
+      const echoTarget=this.echo && (this.echo.aggroTime??0)>0 ? this.echo : null;
+      if (updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed))) {
+        if(echoTarget) { this.echo=null;this.showBanner(this.language==='vi'?'Echo đã chặn một đòn và biến mất.':'Echo took a hit and vanished.'); }
+        else this.takeDamage();
+      }
     } else if ((this.legTimeRemaining === null || this.checkpointIndex === this.currentLevel.plates.length) &&
       checkExitReached(this.player.x, this.player.y, this.currentLevel.exit)) {
       this.handleVictory();
@@ -1071,6 +1185,10 @@ export class GameEngine {
         bestStars: { ...this.campaign.bestStars },
         lastRating: this.lastRating,
         skillCooldown: this.skillCooldown,
+        bossArmor: this.boss?.armor??0,
+        pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
+        activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ×${this.stoneShield}`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ×${this.armorShield}`:'',
+        skillDrop: this.skillDrop?.kind??null,
       });
     }
   }

@@ -5,6 +5,7 @@ export function getCurrentLanguage() { return currentLanguage; }
 
 // Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
 const pairs: [string, string][] = [
+  ['Your relics and weapon remain. Destroy four corner pillars, collect a skill every five seconds, and use Echo to distract the boss.', 'Di vật và vũ khí vẫn được giữ lại. Phá bốn trụ ở góc bản đồ trước, nhặt ô kỹ năng rơi mỗi 5 giây và dùng Echo đánh lạc hướng boss.'],
   ['Character and class', 'Nhân vật và class'], ['Characters', 'NHÂN VẬT'], ['Inventory', 'TÚI ĐỒ'],
   ['CHARACTERS & CLASSES', 'NHÂN VẬT & CLASS'],
   ['WASD to move · E to record · Q to summon Echo · Right click for skill.', 'WASD di chuyển · E ghi đường đi · Q gọi Echo · Chuột phải dùng kỹ năng.'],

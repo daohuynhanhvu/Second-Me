@@ -295,7 +295,7 @@ LEVELS.push(relayLevel(5, [270, 490, 710, 930], [150, 450, 150, 450], 96,
   [[140, 520], [350, 120], [560, 530], [790, 120]], 'THE LAST EMBER'));
 LEVELS.push({
   id: 6, name: 'LEVEL 06', subtitle: 'FROST GUARDIAN', difficulty: 6,
-  description: 'Đánh bại Thủ Vệ Băng bằng kiếm đã rèn. Echo giữ ấn giữa đấu trường sẽ làm chậm boss và tăng sát thương.',
+  description: 'Phá bốn trụ để gỡ giáp boss. Nhặt ô kỹ năng rơi mỗi 5 giây; Echo đánh lạc hướng và hỗ trợ tấn công.',
   playerSpawn: { x: 320, y: 360, direction: 'right' }, walls: perimeter.map(w => ({ ...w })),
   plates: [{ id: 'boss_rune', x: 600, y: 340, width: 64, height: 64, isPressed: false, color: '#e9ba75' }],
   doors: [], exit: { x: 1150, y: 330, width: 60, height: 60, radius: 36 },
@@ -315,11 +315,11 @@ LEVELS[2].decorations = LEVELS[2].decorations?.filter(d => d.type !== 'circuit')
 // Each trap sits in walkable space, with room to take a longer safe line.
 // Later levels combine more hazards and shorter impact cycles.
 const trapLayouts: [import('./types.ts').Trap['kind'], number, number, number, number][][] = [
-  [['vines',310,440,70,65], ['crusher',520,310,70,100], ['rocks',830,330,85,85]],
-  [['vines',235,220,75,60], ['crusher',470,210,65,95], ['rocks',650,350,85,85], ['vines',805,405,65,60], ['rocks',1010,340,85,85]],
-  [['crusher',260,315,55,80], ['vines',420,300,70,65], ['rocks',640,210,80,80], ['crusher',720,365,65,95], ['rocks',970,300,65,80], ['vines',1100,435,65,60]],
-  [['vines',235,285,65,75], ['crusher',265,450,65,90], ['rocks',410,390,75,80], ['vines',520,325,65,65], ['crusher',585,165,65,80], ['rocks',755,325,80,85], ['crusher',895,450,70,90]],
-  [['vines',185,350,60,70], ['crusher',200,160,60,76], ['rocks',345,280,75,80], ['crusher',420,460,60,76], ['vines',555,365,60,70], ['rocks',620,170,70,76], ['crusher',640,160,60,76], ['vines',815,300,65,70], ['crusher',860,460,60,76], ['rocks',1050,385,85,85]],
+  [['vines',530,330,120,75], ['crusher',600,270,50,55], ['rocks',830,330,85,85]],
+  [['vines',235,185,110,70], ['crusher',470,210,65,95], ['rocks',650,350,85,85], ['vines',805,405,95,70], ['rocks',1010,340,85,85]],
+  [['crusher',260,315,55,80], ['vines',420,300,105,75], ['rocks',640,210,80,80], ['crusher',720,365,65,95], ['rocks',970,300,65,80], ['vines',1080,340,110,70]],
+  [['vines',180,285,105,80], ['crusher',265,450,65,90], ['rocks',410,450,75,80], ['vines',475,380,115,75], ['crusher',585,165,65,80], ['rocks',755,325,80,85], ['crusher',895,450,70,90]],
+  [['vines',175,330,95,80], ['crusher',200,160,60,76], ['rocks',345,280,75,80], ['crusher',420,460,60,76], ['vines',550,425,105,70], ['rocks',620,170,70,76], ['crusher',790,180,60,76], ['vines',815,290,105,80], ['crusher',860,460,60,76], ['rocks',1050,385,85,85]],
 ];
 for (let i = 0; i < 5; i++) {
   // Replace the old generic glowing damage circles with distinct readable traps.
@@ -327,19 +327,5 @@ for (let i = 0; i < 5; i++) {
   LEVELS[i].traps = trapLayouts[i].map(([kind,x,y,width,height], index) => ({
     kind, x, y, width, height, period: 3.8 - i * 0.25, offset: (index % 3) * 0.35,
   }));
-  for (const trap of LEVELS[i].traps ?? []) {
-    if (trap.kind !== 'vines') continue;
-    // Grow vines into a continuous lane without covering a wall or checkpoint.
-    for (const side of ['left', 'right'] as const) {
-      for (let step = 0; step < 20; step++) {
-        const candidate = { ...trap, x: side === 'left' ? trap.x - 10 : trap.x,
-          width: trap.width + 10 };
-        if (candidate.x < 40 || candidate.x + candidate.width > 1240 ||
-            LEVELS[i].walls.some(w => candidate.x < w.x+w.width && candidate.x+candidate.width > w.x && candidate.y < w.y+w.height && candidate.y+candidate.height > w.y) ||
-            LEVELS[i].plates.some(p => candidate.x < p.x+p.width && candidate.x+candidate.width > p.x && candidate.y < p.y+p.height && candidate.y+candidate.height > p.y)) break;
-        trap.x = candidate.x; trap.width = candidate.width;
-      }
-    }
-  }
   LEVELS[i].description = `10 seconds per leg · ${LEVELS[i].plates.length} runes. Use Echo to hold gates; dodge crushers and falling rocks, and cross slowing vines.`;
 }

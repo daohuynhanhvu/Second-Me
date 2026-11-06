@@ -2,6 +2,7 @@ import type { GameEngine } from '../GameEngine.ts';
 import { drawTrap } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawFrostGuardian } from './frostGuardian.ts';
+import { drawSoldierSprite } from './soldierSprite.ts';
 
 export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
   ctx.save();
@@ -48,6 +49,19 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
   const boss = game.boss;
   if (boss) {
+    for(const pillar of boss.pillars) {
+      const active=pillar.hp>0;
+      ctx.save();ctx.translate(pillar.x,pillar.y);ctx.shadowColor=active?'#8eeaff':'#536764';ctx.shadowBlur=active?22:0;
+      ctx.fillStyle=active?'#477a83':'#34433d';ctx.strokeStyle=active?'#b9f7ff':'#65706a';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(0,-36);ctx.lineTo(21,-10);ctx.lineTo(15,25);ctx.lineTo(-15,25);ctx.lineTo(-21,-10);ctx.closePath();ctx.fill();ctx.stroke();
+      if(active) {ctx.fillStyle='#c6fbff';ctx.beginPath();ctx.arc(0,-12,9,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d8faff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(`${Math.ceil(pillar.hp)}/${pillar.maxHp}`,0,42);}
+      ctx.restore();
+    }
+    for(const area of boss.burstAreas) {
+      ctx.beginPath();ctx.arc(area.x,area.y,area.radius,0,Math.PI*2);
+      ctx.fillStyle=area.struck?'rgba(137,231,255,.5)':'rgba(111,190,224,.16)';
+      ctx.strokeStyle=area.struck?'#defbff':'#8bd5ef';ctx.lineWidth=3;ctx.fill();ctx.stroke();
+    }
     if (boss.hp > 0 && (boss.mode === 'warning' || boss.mode === 'strike')) {
       ctx.beginPath(); ctx.arc(boss.targetX, boss.targetY, 82, 0, Math.PI * 2);
       ctx.fillStyle = boss.mode === 'warning' ? 'rgba(88,207,255,.18)' : 'rgba(91,220,255,.58)';
@@ -64,26 +78,15 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
     const walking = boss.mode === 'stalking' && Math.hypot(game.player.x - boss.x, game.player.y - boss.y) > 85;
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
-    if (game.campaign.forged && game.characterClass === 'swordsman') {
+    if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
+    if (game.campaign.forged && game.characterClass === 'swordsman' && game.attackFlash > 0) {
       ctx.save(); ctx.translate(game.player.x, game.player.y);
-      const angle = game.player.direction === 'left' ? -1.5 : game.player.direction === 'up' ? -2.7 : game.player.direction === 'down' ? .4 : -0.8;
-      ctx.rotate(angle + (game.attackFlash > 0 ? (0.22 - game.attackFlash) * 18 : 0));
-      ctx.fillStyle = '#dcece2'; ctx.shadowColor = '#6de7d2'; ctx.shadowBlur = 8;
-      ctx.beginPath(); ctx.moveTo(18, -7); ctx.lineTo(20, -48); ctx.lineTo(25, -56); ctx.lineTo(30, -48); ctx.lineTo(28, -7); ctx.fill();
-      ctx.fillStyle = '#d5ad6c'; ctx.fillRect(12, -9, 23, 4); ctx.fillStyle = '#78553c'; ctx.fillRect(21, -5, 5, 14);
-      if (game.attackFlash > 0) {
-        ctx.beginPath(); ctx.arc(0, 0, 94, -2, 1.4); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 7; ctx.stroke();
-      }
+      ctx.beginPath(); ctx.arc(0, 0, 64, -2, 1.4); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
   }
-  if (game.characterClass === 'swordsman') {
-    ctx.save(); ctx.translate(game.player.x, game.player.y - 8);
-    ctx.fillStyle = '#735e4a'; ctx.strokeStyle = '#d4b986'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(-17,-17); ctx.lineTo(0,-34); ctx.lineTo(17,-17); ctx.lineTo(13,16); ctx.lineTo(-13,16); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#c8d2d1'; ctx.fillRect(-12,-29,24,14); ctx.fillStyle = '#3c5558'; ctx.fillRect(-10,-20,20,4);
-    ctx.restore();
-  }
+  if(game.characterClass==='swordsman')drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
+  if(game.echo?.characterClass==='swordsman')drawSoldierSprite(ctx,game.echo.x,game.echo.y,game.echo.direction,game.echo.isMoving,true,time);
   if (game.characterClass === 'mage' && game.campaign.forged) {
     ctx.save(); ctx.translate(game.player.x+17, game.player.y);
     ctx.strokeStyle='#b69262'; ctx.lineWidth=7; ctx.beginPath();ctx.moveTo(0,11);ctx.lineTo(3,-39);ctx.stroke();
@@ -96,6 +99,17 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.save();ctx.shadowColor=shot.skill?'#f7dc83':'#82fff4';ctx.shadowBlur=25;
     ctx.fillStyle=shot.skill?'#ffe7a4':'#b5fff7';ctx.beginPath();ctx.arc(x,y,shot.skill?18:9,0,Math.PI*2);ctx.fill();ctx.restore();
   }
+  if(game.skillDrop) {
+    const drop=game.skillDrop;
+    const y=-35+(drop.y+35)*drop.fall;
+    ctx.save();ctx.translate(drop.x,y);ctx.rotate(time*2);ctx.shadowColor='#f5d77c';ctx.shadowBlur=24;
+    ctx.fillStyle='#d7af58';ctx.strokeStyle='#fff0ae';ctx.lineWidth=3;
+    ctx.fillRect(-18,-18,36,36);ctx.strokeRect(-18,-18,36,36);
+    ctx.rotate(-time*2);ctx.fillStyle='#153428';ctx.textAlign='center';ctx.font='bold 20px sans-serif';ctx.fillText('✦',0,7);ctx.restore();
+    if(drop.fall<1) {ctx.strokeStyle='rgba(255,232,159,.5)';ctx.beginPath();ctx.arc(drop.x,drop.y,23,0,Math.PI*2);ctx.stroke();}
+  }
+  if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c';ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  if(game.stoneShield>0 || game.armorShield>0) {ctx.strokeStyle=game.stoneShield>0?'#aeb6a3':'#e2d099';ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}
   if (game.invulnerability > 0) {
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();
