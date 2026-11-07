@@ -1,5 +1,9 @@
 # Echo implementation handoff — 2026-11-07
 
+## Multi-Echo update
+
+Up to four simultaneous Echoes now have independent snapshots, playheads and stable color slots (cyan, violet, gold, rose), with E1–E4 badges and selection buttons. Q always summons; HUD pause, swap and dismiss operate on the selected Echo. Initial resources allow four summons; charge refill caps at four. Finished Echoes hold plates without passive stability drain. All Echoes count toward plate occupancy and doorway closing safety; a gate's requiredPlates array can require two or three simultaneous buttons. Existing map layouts have not been changed. Added multiEcho.test.ts to verify capacity, colors, independent updates, removal/reset, three-plate gates and doorway safety. These details supersede the single-Echo behavior below.
+
 User requested implementation of the Echo design discussed in chat, and explicitly authorized publishing to Vercel and handoff if needed. This is an incremental playable implementation, not the complete design.
 
 ## Repository and deployment

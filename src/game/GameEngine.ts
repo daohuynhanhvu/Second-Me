@@ -100,7 +100,8 @@ export class GameEngine {
   };
 
   // Echo state
-  public echo: {
+  private echoShape: {
+    colorSlot?: number;
     x: number;
     y: number;
     direction: Direction;
@@ -116,10 +117,19 @@ export class GameEngine {
     attackTimer?: number;
     characterClass?: CharacterClass;
   } | null = null;
+  public echoes: NonNullable<GameEngine['echoShape']>[] = [];
+  public selectedEcho = 0;
+  public get echo() { return this.echoes[this.selectedEcho]??null; }
+  public set echo(value: GameEngine['echoShape']) {
+    if(value) this.echoes[this.selectedEcho]=value;
+    else {this.echoes.splice(this.selectedEcho,1);this.selectedEcho=Math.max(0,Math.min(this.selectedEcho,this.echoes.length-1));}
+  }
+  public selectEcho(index:number) {if(index>=0&&index<this.echoes.length){this.selectedEcho=index;this.notifyHUD();}}
+  public pauseEcho() {if(this.screen==='playing'&&this.echo){this.echo.status=this.echo.status==='paused'?'replaying':'paused';this.notifyHUD();}}
 
   // Recording
   public recorder = new RecordingManager();
-  public echoCharges = 1;
+  public echoCharges = 3;
   private echoFreeSummon = true;
   public dissonanceSeconds = 0;
   private swapCooldown = 0;
@@ -345,8 +355,9 @@ export class GameEngine {
     this.renderer.reset();
     this.currentLevel = this.cloneLevel(LEVELS[this.currentLevelIdx]);
     this.initPlayer();
-    this.echo = null;
-    this.echoCharges = 1;
+    this.echoes = [];
+    this.selectedEcho=0;
+    this.echoCharges = 3;
     this.echoFreeSummon = true;
     this.dissonanceSeconds = 0;
     this.swapCooldown = 0;
@@ -478,7 +489,7 @@ export class GameEngine {
       pillar.hp=Math.max(0,pillar.hp-amount);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
-      if(pillar.hp===0) this.echoCharges=Math.min(2,this.echoCharges+1);
+      if(pillar.hp===0) this.echoCharges=Math.min(4,this.echoCharges+1);
       if(pillar.hp===0)this.showBanner(this.boss.armor===0
         ? (this.language==='vi'?'Bốn trụ đã bị phá · Boss mất giáp!':'All four pillars destroyed · Boss armor broken!')
         : (this.language==='vi'?`Đã phá trụ · Còn ${this.boss.armor/25} trụ`:`Pillar destroyed · ${this.boss.armor/25} remaining`));
@@ -661,8 +672,7 @@ export class GameEngine {
 
   public spawnEcho() {
     if (this.screen !== 'playing') return;
-    if (this.echo?.status === 'replaying') { this.echo.status='paused'; this.notifyHUD(); return; }
-    if (this.echo?.status === 'paused') { this.echo.status='replaying'; this.notifyHUD(); return; }
+    if(this.echoes.length>=4){this.showBanner('Tối đa 4 Echo. Thu hồi một Echo trước khi gọi thêm.');return;}
 
     // Summoning commits the endpoint before any subsequent player movement.
     if (this.recorder.stopRecording(
@@ -691,7 +701,9 @@ export class GameEngine {
     if (this.echoFreeSummon) this.echoFreeSummon=false;
     else this.echoCharges--;
 
+    this.selectedEcho=this.echoes.length;
     this.echo = {
+      colorSlot:[0,1,2,3].find(slot=>!this.echoes.some(e=>e.colorSlot===slot))??0,
       x: safeEchoSpawn.x,
       y: safeEchoSpawn.y,
       direction: first.direction,
@@ -955,7 +967,7 @@ export class GameEngine {
     const altar=this.currentLevel.playerSpawn;
     const outsideAltar=Math.hypot(this.player.x-altar.x,this.player.y-altar.y)>85;
     this.echoGrace=Math.max(0,this.echoGrace-dt);
-    if(!outsideAltar || this.echo) this.dissonanceSeconds=0;
+    if(!outsideAltar || this.echoes.length>0) this.dissonanceSeconds=0;
     else if(this.echoGrace<=0) {
       this.dissonanceSeconds+=dt;
       if(this.dissonanceSeconds>=5) {
@@ -1097,6 +1109,9 @@ export class GameEngine {
     }
 
     // 3. Update Echo if active
+    const selected=this.echo;
+    for(const active of [...this.echoes]) {
+    this.selectedEcho=this.echoes.indexOf(active);
     if (this.echo && this.echo.status === 'replaying') {
       this.echo.elapsedMs += dt * 1000;
       while(this.echo && (this.echo.events?.[this.echo.nextEvent??0]?.time??Infinity)<=this.echo.elapsedMs) {
@@ -1147,9 +1162,12 @@ export class GameEngine {
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
     }
     if(this.echo?.status==='paused' || this.echo?.status==='finished') {
-      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?8:3);
+      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?8:0);
       if(this.echo.stability<=0){this.echo=null;this.echoGrace=2;}
     }
+
+    }
+    this.selectedEcho=Math.max(0,selected?this.echoes.indexOf(selected):0);
 
     // 4. Update Renderer animations & particles
     this.renderer.update(dt, this.player.isMoving);
@@ -1159,7 +1177,7 @@ export class GameEngine {
     if (this.legTimeRemaining !== null && targetPlate &&
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
-      this.echoCharges=Math.min(2,this.echoCharges+1);
+      this.echoCharges=Math.min(4,this.echoCharges+1);
       this.legTimeRemaining = 10;
       this.showBanner(this.checkpointIndex < this.currentLevel.plates.length
         ? `+10s · Reach rune ${this.checkpointIndex + 1}!`
@@ -1168,7 +1186,7 @@ export class GameEngine {
     const plateUpdates = updatePressurePlates(
       this.currentLevel.plates,
       this.player,
-      this.echo,
+      this.echoes,
       dt
     );
     if (plateUpdates.activatedIds.length > 0) {
@@ -1197,7 +1215,7 @@ export class GameEngine {
       this.currentLevel.doors,
       this.currentLevel.plates,
       this.player,
-      this.echo,
+      this.echoes,
       dt
     );
     if (doorUpdates.openedDoorIds.length > 0) {
@@ -1260,7 +1278,7 @@ export class GameEngine {
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
       this.characterClass !== 'mage' ? {...this.player,x:-1000,y:-1000} : this.player,
-      this.echo && this.echo.characterClass && this.echo.characterClass !== 'mage' ? {...this.echo,x:-1000,y:-1000} : this.echo,
+      null,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
       this.recorder.getSamples(),
@@ -1280,7 +1298,7 @@ export class GameEngine {
         recordingStatus: this.recorder.getStatus(),
         recordingTimeRemaining: this.recorder.getRemainingTimeMs(),
         echoStatus: echoState,
-        echoCount: this.echo ? 1 : 0,
+        echoCount: this.echoes.length,
         echoCharges: this.echoCharges + (this.echoFreeSummon?1:0),
         echoStability: this.echo?.stability??0,
         echoElapsedMs: this.echo?.elapsedMs??0,

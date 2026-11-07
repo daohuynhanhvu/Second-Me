@@ -4,9 +4,25 @@ import { drawTrap } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawFrostGuardian } from './frostGuardian.ts';
 import { drawSoldierSprite } from './soldierSprite.ts';
+let echoCanvas:HTMLCanvasElement|undefined;
+export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185'];
 
 export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
   ctx.save();
+  if(game.echoes.length){
+    echoCanvas??=document.createElement('canvas');echoCanvas.width=96;echoCanvas.height=112;
+    const layer=echoCanvas.getContext('2d')!;
+    for(const echo of game.echoes){
+      layer.clearRect(0,0,96,112);
+      if(echo.characterClass==='swordsman')drawSoldierSprite(layer,48,70,echo.direction,echo.isMoving,true,time);
+      else if(echo.characterClass==='mechanical')drawMechanicalSprite(layer,48,70,echo.direction,echo.isMoving,true,time);
+      else game.renderer.drawEcho(layer,48,70,echo.direction,echo.isMoving,time);
+      const slot=echo.colorSlot??0;
+      ctx.save();ctx.filter=`hue-rotate(${[0,75,190,140][slot]}deg)`;ctx.drawImage(echoCanvas,echo.x-48,echo.y-70);ctx.restore();
+      ctx.strokeStyle=ECHO_COLORS[slot];ctx.lineWidth=game.echo===echo?3:1.5;ctx.beginPath();ctx.ellipse(echo.x,echo.y+12,17,7,0,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle=ECHO_COLORS[slot];ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(`E${slot+1}`,echo.x,echo.y-48);
+    }
+  }
   for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, game.showHints);
   if (game.legTimeRemaining !== null) {
     if (game.timePickup) {
@@ -95,7 +111,6 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.restore();
   }
   if(game.characterClass==='mechanical')drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  if(game.echo?.characterClass==='mechanical')drawMechanicalSprite(ctx,game.echo.x,game.echo.y,game.echo.direction,game.echo.isMoving,true,time);
   for(const orb of game.orbitOrbs) {
     ctx.save();ctx.globalAlpha=Math.min(1,orb.life);ctx.shadowColor='#82cfff';ctx.shadowBlur=8;
     const x=game.player.x+Math.cos(orb.angle)*36,y=game.player.y-12+Math.sin(orb.angle)*28;
@@ -104,7 +119,6 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
   if(game.characterClass==='swordsman')drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  if(game.echo?.characterClass==='swordsman')drawSoldierSprite(ctx,game.echo.x,game.echo.y,game.echo.direction,game.echo.isMoving,true,time);
   if (game.characterClass === 'mage' && game.campaign.forged) {
     ctx.save(); ctx.translate(game.player.x+17, game.player.y);
     ctx.strokeStyle='#b69262'; ctx.lineWidth=7; ctx.beginPath();ctx.moveTo(0,11);ctx.lineTo(3,-39);ctx.stroke();
