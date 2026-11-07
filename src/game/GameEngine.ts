@@ -407,6 +407,10 @@ export class GameEngine {
     this.devUnlocked = true;
     this.campaign.completed = [1,2,3,4,5];
     this.campaign.forged = true;
+    this.campaign.mechanicalOwned = true;
+    this.campaign.coins = 99999;
+    this.campaign.timeItems = 99999;
+    this.campaign.save();
     this.notifyHUD();
   }
 
