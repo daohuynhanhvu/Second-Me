@@ -6,7 +6,7 @@ export const MATERIALS = [
   { id: 'rune', name: 'Ấn thạch cổ', detail: 'Mảnh cuối để đánh thức vũ khí Echo.', icon: '◇', color: '#dac18e' },
 ] as const;
 
-export type CharacterClass = 'mage' | 'swordsman';
+export type CharacterClass = 'mage' | 'swordsman' | 'mechanical';
 export function levelRating(seconds: number): { stars: number; coins: number } {
   const stars = seconds <= 15 ? 3 : seconds <= 20 ? 2 : seconds <= 25 ? 1 : 0;
   return { stars, coins: [0, 4, 8, 12][stars] };
@@ -16,6 +16,7 @@ export class Campaign {
   completed: number[] = [];
   forged = false;
   bossDefeated = false;
+  mechanicalOwned = false;
   coins = 0;
   timeItems = 0;
   bestStars: Record<number, number> = {};
@@ -28,6 +29,7 @@ export class Campaign {
       this.completed = this.completed.filter((id, i) => id === i + 1);
       this.forged = this.canForge && value.forged === true;
       this.bossDefeated = this.forged && value.bossDefeated === true;
+      this.mechanicalOwned = value.mechanicalOwned === true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
@@ -36,7 +38,7 @@ export class Campaign {
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
+      mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -52,6 +54,7 @@ export class Campaign {
     this.save();
     return reward;
   }
+  buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
   get canForge() { return MATERIALS.every((_, i) => this.completed.includes(i + 1)); }

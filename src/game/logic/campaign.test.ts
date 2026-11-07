@@ -61,7 +61,8 @@ test('mage magic and class skill damage the boss, while the class fixes the weap
   assert.equal(game.boss!.hp,225);
   game.useSkill({x:game.boss!.x,y:game.boss!.y});
   for(let i=0;i<7;i++)update(.05);
-  assert.equal(game.boss!.hp,185);
+  assert.equal(game.boss!.hp,225);
+  assert.equal(game.orbitOrbs.length,1);
   game.goToLobby();game.selectClass('swordsman');
   assert.equal(game.weapon,'sword');
 });

@@ -31,7 +31,7 @@ import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 
 export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | 'wave';
-const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'] };
+const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'], mechanical: ['fire','armor','haste'] };
 
 export interface HUDState {
   screen: GameScreen;
@@ -74,6 +74,7 @@ export interface HUDState {
   pillarsRemaining: number;
   activeBuff: string;
   skillDrop: CombatSkill | null;
+  mechanicalOwned: boolean;
 }
 
 export class GameEngine {
@@ -133,6 +134,12 @@ export class GameEngine {
   public characterClass: CharacterClass = 'mage';
   public lastRating: { stars: number; coins: number } | null = null;
   public skillCooldown = 0;
+  public orbitOrbs: { angle:number; life:number; tick:number }[] = [];
+  public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
+  public overdrive = 0;
+  public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
+  public buyMechanical() { if(this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
+
   public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
   public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
   public skillDropTimer = 5;
@@ -183,7 +190,7 @@ export class GameEngine {
       this.reducedMotion = value.reducedMotion === true;
       this.showHints = value.showHints !== false;
       this.language = value.language === 'vi' ? 'vi' : 'en';
-      this.characterClass = value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
+      this.characterClass = value.characterClass === 'mechanical' && this.campaign.mechanicalOwned ? 'mechanical' : value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
       setCurrentLanguage(this.language);
       if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', this.reducedMotion);
     } catch { /* Defaults keep the game playable. */ }
@@ -271,7 +278,7 @@ export class GameEngine {
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
   public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
-  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
+  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && !this.campaign.mechanicalOwned) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || !this.campaign.useTimeItem()) return false; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 
@@ -336,6 +343,7 @@ export class GameEngine {
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.magicShots = [];
+    this.orbitOrbs = []; this.lightCircle = null; this.overdrive = 0;
     this.skillDrop = null; this.skillDropTimer = 5;
     this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
     this.combatFlash = null;
@@ -438,6 +446,7 @@ export class GameEngine {
 
   private damageCombatTarget(x:number,y:number,amount:number,radius=65) {
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
+    if(this.insideLightCircle) amount *= 1.2;
     const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
     if(pillar) {
       pillar.hp=Math.max(0,pillar.hp-amount);
@@ -491,7 +500,7 @@ export class GameEngine {
 
   public attack(target?: { x: number; y: number }) {
     if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
-    this.attackCooldown = this.hasteTime>0 ? .27 : .55;
+    this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     if (this.characterClass === 'mage') {
       const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
       const aim = target ?? fallback;
@@ -508,19 +517,40 @@ export class GameEngine {
     this.notifyHUD();
   }
 
-  public useSkill(target?: { x: number; y: number }) {
+  public useSkill(_target?: { x: number; y: number }) {
     if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
-    this.skillCooldown = 4;
     if (this.characterClass === 'mage') {
-      const aim = target ?? this.combatAim() ?? { x: this.player.x, y: this.player.y - 180 };
-      this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: aim.x, targetY: aim.y, age: 0, skill: true });
-      this.renderer.emitMagic('rune', this.player.x, this.player.y - 10, 70);
+      if(this.orbitOrbs.length >= 3) return;
+      this.orbitOrbs.push({angle: this.orbitOrbs.length*Math.PI*2/3, life:6, tick:0});
+      this.skillCooldown = 1;
+    } else if(this.characterClass === 'swordsman') {
+      this.lightCircle = {x:this.player.x,y:this.player.y,life:5,heal:0};
+      this.skillCooldown = 9;
     } else {
-      this.attackFlash = 0.3;
-      const aim=target ?? this.combatAim();
-      if(aim && Math.hypot(aim.x-this.player.x,aim.y-this.player.y)<=145)this.damageCombatTarget(aim.x,aim.y,40,60);
+      this.overdrive = 5;
+      this.skillCooldown = 10;
     }
     this.notifyHUD();
+  }
+
+  private updatePersonalSkill(dt:number) {
+    this.overdrive = Math.max(0,this.overdrive-dt);
+    for(const orb of this.orbitOrbs) {
+      orb.life-=dt; orb.angle+=dt*3; orb.tick-=dt;
+      if(orb.life>0 && orb.tick<=0) {
+        orb.tick=.5;
+        this.damageCombatTarget(this.player.x+Math.cos(orb.angle)*36,this.player.y-12+Math.sin(orb.angle)*28,4,22);
+      }
+    }
+    this.orbitOrbs=this.orbitOrbs.filter(o=>o.life>0);
+    if(this.lightCircle) {
+      this.lightCircle.life-=dt;
+      if(this.lightCircle.life<=0) this.lightCircle=null;
+      else if(this.insideLightCircle) {
+        this.lightCircle.heal+=dt;
+        if(this.lightCircle.heal>=2) {this.lightCircle.heal-=2;this.health=Math.min(5,this.health+1);this.notifyHUD();}
+      }
+    }
   }
 
   public dodge() {
@@ -858,6 +888,7 @@ export class GameEngine {
     this.invulnerability = Math.max(0, this.invulnerability - dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+    this.updatePersonalSkill(dt);
     this.hasteTime=Math.max(0,this.hasteTime-dt);
     if(this.combatFlash) { this.combatFlash.time-=dt; if(this.combatFlash.time<=0)this.combatFlash=null; }
     if(this.boss) {
@@ -1041,8 +1072,8 @@ export class GameEngine {
     }
     const plateUpdates = updatePressurePlates(
       this.currentLevel.plates,
-      this.characterClass==='swordsman'?{...this.player,x:-1000,y:-1000}:this.player,
-      this.echo && this.echo.characterClass==='swordsman'?{...this.echo,x:-1000,y:-1000}:this.echo,
+      this.player,
+      this.echo,
       dt
     );
     if (plateUpdates.activatedIds.length > 0) {
@@ -1131,8 +1162,8 @@ export class GameEngine {
       this.canvas.width,
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
-      this.player,
-      this.echo,
+      this.characterClass !== 'mage' ? {...this.player,x:-1000,y:-1000} : this.player,
+      this.echo && this.echo.characterClass && this.echo.characterClass !== 'mage' ? {...this.echo,x:-1000,y:-1000} : this.echo,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
       this.recorder.getSamples(),
@@ -1185,6 +1216,7 @@ export class GameEngine {
         bestStars: { ...this.campaign.bestStars },
         lastRating: this.lastRating,
         skillCooldown: this.skillCooldown,
+        mechanicalOwned: this.campaign.mechanicalOwned,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
         activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ×${this.stoneShield}`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ×${this.armorShield}`:'',

@@ -1,3 +1,4 @@
+import { drawMechanicalSprite } from './mechanicalSprite.ts';
 import type { GameEngine } from '../GameEngine.ts';
 import { drawTrap } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
@@ -85,6 +86,23 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       ctx.restore();
     }
   }
+  if(game.lightCircle) {
+    const c=game.lightCircle;ctx.save();ctx.globalAlpha=Math.min(1,c.life);
+    ctx.fillStyle='rgba(255,221,132,.12)';ctx.strokeStyle='#f6df9e';ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(c.x,c.y,58,38,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.ellipse(c.x,c.y,48,30,0,0,Math.PI*2);ctx.stroke();
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.fillRect(c.x+Math.cos(a)*53-2,c.y+Math.sin(a)*34-2,4,4);}
+    ctx.restore();
+  }
+  if(game.characterClass==='mechanical')drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
+  if(game.echo?.characterClass==='mechanical')drawMechanicalSprite(ctx,game.echo.x,game.echo.y,game.echo.direction,game.echo.isMoving,true,time);
+  for(const orb of game.orbitOrbs) {
+    ctx.save();ctx.globalAlpha=Math.min(1,orb.life);ctx.shadowColor='#82cfff';ctx.shadowBlur=8;
+    const x=game.player.x+Math.cos(orb.angle)*36,y=game.player.y-12+Math.sin(orb.angle)*28;
+    ctx.fillStyle='#bceaff';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,y-4);ctx.lineTo(x+1,y);ctx.lineTo(x-2,y+4);ctx.stroke();ctx.restore();
+  }
+  if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
   if(game.characterClass==='swordsman')drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   if(game.echo?.characterClass==='swordsman')drawSoldierSprite(ctx,game.echo.x,game.echo.y,game.echo.direction,game.echo.isMoving,true,time);
   if (game.characterClass === 'mage' && game.campaign.forged) {
