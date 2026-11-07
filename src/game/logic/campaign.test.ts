@@ -159,7 +159,7 @@ test('skill drops are class-specific and Echo cannot collect one',t=>{
   assert.equal(game.skillDrop,null);
 });
 
-test('Echo draws boss attention for three seconds and dies on one hit',t=>{
+test('Echo draws boss attention and spends stability to absorb a hit',t=>{
   const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
@@ -170,7 +170,8 @@ test('Echo draws boss attention for three seconds and dies on one hit',t=>{
   game.boss!.mode='warning';game.boss!.timer=.01;game.boss!.targetX=game.echo!.x;game.boss!.targetY=game.echo!.y;
   game.boss!.burstCooldown=100;
   (game as unknown as {update(dt:number):void}).update(.05);
-  assert.equal(game.echo,null);
+  assert.ok(game.echo);
+  assert.ok(game.echo!.stability!<100);
   assert.equal(game.health,5);
 });
 
@@ -188,16 +189,16 @@ test('boss begins a two-second projectile and area burst every five seconds',()=
   assert.equal(boss.burstRemaining,0);
 });
 
-test('combat Echo attacks for seventy percent of a normal hit',t=>{
+test('combat Echo replays a recorded attack instead of auto attacking',t=>{
   const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
   game.screen='forge';game.forgeWeapon();game.enterBoss();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;game.boss!.timer=100;game.boss!.burstCooldown=100;
-  game.echo={x:game.boss!.x-80,y:game.boss!.y,direction:'right',isMoving:false,elapsedMs:0,status:'finished',samples:[],combatLife:8,aggroTime:3,attackTimer:0,characterClass:'mage'};
+  game.echo={x:game.boss!.x-80,y:game.boss!.y,direction:'right',isMoving:false,elapsedMs:0,status:'replaying',samples:[{time:0,x:game.boss!.x-80,y:game.boss!.y,direction:'right'},{time:100,x:game.boss!.x-80,y:game.boss!.y,direction:'right'}],events:[{time:40,kind:'attack',x:game.boss!.x-80,y:game.boss!.y,targetX:game.boss!.x,targetY:game.boss!.y}],nextEvent:0,stability:100,aggroTime:3,characterClass:'mage'};
   (game as unknown as {update(dt:number):void}).update(.05);
-  assert.equal(game.boss!.hp,229.5);
+  assert.equal(game.boss!.hp,230);
 });
 
 test('all six class pickups apply their distinct damage or defense',t=>{

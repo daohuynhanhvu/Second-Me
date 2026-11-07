@@ -8,6 +8,7 @@ import {
   GameScreen,
   LevelData,
   MovementSample,
+  EchoEvent,
   RecordingStatus,
   EchoStatus,
 } from './logic/types.ts';
@@ -41,6 +42,12 @@ export interface HUDState {
   recordingTimeRemaining: number;
   echoStatus: EchoStatus;
   echoCount: number; // 0 or 1
+  echoCharges: number;
+  echoStability: number;
+  echoElapsedMs: number;
+  echoDurationMs: number;
+  echoEvents: EchoEvent[];
+  dissonanceSeconds: number;
   isMuted: boolean;
   bannerMessage: string;
   elapsedLevelTime: number;
@@ -99,8 +106,11 @@ export class GameEngine {
     direction: Direction;
     isMoving: boolean;
     elapsedMs: number;
-    status: 'replaying' | 'finished';
+    status: 'replaying' | 'paused' | 'finished';
     samples: MovementSample[];
+    events?: EchoEvent[];
+    nextEvent?: number;
+    stability?: number;
     combatLife?: number;
     aggroTime?: number;
     attackTimer?: number;
@@ -109,6 +119,12 @@ export class GameEngine {
 
   // Recording
   public recorder = new RecordingManager();
+  public echoCharges = 1;
+  private echoFreeSummon = true;
+  public dissonanceSeconds = 0;
+  private swapCooldown = 0;
+  private echoGrace = 0;
+  private pingTarget: {x:number;y:number;life:number}|null = null;
   public campaign = new Campaign();
   public boss: BossState | null = null;
   public bossDeathElapsed = 0;
@@ -330,6 +346,12 @@ export class GameEngine {
     this.currentLevel = this.cloneLevel(LEVELS[this.currentLevelIdx]);
     this.initPlayer();
     this.echo = null;
+    this.echoCharges = 1;
+    this.echoFreeSummon = true;
+    this.dissonanceSeconds = 0;
+    this.swapCooldown = 0;
+    this.echoGrace = 0;
+    this.pingTarget = null;
     this.recorder.clear();
     this.elapsedLevelTime = 0;
     this.legTimeRemaining = this.currentLevel.id <= 5 ? 10 : null;
@@ -456,6 +478,7 @@ export class GameEngine {
       pillar.hp=Math.max(0,pillar.hp-amount);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
+      if(pillar.hp===0) this.echoCharges=Math.min(2,this.echoCharges+1);
       if(pillar.hp===0)this.showBanner(this.boss.armor===0
         ? (this.language==='vi'?'Bốn trụ đã bị phá · Boss mất giáp!':'All four pillars destroyed · Boss armor broken!')
         : (this.language==='vi'?`Đã phá trụ · Còn ${this.boss.armor/25} trụ`:`Pillar destroyed · ${this.boss.armor/25} remaining`));
@@ -505,6 +528,8 @@ export class GameEngine {
   public attack(target?: { x: number; y: number }) {
     if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
+    const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+    this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
     if (this.characterClass === 'mage') {
       const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
       const aim = target ?? fallback;
@@ -525,13 +550,17 @@ export class GameEngine {
     if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
     if (this.characterClass === 'mage') {
       if(this.orbitOrbs.length >= 3) return;
+      const aim = _target ?? this.combatAim() ?? this.player;
+      this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:aim.x,targetY:aim.y});
       this.orbitOrbs.push({angle: this.orbitOrbs.length*Math.PI*2/3, life:6, tick:0});
       this.skillCooldown = 1;
     } else if(this.characterClass === 'swordsman') {
+      this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
       this.lightCircle = {x:this.player.x,y:this.player.y,life:5,heal:0};
       this.skillCooldown = 9;
     } else {
       this.overdrive = 5;
+      this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
       this.skillCooldown = 10;
     }
     this.notifyHUD();
@@ -632,6 +661,8 @@ export class GameEngine {
 
   public spawnEcho() {
     if (this.screen !== 'playing') return;
+    if (this.echo?.status === 'replaying') { this.echo.status='paused'; this.notifyHUD(); return; }
+    if (this.echo?.status === 'paused') { this.echo.status='replaying'; this.notifyHUD(); return; }
 
     // Summoning commits the endpoint before any subsequent player movement.
     if (this.recorder.stopRecording(
@@ -648,11 +679,17 @@ export class GameEngine {
       this.showBanner(this.language==='vi'?'Chưa có bản ghi. Nhấn E để ghi đường đi trước.':'No recording yet. Press E to record a path.');
       return;
     }
+    if (!this.echoFreeSummon && this.echoCharges <= 0) {
+      this.showBanner(this.language==='vi'?'Hết lượt triệu hồi. Chạm ấn thạch để hồi.':'No Echo charges. Reach a rune to restore one.');
+      return;
+    }
 
     // Spawn or reset Echo
     const first = samples[0];
     const obstacles = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
     const safeEchoSpawn = resolveSpawnPosition(first.x, first.y, 24, 24, obstacles);
+    if (this.echoFreeSummon) this.echoFreeSummon=false;
+    else this.echoCharges--;
 
     this.echo = {
       x: safeEchoSpawn.x,
@@ -662,7 +699,9 @@ export class GameEngine {
       elapsedMs: 0,
       status: 'replaying',
       samples,
-      combatLife: this.boss ? 8 : undefined,
+      events: this.recorder.getEvents().map(event=>({...event})),
+      nextEvent: 0,
+      stability: 100,
       aggroTime: this.boss ? 3 : undefined,
       attackTimer: 0,
       characterClass: this.characterClass,
@@ -692,6 +731,40 @@ export class GameEngine {
       this.showBanner('Đã xóa Echo.');
       this.notifyHUD();
     }
+  }
+
+  private replayEchoEvent(event: EchoEvent) {
+    if (!this.echo || !this.boss) return;
+    const originX=this.echo.x, originY=this.echo.y;
+    const angle=Math.atan2(event.targetY-event.y,event.targetX-event.x);
+    const targets=[...this.boss.pillars.filter(p=>p.hp>0),...(this.boss.armor===0?[this.boss]:[])];
+    const target=targets.filter(p=>Math.hypot(p.x-originX,p.y-originY)<(event.kind==='skill'?180:150))
+      .map(p=>({p,offset:Math.abs(Math.atan2(Math.sin(Math.atan2(p.y-originY,p.x-originX)-angle),Math.cos(Math.atan2(p.y-originY,p.x-originX)-angle)))}))
+      .filter(item=>item.offset<=(this.pingTarget&&Math.hypot(item.p.x-this.pingTarget.x,item.p.y-this.pingTarget.y)<45?Math.PI/6:Math.PI/9))
+      .sort((a,b)=>(this.pingTarget?Math.hypot(a.p.x-this.pingTarget.x,a.p.y-this.pingTarget.y)-Math.hypot(b.p.x-this.pingTarget.x,b.p.y-this.pingTarget.y):a.offset-b.offset))[0]?.p;
+    const x=target?.x??originX+Math.cos(angle)*120, y=target?.y??originY+Math.sin(angle)*120;
+    this.damageCombatTarget(x,y,event.kind==='skill'?15:10, event.kind==='skill'?75:65);
+    this.renderer.emitMagic('sparkle',x,y,event.kind==='skill'?65:36);
+  }
+
+  public swapEcho() {
+    if(this.screen!=='playing'||!this.echo||this.swapCooldown>0||(this.echo.stability??100)<30)return;
+    const obstacles=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
+    const dx=this.echo.x-this.player.x,dy=this.echo.y-this.player.y;
+    const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/6));
+    for(let i=0;i<=steps;i++) {
+      const box=getCharacterBoundingBox(this.player.x+dx*i/steps,this.player.y+dy*i/steps,24,24);
+      if(obstacles.some(obstacle=>rectIntersects(box,obstacle))) {
+        this.showBanner(this.language==='vi'?'Không thể hoán đổi xuyên tường hoặc cổng.':'Swap path is blocked.');return;
+      }
+    }
+    const x=this.player.x,y=this.player.y;
+    this.player.x=this.echo.x;this.player.y=this.echo.y;
+    this.echo.x=x;this.echo.y=y;
+    this.echo.samples=this.echo.samples.map(sample=>({...sample,x:sample.x-dx,y:sample.y-dy}));
+    this.echo.stability=(this.echo.stability??100)-30;
+    this.swapCooldown=7;this.invulnerability=Math.max(.2,this.invulnerability);
+    this.notifyHUD();
   }
 
   // --- Input Handling ---
@@ -779,7 +852,7 @@ export class GameEngine {
       if (key === 'e') {
         this.toggleRecording();
       } else if (key === 'q') {
-        this.spawnEcho();
+        if(e.shiftKey)this.swapEcho();else this.spawnEcho();
       } else if (key === 'x') {
         this.dismissEcho();
       }
@@ -804,6 +877,7 @@ export class GameEngine {
     const bounds = this.canvas.getBoundingClientRect();
     const target = { x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
       y: (e.clientY - bounds.top) * this.canvas.height / bounds.height };
+    if (e.shiftKey && this.echo) { this.pingTarget={...target,life:4}; this.showBanner(this.language==='vi'?'Echo ưu tiên mục tiêu đã đánh dấu.':'Echo target marked.'); return; }
     if (e.button === 2) { e.preventDefault(); this.useSkill(target); }
     else this.attack(target);
   };
@@ -875,7 +949,22 @@ export class GameEngine {
       }
     }
     this.gameTime += dt;
+    this.swapCooldown=Math.max(0,this.swapCooldown-dt);
     this.elapsedLevelTime += dt;
+    if(this.pingTarget) {this.pingTarget.life-=dt;if(this.pingTarget.life<=0)this.pingTarget=null;}
+    const altar=this.currentLevel.playerSpawn;
+    const outsideAltar=Math.hypot(this.player.x-altar.x,this.player.y-altar.y)>85;
+    this.echoGrace=Math.max(0,this.echoGrace-dt);
+    if(!outsideAltar || this.echo) this.dissonanceSeconds=0;
+    else if(this.echoGrace<=0) {
+      this.dissonanceSeconds+=dt;
+      if(this.dissonanceSeconds>=5) {
+        this.dissonanceSeconds-=5;
+        this.takeDamage();
+        if(this.screen!=='playing')return;
+        this.showBanner(this.language==='vi'?'Rạn vỡ ký ức: cần Echo để bảo hộ.':'Dissonance: summon Echo for protection.');
+      }
+    }
     this.trappedTime = Math.max(0, this.trappedTime - dt);
     if (this.legTimeRemaining !== null) {
       this.pickupSpawnTimer -= dt;
@@ -1010,6 +1099,11 @@ export class GameEngine {
     // 3. Update Echo if active
     if (this.echo && this.echo.status === 'replaying') {
       this.echo.elapsedMs += dt * 1000;
+      while(this.echo && (this.echo.events?.[this.echo.nextEvent??0]?.time??Infinity)<=this.echo.elapsedMs) {
+        const event=this.echo.events![this.echo.nextEvent??0];
+        this.echo.nextEvent=(this.echo.nextEvent??0)+1;
+        this.replayEchoEvent(event);
+      }
       const sample = interpolateSample(
         this.echo.samples,
         this.echo.elapsedMs
@@ -1050,15 +1144,11 @@ export class GameEngine {
       }
     }
     if(this.boss && this.echo) {
-      this.echo.combatLife=(this.echo.combatLife??8)-dt;
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
-      this.echo.attackTimer=(this.echo.attackTimer??0)-dt;
-      if(this.echo.combatLife<=0) this.echo=null;
-      else if(this.echo.attackTimer<=0) {
-        const target=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-this.echo!.x,p.y-this.echo!.y)<=120)
-          ?? (this.boss.pillars.every(p=>p.hp<=0) && Math.hypot(this.boss.x-this.echo.x,this.boss.y-this.echo.y)<=120 ? this.boss : null);
-        if(target) { this.damageCombatTarget(target.x,target.y,(this.currentLevel.plates.some(p=>p.isPressed)?24:15)*.7,60); this.echo.attackTimer=.65; }
-      }
+    }
+    if(this.echo?.status==='paused' || this.echo?.status==='finished') {
+      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?8:3);
+      if(this.echo.stability<=0){this.echo=null;this.echoGrace=2;}
     }
 
     // 4. Update Renderer animations & particles
@@ -1069,6 +1159,7 @@ export class GameEngine {
     if (this.legTimeRemaining !== null && targetPlate &&
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
+      this.echoCharges=Math.min(2,this.echoCharges+1);
       this.legTimeRemaining = 10;
       this.showBanner(this.checkpointIndex < this.currentLevel.plates.length
         ? `+10s · Reach rune ${this.checkpointIndex + 1}!`
@@ -1129,11 +1220,13 @@ export class GameEngine {
     }
     if (this.screen !== 'playing') return;
     if (this.boss) {
+      const previousPhase=this.boss.phase;
       const echoTarget=this.echo && (this.echo.aggroTime??0)>0 ? this.echo : null;
       if (updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed))) {
-        if(echoTarget) { this.echo=null;this.showBanner(this.language==='vi'?'Echo đã chặn một đòn và biến mất.':'Echo took a hit and vanished.'); }
+        if(echoTarget) { echoTarget.stability=(echoTarget.stability??100)-30; if(echoTarget.stability<=0){this.echo=null;this.echoGrace=2;}this.showBanner(this.language==='vi'?'Echo đã chặn đòn.':'Echo absorbed the hit.'); }
         else this.takeDamage();
       }
+      if(this.boss.phase!==previousPhase)this.echoCharges=Math.max(1,this.echoCharges);
     } else if ((this.legTimeRemaining === null || this.checkpointIndex === this.currentLevel.plates.length) &&
       checkExitReached(this.player.x, this.player.y, this.currentLevel.exit)) {
       this.handleVictory();
@@ -1178,11 +1271,7 @@ export class GameEngine {
 
   private notifyHUD() {
     if (this.onHUDChange) {
-      const echoState: EchoStatus = this.echo
-        ? this.echo.status === 'replaying'
-          ? 'replaying'
-          : 'finished'
-        : 'none';
+      const echoState: EchoStatus = this.echo?.status??'none';
 
       this.onHUDChange({
         screen: this.screen,
@@ -1192,6 +1281,12 @@ export class GameEngine {
         recordingTimeRemaining: this.recorder.getRemainingTimeMs(),
         echoStatus: echoState,
         echoCount: this.echo ? 1 : 0,
+        echoCharges: this.echoCharges + (this.echoFreeSummon?1:0),
+        echoStability: this.echo?.stability??0,
+        echoElapsedMs: this.echo?.elapsedMs??0,
+        echoDurationMs: this.echo?.samples.at(-1)?.time??this.recorder.getDuration(),
+        echoEvents: this.echo?.events??this.recorder.getEvents(),
+        dissonanceSeconds: this.dissonanceSeconds,
         isMuted: sounds.getMuted(),
         bannerMessage: this.bannerMessage,
         elapsedLevelTime: this.elapsedLevelTime,
