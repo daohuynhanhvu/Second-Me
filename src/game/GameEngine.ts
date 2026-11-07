@@ -1175,7 +1175,7 @@ export class GameEngine {
 
     // 5. Update Pressure Plates
     const targetPlate = this.currentLevel.plates[this.checkpointIndex];
-    if (this.currentLevel.id <= 5 && targetPlate &&
+    if (this.currentLevel.id <= 5 && (this.legTimeRemaining !== null || this.devUnlocked) && targetPlate &&
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
       this.echoCharges=Math.min(4,this.echoCharges+1);
