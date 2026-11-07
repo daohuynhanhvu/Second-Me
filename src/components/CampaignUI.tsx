@@ -9,6 +9,11 @@ import { LEVELS } from '../game/logic/levels.ts';
 
 const wizardImage = `${import.meta.env.BASE_URL}assets/blue-wizard/idle/00.png`;
 function WizardAvatar({className=''}:{className?:string}) { return <span className={`wizard-avatar ${className}`}><img src={wizardImage} alt="Pháp sư Echo"/></span>; }
+function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
+  return hud.characterClass==='swordsman'
+    ? <span className="selected-soldier-avatar"><img src={`${import.meta.env.BASE_URL}assets/soldier/Soldier_Idle.png`} alt={hud.language==='vi'?'Kael · Kiếm sĩ':'Kael · Swordsman'}/></span>
+    : <WizardAvatar/>;
+}
 
 export function Intro({ engine }: { engine: GameEngine | null }) {
   return localize(<div className="intro-screen overlay"><div className="mist mist-one"/><div className="mist mist-two"/>
@@ -45,7 +50,7 @@ export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
   const [bag, setBag] = useState(false);
   const complete = engine?.campaign.bossDefeated === true;
   const next = Math.min(hud.completed.length, 5);
-  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><button className="character-entry" onClick={()=>engine?.openCharacters()} aria-label="Nhân vật và class" title="Nhân vật và class"><WizardAvatar/></button><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button onClick={()=>engine?.openCharacters()}><WizardAvatar/> {hud.language==='vi'?'NHÂN VẬT':'CHARACTERS'}</button><button onClick={()=>setBag(true)}><Backpack size={17}/> {hud.language==='vi'?'TÚI ĐỒ':'INVENTORY'}</button><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
+  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><button className="character-entry" onClick={()=>engine?.openCharacters()} aria-label={hud.language==='vi'?'Chọn nhân vật':'Choose character'} title={hud.characterClass==='swordsman'?'Kael · Swordsman':'Aeris · Mage'}><SelectedCharacterAvatar hud={hud}/></button><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button onClick={()=>engine?.openCharacters()} aria-label={(hud.language==='vi'?'Chọn nhân vật: ':'Choose character: ')+(hud.characterClass==='swordsman'?'Kael':'Aeris')} title={(hud.language==='vi'?'Đang chọn: ':'Selected: ')+(hud.characterClass==='swordsman'?'Kael · Kiếm sĩ':'Aeris · Pháp sư')}><SelectedCharacterAvatar hud={hud}/> {hud.language==='vi'?'NHÂN VẬT':'CHARACTERS'} · {hud.characterClass==='swordsman'?'Kael':'Aeris'}</button><button onClick={()=>setBag(true)}><Backpack size={17}/> {hud.language==='vi'?'TÚI ĐỒ':'INVENTORY'}</button><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
     <div className="lobby-layout"><aside className="lobby-welcome"><span className="eyebrow gold">TRẠI NGHỈ ECHO</span><h1>{complete ? 'Khu rừng đã thức giấc.' : hud.completed.length ? 'Hành trình vẫn đang gọi.' : 'Lối mòn đầu tiên đang chờ.'}</h1><p>{complete ? 'Toàn bộ ký ức đã được giải phóng. Bạn có thể quay lại bất kỳ màn nào.' : 'Thu hồi năm di vật, rèn vũ khí của class và đối mặt với Thủ Vệ Băng.'}</p>
       <button className="secondary lobby-character-link" onClick={()=>engine?.openCharacters()}>{hud.language==='vi'?'NHÂN VẬT & CLASS':'CHARACTERS & CLASSES'} <ArrowRight size={15}/></button>
       {!complete && <button className="primary lobby-continue" onClick={()=>hud.completed.length ? engine?.continueGame() : engine?.selectLevel(0)}><Play size={18}/>{hud.completed.length ? `TIẾP TỤC · MÀN 0${next+1}` : 'BẮT ĐẦU MÀN 01'}</button>}
