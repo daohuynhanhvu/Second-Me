@@ -272,3 +272,23 @@ test('completed campaign can replay any level from lobby',t=>{
   engine.goToLobby();engine.selectLevel(5);
   assert.equal(engine.currentLevelIdx,5);assert.ok(engine.boss);
 });
+
+test('yyyy removes the active deadline and keeps all subsequent trials untimed',t=>{
+  mockDocument(t);
+  const engine=new GameEngine();engine.restartLevel();engine.legTimeRemaining=.1;
+  const controls=engine as unknown as {handleKeyDown(event:KeyboardEvent):void;update(dt:number):void};
+  const event={key:'y',code:'KeyY',repeat:false,preventDefault(){}} as KeyboardEvent;
+  for(let i=0;i<4;i++)controls.handleKeyDown(event);
+  assert.equal(engine.legTimeRemaining,null);
+  for(let i=0;i<240;i++)controls.update(.05);
+  assert.equal(engine.screen,'playing');
+  for(let level=0;level<5;level++){
+    engine.selectLevel(level);assert.equal(engine.legTimeRemaining,null);
+    engine.restartLevel();assert.equal(engine.legTimeRemaining,null);
+  }
+  engine.pauseGame();engine.resumeGame();assert.equal(engine.legTimeRemaining,null);
+  engine.selectLevel(0);
+  const plate=engine.currentLevel.plates[0];engine.player.x=plate.x+plate.width/2;engine.player.y=plate.y+plate.height/2;
+  controls.update(.05);assert.equal(engine.checkpointIndex,1);assert.equal(engine.legTimeRemaining,null);
+  const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,10);
+});

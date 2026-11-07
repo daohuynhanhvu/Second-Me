@@ -365,7 +365,7 @@ export class GameEngine {
     this.pingTarget = null;
     this.recorder.clear();
     this.elapsedLevelTime = 0;
-    this.legTimeRemaining = this.currentLevel.id <= 5 ? 10 : null;
+    this.legTimeRemaining = !this.devUnlocked && this.currentLevel.id <= 5 ? 10 : null;
     this.timePickup = null;
     this.pickupSpawnTimer = 3;
     this.trappedTime = 0;
@@ -438,6 +438,7 @@ export class GameEngine {
 
   public unlockDevMode() {
     this.devUnlocked = true;
+    this.legTimeRemaining = null;
     this.campaign.completed = [1,2,3,4,5];
     this.campaign.forged = true;
     this.campaign.mechanicalOwned = true;
@@ -1174,12 +1175,12 @@ export class GameEngine {
 
     // 5. Update Pressure Plates
     const targetPlate = this.currentLevel.plates[this.checkpointIndex];
-    if (this.legTimeRemaining !== null && targetPlate &&
+    if (this.currentLevel.id <= 5 && targetPlate &&
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
       this.echoCharges=Math.min(4,this.echoCharges+1);
-      this.legTimeRemaining = 10;
-      this.showBanner(this.checkpointIndex < this.currentLevel.plates.length
+      this.legTimeRemaining = this.devUnlocked ? null : 10;
+      this.showBanner(this.devUnlocked ? (this.language==='vi'?'Đã kích hoạt ấn thạch · Không giới hạn thời gian':'Rune activated · No time limit') : this.checkpointIndex < this.currentLevel.plates.length
         ? `+10s · Reach rune ${this.checkpointIndex + 1}!`
         : '+10s · Reach the exit!');
     }
