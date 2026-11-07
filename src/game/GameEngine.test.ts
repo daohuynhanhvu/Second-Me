@@ -251,7 +251,7 @@ test('pressing Y four times unlocks every trail for the current dev session', t 
   assert.equal(engine.campaign.timeItems,99999);
   assert.equal(engine.campaign.mechanicalOwned,true);
   engine.selectClass('mechanical');
-  assert.equal(engine.characterClass,'mechanical');
+  assert.equal(engine.characterClass,'mage');
   engine.campaign.coins=12;engine.campaign.timeItems=0;
   for(let i=0;i<4;i++)controls.handleKeyDown(event);
   assert.equal(engine.campaign.coins,99999);

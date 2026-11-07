@@ -1,3 +1,5 @@
+// Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
+export const MECHANICAL_ENABLED = false;
 export const MATERIALS = [
   { id: 'iron', name: 'Mảnh sắt cổ', detail: 'Kim loại còn ấm dưới lớp rêu.', icon: '◆', color: '#bbc8cf' },
   { id: 'wood', name: 'Gỗ linh mộc', detail: 'Lõi gỗ dùng để rèn vũ khí Echo.', icon: '✦', color: '#b5c987' },

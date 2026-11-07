@@ -26,7 +26,7 @@ import {
 import { LEVELS } from './logic/levels.ts';
 import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
-import { Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
+import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 
@@ -138,7 +138,7 @@ export class GameEngine {
   public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
   public overdrive = 0;
   public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
-  public buyMechanical() { if(this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
+  public buyMechanical() { if(!MECHANICAL_ENABLED || this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
 
   public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
   public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
@@ -190,7 +190,7 @@ export class GameEngine {
       this.reducedMotion = value.reducedMotion === true;
       this.showHints = value.showHints !== false;
       this.language = value.language === 'vi' ? 'vi' : 'en';
-      this.characterClass = value.characterClass === 'mechanical' && this.campaign.mechanicalOwned ? 'mechanical' : value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
+      this.characterClass = MECHANICAL_ENABLED && value.characterClass === 'mechanical' && this.campaign.mechanicalOwned ? 'mechanical' : value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
       setCurrentLanguage(this.language);
       if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', this.reducedMotion);
     } catch { /* Defaults keep the game playable. */ }
@@ -278,7 +278,7 @@ export class GameEngine {
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
   public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
-  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && !this.campaign.mechanicalOwned) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
+  public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || !this.campaign.useTimeItem()) return false; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 

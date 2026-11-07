@@ -23,7 +23,9 @@ test('Rivet costs exactly 100, cannot be bought twice, and ownership survives re
 });
 test('locked mechanical class cannot be selected; purchased class gets its own skill',t=>{
   const g=setup(t);g.screen='characters';g.selectClass('mechanical');assert.equal(g.characterClass,'mage');
-  g.campaign.coins=100;g.screen='shop';g.buyMechanical();g.screen='characters';g.selectClass('mechanical');assert.equal(g.characterClass,'mechanical');
+  g.campaign.coins=100;g.screen='shop';g.buyMechanical();g.screen='characters';g.selectClass('mechanical');assert.equal(g.characterClass,'mage');
+  assert.equal(g.campaign.coins,100);
+  g.characterClass='mechanical';
   g.screen='playing';g.useSkill();assert.equal(g.overdrive,5);g.attack();assert.equal(g.attackCooldown,.27);
 });
 test('orbs cap at three, orbit and deal nearby damage, then expire',t=>{
