@@ -24,4 +24,5 @@ test('Audit all existing levels with MapValidator', () => {
   if (report.errorsCount > 0) {
     console.log(`Fixes needed for ${report.errorsCount} errors!`);
   }
+  assert.equal(report.isValid,true,JSON.stringify(report.issues));
 });

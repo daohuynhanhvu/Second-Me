@@ -6,6 +6,25 @@ import { LEVELS } from './logic/levels.ts';
 
 sounds.setMuted(true);
 
+test('summoning creates a foreground effect at the resolved Echo spawn and expires it', () => {
+  const {engine,advance}=setup();
+  engine.recorder.startRecording(engine.player.x,engine.player.y,'right');
+  engine.spawnEcho();
+  assert.equal(engine.summonEffects.length,1);
+  assert.equal(engine.summonEffects[0].x,engine.echo!.x);
+  advance(1.1);assert.equal(engine.summonEffects.length,0);
+});
+
+test('exit travel freezes movement before committing victory and pause freezes travel', t => {
+  mockDocument(t);
+  const {engine,controls,advance}=setup();
+  const x=engine.player.x,y=engine.player.y;
+  engine.exitTravelRemaining=.7;controls.heldKeys.add('KeyD');
+  advance(.3);assert.equal(engine.screen,'playing');assert.equal(engine.player.x,x);assert.equal(engine.player.y,y);
+  engine.screen='paused';const remaining=engine.exitTravelRemaining;advance(.2);assert.equal(engine.exitTravelRemaining,remaining);
+  engine.screen='playing';advance(.45);assert.equal(engine.screen,'victory');assert.equal(engine.exitTravelRemaining,0);
+});
+
 function mockDocument(t: TestContext) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const document = { body: { dataset: { state: 'gameover' } } };
@@ -329,5 +348,5 @@ test('yyyy removes the active deadline and keeps all subsequent trials untimed',
   engine.selectLevel(0);
   const plate=engine.currentLevel.plates[0];engine.player.x=plate.x+plate.width/2;engine.player.y=plate.y+plate.height/2;
   controls.update(.05);assert.equal(engine.checkpointIndex,1);assert.equal(engine.legTimeRemaining,null);
-  const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,10);
+  const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,16);
 });

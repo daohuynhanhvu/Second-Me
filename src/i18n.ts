@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['A new character selection screen', 'Giao diện chọn nhân vật mới'],
+  ['The character selection screen has a new ancient forest look. Preview Aeris or Kael and press Confirm to begin your journey.', 'Màn chọn nhân vật có diện mạo rừng cổ mới. Xem trước Aeris hoặc Kael và nhấn Xác nhận để bắt đầu hành trình.'],
   ['A new staff and lightning orbs', 'Trượng phép và cầu sét mới'],
   ['Aeris’s staff now features a blue crystal and a more balanced size. Her magic shots and lightning orbs have a new blue pixel-art look.', 'Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.'],
   ['Aeris’s new look', 'Diện mạo mới cho Aeris'],

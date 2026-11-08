@@ -1,3 +1,4 @@
+import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
 export const MECHANICAL_ENABLED = false;
 export const MATERIALS = [
@@ -9,8 +10,9 @@ export const MATERIALS = [
 ] as const;
 
 export type CharacterClass = 'mage' | 'swordsman' | 'mechanical';
-export function levelRating(seconds: number): { stars: number; coins: number } {
-  const stars = seconds <= 15 ? 3 : seconds <= 20 ? 2 : seconds <= 25 ? 1 : 0;
+export function levelRating(seconds: number, levelId?: number): { stars: number; coins: number } {
+  const target = levelId ? (levelId===6?120:puzzleBalance(levelId).threeStars) : 15;
+  const stars = seconds <= target ? 3 : seconds <= target*4/3 ? 2 : seconds <= target*5/3 ? 1 : 0;
   return { stars, coins: [0, 4, 8, 12][stars] };
 }
 
@@ -50,7 +52,7 @@ export class Campaign {
     return true;
   }
   completeLevel(levelId: number, seconds: number) {
-    const reward = levelRating(seconds);
+    const reward = levelRating(seconds,levelId);
     this.coins += reward.coins;
     this.bestStars[levelId] = Math.max(this.bestStars[levelId] ?? 0, reward.stars);
     this.save();
@@ -75,7 +77,8 @@ export interface BossState {
   mode: 'stalking' | 'warning' | 'strike' | 'recover'; timer: number;
   targetX: number; targetY: number; hitFlash: number;
   projectiles: { x: number; y: number; vx: number; vy: number; life: number }[];
-  pillars: { x: number; y: number; hp: number; maxHp: number }[];
+  pillars: { x: number; y: number; hp: number; maxHp: number; hitFlash?: number; destroyedAge?: number }[];
+  shieldBreak?: number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
   burstAreas: { x: number; y: number; radius: number; timer: number; struck: boolean }[];
@@ -96,31 +99,37 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+  boss.shieldBreak = Math.max(0, (boss.shieldBreak ?? 0) - dt);
+  for (const pillar of boss.pillars) {
+    pillar.hitFlash = Math.max(0, (pillar.hitFlash ?? 0) - dt);
+    if (pillar.hp <= 0) pillar.destroyedAge = (pillar.destroyedAge ?? 0) + dt;
+  }
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
   if (activePillars) boss.hp = Math.min(boss.maxHp, boss.hp + activePillars * 2 * dt);
   boss.burstCooldown -= dt;
-  if (boss.burstCooldown <= 0) { boss.burstCooldown += 5; boss.burstRemaining = 2; boss.burstPulse = 0; }
+  if (boss.burstCooldown <= 0) { boss.burstCooldown += 8-boss.phase; boss.burstRemaining = 1+boss.phase*.2; boss.burstPulse = 0; }
   if (boss.burstRemaining > 0) {
     boss.burstRemaining = Math.max(0,boss.burstRemaining-dt);
     boss.burstPulse -= dt;
     if (boss.burstPulse <= 0) {
-      boss.burstPulse += .22;
-      for(let i=0;i<5;i++) {
-        const angle=Math.PI*2*(i/5)+Math.random()*.22;
-        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*210,vy:Math.sin(angle)*210,life:3.2});
+      boss.burstPulse += .8-boss.phase*.12;
+      const count=2+boss.phase*2;
+      for(let i=0;i<count;i++) {
+        const angle=Math.PI*2*(i/count)+boss.phase*.17;
+        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*(110+boss.phase*25),vy:Math.sin(angle)*(110+boss.phase*25),life:3.2});
       }
-      for(let i=0;i<2;i++)boss.burstAreas.push({x:Math.max(85,Math.min(1195,player.x+(Math.random()-.5)*260)),y:Math.max(85,Math.min(635,player.y+(Math.random()-.5)*220)),radius:50,timer:.55,struck:false});
+      for(let i=0;i<1;i++)boss.burstAreas.push({x:Math.max(85,Math.min(1195,player.x+(Math.random()-.5)*260)),y:Math.max(85,Math.min(635,player.y+(Math.random()-.5)*220)),radius:48,timer:.9,struck:false});
     }
   }
   let burstHit=false;
   for(const area of boss.burstAreas) {
     area.timer-=dt;
-    if(area.timer<=0 && !area.struck) { area.struck=true; if(Math.hypot(player.x-area.x,player.y-area.y)<area.radius+12)burstHit=true; }
+    if(area.timer<=0 && !area.struck) { area.struck=true; if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12)burstHit=true; }
   }
   boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
   boss.timer -= dt;
@@ -138,7 +147,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     }
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
     boss.mode = 'strike'; boss.timer = 0.3;
-    hit = Math.hypot(player.x - boss.targetX, player.y - boss.targetY) < 82;
+    hit = Math.hypot(defender.x - boss.targetX, defender.y - boss.targetY) < 82;
     if (boss.phase >= 2) {
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
@@ -153,7 +162,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   }
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
-    if (Math.hypot(shot.x - player.x, shot.y - player.y) < 19) { shot.life = 0; hit = true; }
+    if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; }
   }
   boss.projectiles = boss.projectiles.filter(s => s.life > 0 && s.x > 40 && s.x < 1240 && s.y > 40 && s.y < 680);
   return hit || burstHit;

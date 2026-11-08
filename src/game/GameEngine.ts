@@ -1,3 +1,6 @@
+import { puzzleBalance, SHARD_BONUS, PUZZLE_HINTS } from './logic/balance.ts';
+import { TutorialDirector, type GuideTopic } from './logic/tutorials.ts';
+import { isPuzzleExitOpen } from './logic/puzzle.ts';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -29,6 +32,7 @@ import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
 import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
+import { drawPortalEnergy, finishPixelFrame } from './rendering/portalEffects.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 import { voice, type VoiceRole } from './logic/voice.ts';
 import { music, type MusicScene } from './logic/music.ts';
@@ -54,6 +58,8 @@ export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | '
 const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'], mechanical: ['fire','armor','haste'] };
 
 export interface HUDState {
+  guideTopic?: GuideTopic|null;
+  guideLibrary?: boolean;
   screen: GameScreen;
   levelName: string;
   levelSubtitle: string;
@@ -82,6 +88,9 @@ export interface HUDState {
   legTimeRemaining: number | null;
   checkpointIndex: number;
   checkpointCount: number;
+  legTimeBudget?: number;
+  runesHeld?: number;
+  runesRequired?: number;
   slowed: boolean;
   defeatReason: 'timeout' | 'damage';
   volume: number;
@@ -174,6 +183,12 @@ export class GameEngine {
   private echoGrace = 0;
   private pingTarget: {x:number;y:number;life:number}|null = null;
   public campaign = new Campaign();
+  public readonly guides = new TutorialDirector();
+  public tutorialEnabled = false;
+  public dismissGuide(){this.guides.dismiss();this.heldKeys.clear();this.notifyHUD();}
+  public openGuide(){this.guides.openLibrary();this.heldKeys.clear();this.notifyHUD();}
+  public replayGuide(topic:GuideTopic){this.guides.replay(topic);this.notifyHUD();}
+  public closeGuide(){this.guides.closeLibrary();this.heldKeys.clear();this.notifyHUD();}
   public boss: BossState | null = null;
   public bossDeathElapsed = 0;
   private bossDeathPending = false;
@@ -190,12 +205,19 @@ export class GameEngine {
   public invulnerability = 0;
   public attackCooldown = 0;
   public attackFlash = 0;
+  public attackAngle = 0;
+  public summonEffects: {x:number;y:number;life:number}[] = [];
+  public exitTravelRemaining = 0;
+  private exitOpenedAt: number | null = null;
+  public combatHits: { x: number; y: number; damage: number; life: number; broken: boolean }[] = [];
   public dodgeCooldown = 0;
   public dodgeTime = 0;
   public lastReward: number | null = null;
   public legTimeRemaining: number | null = null;
   public timePickup: { x: number; y: number } | null = null;
-  public pickupSpawnTimer = 3;
+  public pickupSpawnTimer = 5;
+  private shardClaimedThisLeg = false;
+  private timeItemUsedThisLeg = false;
   public trappedTime = 0;
   public checkpointIndex = 0;
   public slowed = false;
@@ -406,7 +428,7 @@ export class GameEngine {
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
-  public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || !this.campaign.useTimeItem()) return false; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
+  public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || this.timeItemUsedThisLeg || !this.campaign.useTimeItem()) return false; this.timeItemUsedThisLeg = true; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 
   public stop() {
     if (this.animFrameId !== null) {
@@ -471,15 +493,18 @@ export class GameEngine {
     this.pingTarget = null;
     this.recorder.clear();
     this.elapsedLevelTime = 0;
-    this.legTimeRemaining = !this.devUnlocked && this.currentLevel.id <= 5 ? 10 : null;
+    this.legTimeRemaining = !this.devUnlocked && this.currentLevel.id <= 5 ? puzzleBalance(this.currentLevel.id).legSeconds : null;
     this.timePickup = null;
-    this.pickupSpawnTimer = 3;
+    this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
+    this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false;
     this.trappedTime = 0;
     this.checkpointIndex = 0;
     this.slowed = false;
     this.defeatReason = 'damage';
     this.health = 5;
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
+    this.combatHits = [];
+    this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.magicShots = [];
     this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
@@ -499,6 +524,8 @@ export class GameEngine {
     this.screen = 'playing';
     document.body.dataset.state = 'playing';
     this.showBanner(`Bắt đầu lại ${this.currentLevel.name}`);
+    if(this.tutorialEnabled)this.guides.offer(this.currentLevel.id===6?'shield':'echo');
+    if(this.currentLevel.id<=5)this.showBanner(this.language==='vi'?PUZZLE_HINTS[this.currentLevel.id-1]:this.currentLevel.description,6);
     this.voiceLevelStart();
     this.notifyHUD();
   }
@@ -619,12 +646,23 @@ export class GameEngine {
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
     if(this.insideLightCircle) amount *= 1.2;
     if(target !== this.boss) {
-      const pillar = target;
+      const pillar = target as BossState['pillars'][number];
+      const dealt = Math.min(pillar.hp, amount);
       pillar.hp=Math.max(0,pillar.hp-amount);
-      this.addDamageText(pillar.x, pillar.y - 34, amount, heavy);
+      pillar.hitFlash = .2;
+      this.combatHits.push({ x: pillar.x, y: pillar.y - 20, damage: dealt, life: .7, broken: pillar.hp === 0 });
+      this.combatHits = this.combatHits.slice(-24);
+      sounds.playIceHit(pillar.hp === 0);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
       if(pillar.hp===0) {
+        pillar.destroyedAge = 0;
+        if (this.boss.armor === 0) {
+          this.boss.shieldBreak = 1;
+          this.boss.mode = 'recover'; this.boss.timer = 1.8;
+          this.boss.burstCooldown = Math.max(2, this.boss.burstCooldown);
+          this.boss.burstRemaining = 0; this.boss.burstAreas = []; this.boss.projectiles = [];
+        }
         this.echoCharges=Math.min(4,this.echoCharges+1);
         voice.say(this.voiceRole, 'kill');
         if(this.boss.armor===0) voice.say('guardian', 'event', { id: 'armor', delay: 1.2 });
@@ -640,8 +678,10 @@ export class GameEngine {
       return false;
     }
     this.boss.hp=Math.max(0,this.boss.hp-amount);
+    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: amount, life: .7, broken: false });
+    this.combatHits = this.combatHits.slice(-24);
+    sounds.playIceHit(false);
     this.boss.hitFlash=.18;
-    this.addDamageText(this.boss.x, this.boss.y - 60, amount, heavy);
     this.finishBossHit(); return true;
   }
 
@@ -740,7 +780,7 @@ export class GameEngine {
   private get comboSpeed() { return this.hasteTime > 0 || this.overdrive > 0 ? 2 : 1; }
 
   public attack(target?: { x: number; y: number }) {
-    if (this.screen !== 'playing' || this.bossDeathPending) return;
+    if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0) return;
     const combo = this.comboFor();
     if (combo) {
       if (this.dodgeTime > 0) return;                   // mid-dodge: no attack
@@ -755,6 +795,7 @@ export class GameEngine {
     if (this.attackCooldown > 0) return;
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+    this.attackAngle = Math.atan2(recordedAim.y - this.player.y, recordedAim.x - this.player.x);
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
     voice.say(this.voiceRole, 'attack');
     if (this.characterClass === 'mage') {
@@ -862,7 +903,7 @@ export class GameEngine {
   }
 
   public useSkill(_target?: { x: number; y: number }) {
-    if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
+    if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
     if (this.characterClass === 'mage') {
       if(this.orbitOrbs.length >= 3) return;
       const aim = _target ?? this.combatAim() ?? this.player;
@@ -1034,6 +1075,7 @@ export class GameEngine {
     };
 
     sounds.playEchoSpawn();
+    this.summonEffects.push({x:safeEchoSpawn.x,y:safeEchoSpawn.y,life:1});
     this.renderer.particles.emit(first.x, first.y, 25, '#22d3ee', 80, 4, 0.7);
     this.showBanner('Echo đã xuất hiện và đang phát lại đường đi.');
     this.notifyHUD();
@@ -1103,6 +1145,10 @@ export class GameEngine {
 
     // Movement is held in heldKeys; one-shot actions must run once per press.
     if (e.repeat) return;
+    if(this.tutorialEnabled&&this.guides.blocking){
+      if(e.code==='Escape'){if(this.guides.active)this.dismissGuide();else this.closeGuide();}
+      return;
+    }
     if (this.bossDeathPending) return;
 
     const key = e.key.toLowerCase();
@@ -1283,8 +1329,36 @@ export class GameEngine {
     this.animFrameId = requestAnimationFrame(this.loop);
   };
 
+  private discoverMechanics() {
+    const offer=(id:GuideTopic)=>this.guides.offer(id);
+    if(this.boss){
+      offer('shield');
+      if(this.echoes.length)offer('decoy');
+      if(this.boss.armor===0)offer('vulnerable');
+      return;
+    }
+    if(this.currentLevel.id===5&&this.checkpointIndex>=3)offer('recycle');
+    if(this.echoes.length>=2)offer('multi');
+    if(this.currentLevel.plates.some(p=>Math.hypot(this.player.x-p.x-p.width/2,this.player.y-p.y-p.height/2)<140))offer('links');
+    if(this.timePickup)offer('time');
+    for(const trap of this.currentLevel.traps??[])if(Math.hypot(this.player.x-trap.x-trap.width/2,this.player.y-trap.y-trap.height/2)<150)offer(trap.kind);
+  }
+
   private update(dt: number) {
     if (this.screen !== 'playing') return;
+    if(this.tutorialEnabled){
+      const previousTopic=this.guides.active;
+      if(!this.guides.blocking)this.discoverMechanics();
+      if(this.guides.blocking){this.heldKeys.clear();if(previousTopic!==this.guides.active)this.notifyHUD();return;}
+    }
+    if (this.exitTravelRemaining > 0) {
+      this.exitTravelRemaining = Math.max(0,this.exitTravelRemaining-dt);
+      this.elapsedLevelTime += dt;
+      if (this.exitTravelRemaining === 0) this.handleVictory();
+      return;
+    }
+    for (const effect of this.summonEffects) effect.life -= dt;
+    this.summonEffects = this.summonEffects.filter(effect=>effect.life>0);
     if (this.bossDeathPending) {
       this.bossDeathElapsed += dt;
       if (this.bossDeathElapsed >= 1.05) {
@@ -1319,7 +1393,7 @@ export class GameEngine {
     const altar=this.currentLevel.playerSpawn;
     const outsideAltar=Math.hypot(this.player.x-altar.x,this.player.y-altar.y)>85;
     this.echoGrace=Math.max(0,this.echoGrace-dt);
-    if(!outsideAltar || this.echoes.length>0) this.dissonanceSeconds=0;
+    if(!this.boss || !outsideAltar || this.echoes.length>0) this.dissonanceSeconds=0;
     else if(this.echoGrace<=0) {
       this.dissonanceSeconds+=dt;
       if(this.dissonanceSeconds>=5) {
@@ -1332,14 +1406,15 @@ export class GameEngine {
     this.trappedTime = Math.max(0, this.trappedTime - dt);
     if (this.legTimeRemaining !== null) {
       this.pickupSpawnTimer -= dt;
-      if (this.pickupSpawnTimer <= 0) {
-        this.pickupSpawnTimer += 3;
+      if (this.pickupSpawnTimer <= 0 && !this.shardClaimedThisLeg && !this.timePickup) {
+        this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
         this.spawnTimePickup();
       }
       if (this.timePickup && Math.hypot(this.player.x - this.timePickup.x, this.player.y - this.timePickup.y) < 30) {
-        this.legTimeRemaining += 4;
+        this.legTimeRemaining += SHARD_BONUS;
+        this.shardClaimedThisLeg = true;
         this.timePickup = null;
-        this.showBanner('+4s · Time shard collected');
+        this.showBanner(this.language==='vi'?`+${SHARD_BONUS}s · Mỗi chặng chỉ có một mảnh thời gian`:`+${SHARD_BONUS}s · One time shard per leg`);
       }
     }
     this.invulnerability = Math.max(0, this.invulnerability - dt);
@@ -1369,6 +1444,8 @@ export class GameEngine {
     }
     this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
     this.attackFlash = Math.max(0, this.attackFlash - dt);
+    for (const hit of this.combatHits) hit.life -= dt;
+    this.combatHits = this.combatHits.filter(hit => hit.life > 0);
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.dodgeTime = Math.max(0, this.dodgeTime - dt);
 
@@ -1516,7 +1593,7 @@ export class GameEngine {
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
     }
     if(this.echo?.status==='paused' || this.echo?.status==='finished') {
-      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?8:0);
+      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0);
       if(this.echo.stability<=0){this.echo=null;this.echoGrace=2;}
     }
 
@@ -1532,10 +1609,12 @@ export class GameEngine {
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
       this.echoCharges=Math.min(4,this.echoCharges+1);
-      this.legTimeRemaining = this.devUnlocked ? null : 10;
+      this.legTimeRemaining = this.devUnlocked ? null : puzzleBalance(this.currentLevel.id).legSeconds;
+      this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false; this.timePickup = null;
+      this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
       this.showBanner(this.devUnlocked ? (this.language==='vi'?'Đã kích hoạt ấn thạch · Không giới hạn thời gian':'Rune activated · No time limit') : this.checkpointIndex < this.currentLevel.plates.length
-        ? `+10s · Reach rune ${this.checkpointIndex + 1}!`
-        : '+10s · Reach the exit!');
+        ? (this.language==='vi'?`Chặng mới ${puzzleBalance(this.currentLevel.id).legSeconds}s · Đến rune ${this.checkpointIndex+1}!`:`New leg · ${puzzleBalance(this.currentLevel.id).legSeconds}s · Reach rune ${this.checkpointIndex + 1}!`)
+        : (this.language==='vi'?'Giữ tất cả rune bằng Echo, rồi tới cổng thoát!':'Hold every rune with Echoes, then reach the exit!'));
     }
     const plateUpdates = updatePressurePlates(
       this.currentLevel.plates,
@@ -1593,9 +1672,15 @@ export class GameEngine {
     if (this.screen !== 'playing') return;
     if (this.boss) {
       const previousPhase=this.boss.phase;
-      const echoTarget=this.echo && (this.echo.aggroTime??0)>0 ? this.echo : null;
+      const echoTarget=this.echoes.filter(e=>(e.aggroTime??0)>0).sort((a,b)=>(b.aggroTime??0)-(a.aggroTime??0))[0]??null;
+      const modeBefore=this.boss.mode;
       const burstBefore = this.boss.burstRemaining;
-      const bossHit = updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed));
+      const bossHit = updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player);
+      if(echoTarget&&modeBefore==='warning'&&this.boss.mode==='strike'&&Math.hypot(echoTarget.x-this.boss.targetX,echoTarget.y-this.boss.targetY)<82) {
+        echoTarget.stability=(echoTarget.stability??100)-30;
+        if(echoTarget.stability<=0){this.echoes=this.echoes.filter(e=>e!==echoTarget);this.echoGrace=2;}
+        this.showBanner(this.language==='vi'?'Echo đã đỡ cú đập băng.':'Echo absorbed the ice slam.');
+      }
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
       this.lastBossPhase = this.boss.phase;
       // Slam wind-up: the shout is timed to end exactly as the blow lands.
@@ -1605,13 +1690,13 @@ export class GameEngine {
       if (burstBefore <= 0 && this.boss.burstRemaining > 0) voice.say('guardian', 'skill', { chance: 0.6, cooldown: 9 });
       if (!this.bossLowVoiced && this.boss.hp > 0 && this.boss.hp < this.boss.maxHp * 0.15) { this.bossLowVoiced = true; voice.say('guardian', 'lowHealth'); }
       if (bossHit) {
-        if(echoTarget) { echoTarget.stability=(echoTarget.stability??100)-30; if(echoTarget.stability<=0){this.echo=null;this.echoGrace=2;}this.showBanner(this.language==='vi'?'Echo đã chặn đòn.':'Echo absorbed the hit.'); }
-        else this.takeDamage();
+        // A decoy redirects attacks; it never makes the player immune to stray projectiles.
+        this.takeDamage();
       }
       if(this.boss.phase!==previousPhase)this.echoCharges=Math.max(1,this.echoCharges);
-    } else if ((this.legTimeRemaining === null || this.checkpointIndex === this.currentLevel.plates.length) &&
+    } else if ((this.devUnlocked || isPuzzleExitOpen(this.currentLevel,this.checkpointIndex)) &&
       checkExitReached(this.player.x, this.player.y, this.currentLevel.exit)) {
-      this.handleVictory();
+      this.exitTravelRemaining = .7;
     }
   }
 
@@ -1638,13 +1723,14 @@ export class GameEngine {
     if (!this.ctx || !this.canvas) return;
 
     this.renderer.stage.levelTime = this.elapsedLevelTime;
-    this.renderer.stage.exitOpen = this.legTimeRemaining === null || this.checkpointIndex >= this.currentLevel.plates.length;
+    this.renderer.stage.reducedMotion = this.reducedMotion;
+    this.renderer.stage.exitOpen = !this.boss && (this.devUnlocked || isPuzzleExitOpen(this.currentLevel,this.checkpointIndex));
     this.renderer.render(
       this.ctx,
       this.canvas.width,
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
-      this.characterClass !== 'mage' || comboPose(this) ? {...this.player,x:-1000,y:-1000} : this.player,
+      this.characterClass !== 'mage' || comboPose(this) || (this.exitTravelRemaining>0 && this.exitTravelRemaining<.35) ? {...this.player,x:-1000,y:-1000} : {...this.player,y:this.player.y-(this.exitTravelRemaining>0?(.7-this.exitTravelRemaining)*65:0)},
       null,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
@@ -1652,6 +1738,14 @@ export class GameEngine {
       this.gameTime
     );
     renderAdventure(this.ctx, this, this.elapsedLevelTime);
+    const t = this.elapsedLevelTime;
+    if(t<1.3) drawPortalEnergy(this.ctx,this.currentLevel.playerSpawn.x,this.currentLevel.playerSpawn.y,t,Math.max(0,1-t/1.3),this.reducedMotion);
+    for(const effect of this.summonEffects) drawPortalEnergy(this.ctx,effect.x,effect.y,1-effect.life,effect.life,this.reducedMotion);
+    const exit = this.currentLevel.exit, open = this.renderer.stage.exitOpen && !this.boss;
+    if(open && this.exitOpenedAt===null) this.exitOpenedAt=t;
+    if(!open) this.exitOpenedAt=null;
+    if(open) drawPortalEnergy(this.ctx,exit.x+exit.width/2,exit.y+exit.height/2,t-this.exitOpenedAt!,this.exitTravelRemaining>0?1:.6,this.reducedMotion,true);
+    finishPixelFrame(this.ctx,this.canvas);
   }
 
   private notifyHUD() {
@@ -1659,6 +1753,8 @@ export class GameEngine {
       const echoState: EchoStatus = this.echo?.status??'none';
 
       this.onHUDChange({
+        guideTopic:this.tutorialEnabled?this.guides.active:null,
+        guideLibrary:this.tutorialEnabled&&this.guides.libraryOpen,
         screen: this.screen,
         levelName: this.currentLevel.name,
         levelSubtitle: this.currentLevel.subtitle,
@@ -1686,6 +1782,9 @@ export class GameEngine {
         legTimeRemaining: this.legTimeRemaining,
         checkpointIndex: this.checkpointIndex,
         checkpointCount: this.currentLevel.plates.length,
+        legTimeBudget: puzzleBalance(this.currentLevel.id).legSeconds,
+        runesHeld: this.currentLevel.plates.filter(p=>p.isPressed&&this.currentLevel.exitRequiredPlates?.includes(p.id)).length,
+        runesRequired: this.currentLevel.exitRequiredPlates?.length??0,
         slowed: this.slowed,
         defeatReason: this.defeatReason,
         volume: sounds.getVolume(),

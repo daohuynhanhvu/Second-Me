@@ -86,6 +86,21 @@ class SoundEngine {
     osc.stop(t + 0.06);
   }
 
+  public playIceHit(broken: boolean) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx || !this.masterGain) return;
+    const t = this.ctx.currentTime;
+    for (const frequency of broken ? [170, 510, 1230, 2310] : [310, 930, 1910]) {
+      const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(frequency, t);
+      osc.frequency.exponentialRampToValueAtTime(frequency * .32, t + .16);
+      gain.gain.setValueAtTime(broken ? .12 : .065, t);
+      gain.gain.exponentialRampToValueAtTime(.001, t + (broken ? .34 : .13));
+      osc.connect(gain);gain.connect(this.masterGain);osc.start(t);osc.stop(t + .36);
+    }
+  }
+
   public playRecordStart() {
     if (this.isMuted) return;
     this.initCtx();

@@ -66,6 +66,7 @@ export interface LevelData {
   subtitle: string;
   description: string;
   difficulty?: number;
+  exitRequiredPlates?: string[];
   traps?: Trap[];
   hazards?: { x: number; y: number; radius: number; period: number; offset: number }[];
   playerSpawn: { x: number; y: number; direction: Direction };
