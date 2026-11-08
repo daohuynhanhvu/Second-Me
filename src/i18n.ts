@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Guardian ice spike attack', 'Chiêu gai băng của boss'],
+  ['A frost rune warns of the attack, then ice spikes erupt, deal damage and fade away.', 'Vòng phép băng xuất hiện cảnh báo, sau đó gai băng trồi lên gây sát thương rồi tan biến.'],
   ['Echoes fight on their own', 'Echo tự chiến đấu'],
   ['Echoes draw enemies, fight nearby and withstand three hits before being recalled.', 'Echo thu hút kẻ địch, tự chiến đấu trong phạm vi gần và chịu được 3 đòn trước khi bị thu hồi.'],
   ['Guardian frost burst', 'Hiệu ứng nổ băng của boss'],
