@@ -13,6 +13,15 @@ export interface MovementSample {
   isMoving?: boolean;
 }
 
+export interface EchoEvent {
+  time: number;
+  kind: 'attack' | 'skill';
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+}
+
 export interface Rect {
   x: number;
   y: number;
@@ -81,4 +90,4 @@ export interface Trap extends Rect {
 
 export type GameScreen = 'intro' | 'loading' | 'lobby' | 'shop' | 'characters' | 'playing' | 'paused' | 'victory' | 'forge' | 'defeat' | 'ending';
 export type RecordingStatus = 'idle' | 'recording' | 'recorded';
-export type EchoStatus = 'none' | 'replaying' | 'finished';
+export type EchoStatus = 'none' | 'replaying' | 'paused' | 'finished';

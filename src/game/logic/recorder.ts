@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Direction, MovementSample, RecordingStatus } from './types.ts';
+import { Direction, MovementSample, RecordingStatus, type EchoEvent } from './types.ts';
 
 export const MAX_RECORDING_DURATION_MS = 8000;
 export const SAMPLE_INTERVAL_MS = 50;
 
 export class RecordingManager {
   private samples: MovementSample[] = [];
+  private events: EchoEvent[] = [];
   private status: RecordingStatus = 'idle';
   private startTime: number = 0;
   private lastSampleTime: number = -1;
@@ -21,6 +22,11 @@ export class RecordingManager {
 
   public getSamples(): MovementSample[] {
     return this.samples;
+  }
+
+  public getEvents(): EchoEvent[] { return this.events; }
+  public recordEvent(event: Omit<EchoEvent, 'time'>): void {
+    if (this.status === 'recording') this.events.push({ ...event, time: this.currentDuration });
   }
 
   public getDuration(): number {
@@ -42,6 +48,7 @@ export class RecordingManager {
     initialY: number,
     direction: Direction
   ): void {
+    this.events = [];
     this.samples = [
       {
         time: 0,
@@ -131,6 +138,7 @@ export class RecordingManager {
 
   public clear(): void {
     this.samples = [];
+    this.events = [];
     this.status = 'idle';
     this.startTime = 0;
     this.lastSampleTime = -1;

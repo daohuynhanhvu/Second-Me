@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, type HUDState } from './game/GameEngine.ts';
-import { Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
+import { Intro, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
 import { CinematicIntro } from './components/CinematicIntro.tsx';
-import { MainMenu } from './components/MainMenu.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import { localize } from './localize.tsx';
 
-const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:'ECHO GROVE', recordingStatus:'idle',
+const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:'ECHO GROVE', recordingStatus:'idle', echoCharges:2, echoStability:0, echoElapsedMs:0, echoDurationMs:0, echoEvents:[], dissonanceSeconds:0,
   recordingTimeRemaining:8000, echoStatus:'none', echoCount:0, isMuted:false, bannerMessage:'', elapsedLevelTime:0,
   completed:[], forged:false, lastReward:null, health:5, bossHp:0, bossPhase:0, attackCooldown:0, dodgeCooldown:0, legTimeRemaining:null, checkpointIndex:0, checkpointCount:0, slowed:false, defeatReason:'damage', volume:.25, voiceVolume:1, reducedMotion:false, showHints:true, devUnlocked:false, language:'en', characterClass:'mage', weapon:'staff', coins:0, timeItems:0, bestStars:{}, lastRating:null, skillCooldown:0, bossArmor:0, pillarsRemaining:0, activeBuff:'', skillDrop:null, mechanicalOwned:false };
 export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngine) => void } = {}) {
@@ -26,7 +25,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   const engine = ref.current;
   const lang = hud.language === 'vi' ? 'vi' : 'en';
   return localize(<main className="adventure-app" lang={hud.language} translate="no"><div className="game-stage"><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
-    {hud.screen === 'intro' && <MainMenu engine={engine} hud={hud} active={!filmPlaying} onReplay={() => setIntroRun(n => Math.abs(n) + 1)}/>}
+    {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
     {hud.screen === 'intro' && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} onDone={() => setIntroRun(0)}/>}
     {hud.screen === 'loading' && <LoadingScreen key={hud.loadingLevel ?? 'lobby'} language={lang} reducedMotion={hud.reducedMotion}
       level={hud.loadingLevel == null ? null : { levelId: hud.loadingLevel, character: hud.characterClass, lang }}

@@ -19,7 +19,7 @@ export interface CharacterPosition {
 export function updatePressurePlates(
   plates: PressurePlate[],
   player: CharacterPosition,
-  echo: CharacterPosition | null,
+  echo: CharacterPosition | CharacterPosition[] | null,
   dt: number
 ): { plateChanged: boolean; activatedIds: string[]; deactivatedIds: string[] } {
   let plateChanged = false;
@@ -33,14 +33,7 @@ export function updatePressurePlates(
     player.height ?? 24
   );
 
-  const echoBox = echo
-    ? getCharacterBoundingBox(
-        echo.x,
-        echo.y,
-        echo.width ?? 24,
-        echo.height ?? 24
-      )
-    : null;
+  const echoBoxes=(Array.isArray(echo)?echo:echo?[echo]:[]).map(e=>getCharacterBoundingBox(e.x,e.y,e.width??24,e.height??24));
 
   for (const plate of plates) {
     const plateRect: Rect = {
@@ -51,7 +44,7 @@ export function updatePressurePlates(
     };
 
     const playerOn = rectIntersects(playerBox, plateRect);
-    const echoOn = echoBox ? rectIntersects(echoBox, plateRect) : false;
+    const echoOn = echoBoxes.some(box=>rectIntersects(box,plateRect));
     const isNowPressed = playerOn || echoOn;
 
     if (isNowPressed !== plate.isPressed) {
@@ -82,7 +75,7 @@ export function updateSecurityDoors(
   doors: SecurityDoor[],
   plates: PressurePlate[],
   player: CharacterPosition,
-  echo: CharacterPosition | null,
+  echo: CharacterPosition | CharacterPosition[] | null,
   dt: number,
   openSpeed: number = 3.5 // full open/close in ~0.3 seconds
 ): { doorStateChanged: boolean; openedDoorIds: string[]; closedDoorIds: string[] } {
@@ -96,14 +89,7 @@ export function updateSecurityDoors(
     player.width ?? 26,
     player.height ?? 26
   );
-  const echoBox = echo
-    ? getCharacterBoundingBox(
-        echo.x,
-        echo.y,
-        echo.width ?? 26,
-        echo.height ?? 26
-      )
-    : null;
+  const echoBoxes=(Array.isArray(echo)?echo:echo?[echo]:[]).map(e=>getCharacterBoundingBox(e.x,e.y,e.width??26,e.height??26));
 
   // Build a lookup map of plate states
   const plateStateMap = new Map<string, boolean>();
@@ -144,7 +130,7 @@ export function updateSecurityDoors(
     } else {
       // Safety check: is player or echo inside the doorway?
       const playerInside = rectIntersects(playerBox, doorRect);
-      const echoInside = echoBox ? rectIntersects(echoBox, doorRect) : false;
+      const echoInside = echoBoxes.some(box=>rectIntersects(box,doorRect));
 
       // Only close if doorway is unoccupied to prevent getting crushed or stuck
       if (!playerInside && !echoInside) {

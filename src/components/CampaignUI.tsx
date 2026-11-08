@@ -1,4 +1,5 @@
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
+import { IntroEffects } from './IntroEffects.tsx';
 import React, { useEffect, useState } from 'react';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
@@ -13,6 +14,40 @@ function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
   return hud.characterClass==='swordsman'
     ? <span className="selected-soldier-avatar"><img src={`${import.meta.env.BASE_URL}assets/soldier/Soldier_Idle.png`} alt={hud.language==='vi'?'Kael · Kiếm sĩ':'Kael · Swordsman'}/></span>
     : <WizardAvatar/>;
+}
+
+export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
+  const [panel, setPanel] = useState<'none' | 'settings' | 'credits' | 'quit'>('none');
+  const vi = hud.language === 'vi';
+  const hasProgress = hud.completed.length > 0 || hud.forged;
+  return <div className="intro-screen overlay" onKeyDown={event => {
+    if (panel !== 'none' && ['Enter', ' ', 'Escape'].includes(event.key)) {
+      event.stopPropagation();
+      if (event.key === 'Escape') setPanel('none');
+    }
+  }}>
+    <IntroEffects/>
+    <h1 className="intro-accessible-title">SECOND ME</h1>
+    <div className="intro-mobile-title" aria-hidden="true"><span>THE ANCIENT PATH REMEMBERS</span><strong>SECOND ME</strong><small>ECHOES OF THE WILD</small></div>
+    <div className="intro-language" role="group" aria-label={vi ? 'Ngôn ngữ' : 'Language'}>
+      <button type="button" className={!vi ? 'selected' : ''} aria-pressed={!vi} onClick={() => engine?.setLanguage('en')}>EN</button>
+      <span aria-hidden="true">/</span>
+      <button type="button" className={vi ? 'selected' : ''} aria-pressed={vi} onClick={() => engine?.setLanguage('vi')}>VI</button>
+    </div>
+    <nav className="intro-menu" aria-label={vi ? 'Menu chính' : 'Main menu'}>
+      <button className="intro-menu-item selected" onClick={() => engine?.openLobby()}><span aria-hidden="true">▹</span>{vi ? 'BẮT ĐẦU' : 'START GAME'}<span aria-hidden="true">◇</span></button>
+      <button className="intro-menu-item" disabled={!hasProgress} onClick={() => engine?.continueGame()}>{vi ? 'TIẾP TỤC' : 'CONTINUE'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('settings')}>{vi ? 'CÀI ĐẶT' : 'SETTINGS'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('credits')}>{vi ? 'TÁC GIẢ' : 'CREDITS'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('quit')}>{vi ? 'THOÁT' : 'QUIT'}</button>
+    </nav>
+    {panel === 'settings' && <SettingsPanel engine={engine} hud={hud} close={() => setPanel('none')}/>}
+    {(panel === 'credits' || panel === 'quit') && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={panel === 'credits' ? (vi ? 'Tác giả' : 'Credits') : (vi ? 'Thoát trò chơi' : 'Quit game')} onClick={event => event.stopPropagation()}>
+      <div className="panel-top"><span className="eyebrow gold">{panel === 'credits' ? (vi ? 'TÁC GIẢ' : 'CREDITS') : (vi ? 'THOÁT TRÒ CHƠI' : 'QUIT GAME')}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={() => setPanel('none')}><X size={18}/></button></div>
+      <h2>SECOND ME</h2><p className="muted">{panel === 'credits' ? (vi ? 'Một chuyến phiêu lưu Echo đang được phát triển. Cảm ơn bạn đã đồng hành cùng khu rừng.' : 'An Echo adventure in development. Thank you for exploring the forest with us.') : (vi ? 'Bạn có thể đóng tab trình duyệt để thoát game. Tiến độ đã được lưu trên máy này.' : 'Close this browser tab to leave the game. Your progress is saved on this device.')}</p>
+      <button className="primary" onClick={() => setPanel('none')}>{vi ? 'QUAY LẠI' : 'BACK TO MENU'}</button>
+    </div></div>}
+  </div>;
 }
 
 export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | null; hud: HUDState; close: () => void }) {
@@ -154,14 +189,18 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
     {boss && <div className="boss-bar"><div><span>THỦ VỆ BĂNG</span><small>{hud.bossHp} / 240 · {translate('GIAI ĐOẠN',hud.language)} {hud.bossPhase} / 3</small></div><div className="health-track" role="progressbar" aria-label="Máu boss" aria-valuenow={hud.bossHp} aria-valuemin={0} aria-valuemax={240}><i style={{ width: `${hud.bossHp/240*100}%` }}/></div><p className="boss-armor">{hud.pillarsRemaining>0?(hud.language==='vi'?`PHÁ ${hud.pillarsRemaining} TRỤ ĐỂ GỠ GIÁP · GIÁP ${hud.bossArmor}`:`DESTROY ${hud.pillarsRemaining} PILLARS · ARMOR ${hud.bossArmor}`):(hud.language==='vi'?'BOSS ĐÃ MẤT GIÁP':'BOSS ARMOR BROKEN')}</p></div>}
     {hud.bannerMessage && <div className={'hud-banner ' + (boss ? 'boss-banner' : 'trail-banner')}>{hud.bannerMessage}</div>}
     {hud.activeBuff && <div className="combat-buff">{hud.activeBuff}</div>}
+    {hud.dissonanceSeconds>0 && <div className="combat-buff" role="status">RẠN VỠ {hud.dissonanceSeconds.toFixed(1)} / 5s · Gọi Echo để bảo hộ</div>}
     {bag && <div className="inventory-panel"><Inventory hud={hud} close={()=>setBag(false)}/></div>}
-    <div className="hud-bottom"><div className="action-dock">
+    <div className="hud-bottom">{hud.echoDurationMs>0 && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO · {hud.echoCharges} lượt · {Math.ceil(hud.echoStability)} ổn định</span><div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div></div>}<div className="action-dock">
       <button className={hud.recordingStatus === 'recording' ? 'recording' : ''} onClick={() => engine?.toggleRecording()}><kbd>E</kbd><span>{hud.recordingStatus === 'recording' ? 'DỪNG GHI' : 'GHI ĐƯỜNG ĐI'}<small>{hud.recordingStatus === 'recording' ? `${(hud.recordingTimeRemaining/1000).toFixed(1)}s còn lại` : hud.recordingStatus === 'recorded' ? 'Đã lưu đường đi' : 'Tối đa 8 giây'}</small></span></button>
-      <button onClick={() => engine?.spawnEcho()}><kbd>Q</kbd><span>{hud.echoCount ? 'GỌI LẠI ECHO' : 'GỌI ECHO'}<small>{hud.echoStatus === 'finished' ? 'Đang giữ vị trí' : hud.echoStatus === 'replaying' ? 'Đang phát lại' : 'Bản sao của quá khứ'}</small></span></button>
+      <button disabled={hud.echoCount>=4} onClick={() => engine?.spawnEcho()}><kbd>Q</kbd><span>GỌI ECHO<small>{hud.echoCount}/4 đang tồn tại · {hud.echoCharges} lượt</small></span></button>
+      {engine?.echoes.map((echo,index)=><button key={echo.colorSlot??index} aria-pressed={engine.selectedEcho===index} style={{borderColor:['#67e8f9','#c084fc','#fbbf24','#fb7185'][echo.colorSlot??0],color:['#67e8f9','#c084fc','#fbbf24','#fb7185'][echo.colorSlot??0],background:engine.selectedEcho===index?'#30483f':undefined}} onClick={()=>engine.selectEcho(index)}>E{(echo.colorSlot??0)+1}</button>)}
+      {hud.echoCount>0&&<button onClick={()=>engine?.pauseEcho()}>{hud.echoStatus==='paused'?'TIẾP TỤC':'TẠM DỪNG'}<small>Echo đang chọn</small></button>}
       {hud.echoCount > 0 && <button className="compact" title="Xóa Echo" onClick={() => engine?.dismissEcho()}><kbd>X</kbd></button>}
+      {hud.echoCount > 0 && <button onClick={()=>engine?.swapEcho()}><kbd>Shift Q</kbd><span>HOÁN ĐỔI<small>30 ổn định · hồi 7s</small></span></button>}
       {hud.legTimeRemaining !== null && <button disabled={hud.timeItems===0} onClick={()=>engine?.useTimeItem()}><kbd>F</kbd><span>+2 GIÂY<small>× {hud.timeItems}</small></span></button>}
       <button className="combat-action" onClick={() => engine?.attack()}>{hud.weapon==='staff'?<span className="magic-action-icon">✦</span>:<Sword size={20}/>}<span>{hud.weapon==='staff'?'PHÉP':'CHÉM'} <kbd>LMB</kbd><small>{hud.attackCooldown > 0 ? 'Hồi đòn…' : hud.characterClass==='mechanical'?(hud.language==='vi'?'Cưa máy':'Chainblade'):hud.weapon==='staff'?'Trượng Echo':'Kiếm Echo'}</small></span></button><button onClick={() => engine?.useSkill()}><kbd>RMB</kbd><span>{hud.characterClass==='mage'?(hud.language==='vi'?'CẦU SÉT':'STORM ORBS'):hud.characterClass==='swordsman'?(hud.language==='vi'?'PHÁP TRẬN':'SANCTUARY'):(hud.language==='vi'?'QUÁ TẢI':'OVERDRIVE')}<small>{hud.skillCooldown > 0 ? `${hud.skillCooldown.toFixed(1)}s` : 'Space / Chuột phải'}</small></span></button>{boss && <button onClick={() => engine?.dodge()}><Shield size={20}/><span>LƯỚT <kbd>Shift</kbd><small>{hud.dodgeCooldown > 0 ? `${hud.dodgeCooldown.toFixed(1)}s` : 'Sẵn sàng'}</small></span></button>}
-    </div>{hud.showHints && <p>WASD / ↑↓←→ di chuyển <span>·</span> E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Chuột phải / Space kỹ năng · F +2s <span>·</span> Esc tạm dừng</p>}</div>
+    </div>{hud.showHints && <p>WASD / ↑↓←→ di chuyển <span>·</span> E ghi · Q gọi/tạm dừng Echo · Shift + click đánh dấu mục tiêu · X xóa · Chuột trái tấn công · Chuột phải / Space kỹ năng · F +2s <span>·</span> Esc tạm dừng</p>}</div>
     {settings && <SettingsPanel engine={engine} hud={hud} close={()=>setSettings(false)}/>} 
   </div>);
 }

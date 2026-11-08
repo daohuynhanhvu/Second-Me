@@ -9,6 +9,7 @@ interface ForestRenderer {
   reset(): void;
   update(dt: number, moving: boolean): void;
   emitMagic(kind: string, x: number, y: number, size?: number): void;
+  drawEcho(ctx:CanvasRenderingContext2D,x:number,y:number,direction:Direction,moving:boolean,time:number):void;
   render(ctx: CanvasRenderingContext2D, width: number, height: number, level: LevelData,
     player: {x:number;y:number;direction:Direction;isMoving:boolean}, echo: any,
     recording: boolean, duration: number, samples: MovementSample[], time: number): void;
