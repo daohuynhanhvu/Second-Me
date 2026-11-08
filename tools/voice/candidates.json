@@ -1,0 +1,135 @@
+{
+  "_doc": "Audition pool. OmniVoice has no built-in voice catalogue: a voice is a Voice Design 'instruct' (attributes from docs/voice-design.md) plus a seed. The chosen take is saved as a VoiceClonePrompt (.pt) and referenced by its project voice id. Profiles describe what each role needs; 'targets' drive the objective scoring in audition.py.",
+  "test_line": "The forest remembers every step we take, and every echo we leave behind.",
+  "seeds": [
+    11,
+    29
+  ],
+  "roles": {
+    "narrator": {
+      "profile": "Mature, deep and warm; calm, majestic, mysterious. Slow with deliberate pauses, like retelling an old legend. Must not sound like an advert or a newsreader.",
+      "speed": 0.86,
+      "targets": {
+        "expressive": 1.0,
+        "low": 0.8,
+        "slow": 0.8
+      },
+      "candidates": [
+        {
+          "key": "N1",
+          "instruct": "male, elderly, low pitch, british accent"
+        },
+        {
+          "key": "N2",
+          "instruct": "male, middle-aged, low pitch, american accent"
+        },
+        {
+          "key": "N3",
+          "instruct": "female, middle-aged, low pitch, british accent"
+        }
+      ]
+    },
+    "aeris": {
+      "profile": "Mage. Hooded figure whose face is hidden, glowing eyes, Echo staff, storm orbs. Calm, mysterious, wise; measured pace; light and airy rather than heavy.",
+      "speed": 0.95,
+      "targets": {
+        "expressive": 0.7,
+        "low": 0.0,
+        "slow": 0.4
+      },
+      "candidates": [
+        {
+          "key": "A1",
+          "instruct": "female, young adult, moderate pitch, british accent"
+        },
+        {
+          "key": "A2",
+          "instruct": "female, middle-aged, low pitch, british accent"
+        },
+        {
+          "key": "A3",
+          "instruct": "male, young adult, moderate pitch, british accent"
+        }
+      ]
+    },
+    "kael": {
+      "profile": "Swordsman. Helmeted pixel knight in a red tunic, Echo sword, a healing Light Sanctuary: a protector. Firm, clear, brave, warm; brisk and decisive.",
+      "speed": 1.04,
+      "targets": {
+        "expressive": 0.6,
+        "low": 0.3,
+        "slow": 0.0
+      },
+      "candidates": [
+        {
+          "key": "K1",
+          "instruct": "male, young adult, moderate pitch, american accent"
+        },
+        {
+          "key": "K2",
+          "instruct": "male, young adult, low pitch, canadian accent"
+        },
+        {
+          "key": "K3",
+          "instruct": "female, young adult, low pitch, american accent"
+        },
+        {
+          "key": "K4",
+          "instruct": "male, young adult, moderate pitch, australian accent"
+        },
+        {
+          "key": "K5",
+          "instruct": "male, young adult, high pitch, british accent"
+        }
+      ]
+    },
+    "rivet": {
+      "profile": "Rivet-07, a mechanical unit with a chainblade. Terse, clipped, flat delivery; a metallic post-process supplies the synthetic colour.",
+      "speed": 1.0,
+      "fx": "robot",
+      "targets": {
+        "expressive": -0.8,
+        "low": 0.2,
+        "slow": 0.0
+      },
+      "candidates": [
+        {
+          "key": "R1",
+          "instruct": "male, middle-aged, moderate pitch, american accent"
+        },
+        {
+          "key": "R2",
+          "instruct": "female, young adult, moderate pitch, american accent"
+        },
+        {
+          "key": "R3",
+          "instruct": "male, young adult, high pitch, japanese accent"
+        },
+        {
+          "key": "R4",
+          "instruct": "female, middle-aged, moderate pitch, russian accent"
+        }
+      ]
+    },
+    "guardian": {
+      "profile": "Frost Guardian, an ancient ice colossus and final boss. Glacial, slow, enormous; very low with a cold reverberant tail (post-processed).",
+      "speed": 0.82,
+      "fx": "giant",
+      "targets": {
+        "expressive": 0.2,
+        "low": 1.0,
+        "slow": 1.0
+      },
+      "candidates": [
+        {
+          "key": "G1",
+          "instruct": "male, elderly, very low pitch, russian accent"
+        },
+        {
+          "key": "G2",
+          "instruct": "male, elderly, very low pitch, american accent"
+        }
+      ]
+    }
+  }
+}

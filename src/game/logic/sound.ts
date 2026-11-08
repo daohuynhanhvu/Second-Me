@@ -3,11 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { INTRO } from './introTimeline.ts';
+type IntroCues = typeof INTRO.cue;
+
 class SoundEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
   private masterGain: GainNode | null = null;
   private volume = 0.25;
+  /** Voice-over has its own bus so it can be balanced against music and effects. */
+  private voiceGain: GainNode | null = null;
+  private voiceVolume = 1;
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -17,6 +23,9 @@ class SoundEngine {
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.volume, this.ctx.currentTime);
         this.masterGain.connect(this.ctx.destination);
+        this.voiceGain = this.ctx.createGain();
+        this.voiceGain.gain.value = this.voiceVolume;
+        this.voiceGain.connect(this.masterGain);
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -41,6 +50,13 @@ class SoundEngine {
   }
 
   public getVolume() { return this.volume; }
+
+  public setVoiceVolume(value: number) {
+    this.voiceVolume = Math.max(0, Math.min(1, value));
+    if (this.voiceGain && this.ctx) this.voiceGain.gain.setValueAtTime(this.voiceVolume, this.ctx.currentTime);
+  }
+
+  public getVoiceVolume() { return this.voiceVolume; }
 
   public toggleMute(): boolean {
     this.setMuted(!this.isMuted);
@@ -293,6 +309,153 @@ class SoundEngine {
       osc.stop(t + 0.9 + idx * 0.1);
     });
   }
+
+  private bufferCache = new Map<string, Promise<AudioBuffer | null>>();
+
+  /** Shared audio graph for other players (voice-over). Null until audio exists. */
+  public graph(): { ctx: AudioContext; master: GainNode; voice: GainNode } | null {
+    this.initCtx();
+    return this.ctx && this.masterGain && this.voiceGain ? { ctx: this.ctx, master: this.masterGain, voice: this.voiceGain } : null;
+  }
+
+  /**
+   * Fetch + decode once per URL; failures resolve to null so callers can stay silent.
+   * `onProgress(received, total)` reports download bytes when this call starts the fetch
+   * (total is 0 if the server sends no length); a cached URL just resolves.
+   */
+  public loadBuffer(url: string, onProgress?: (received: number, total: number) => void): Promise<AudioBuffer | null> {
+    let p = this.bufferCache.get(url);
+    if (!p) {
+      const g = this.graph();
+      p = !g ? Promise.resolve(null) : fetch(url)
+        .then(r => (r.ok ? readBody(r, onProgress) : Promise.reject(new Error(String(r.status)))))
+        .then(b => g.ctx.decodeAudioData(b))
+        .catch(() => null);
+      this.bufferCache.set(url, p);
+    }
+    return p;
+  }
+
+  /** True when audio can actually play now (a user gesture has unlocked the context). */
+  public isAudioRunning(): boolean {
+    this.initCtx();
+    return !!this.ctx && this.ctx.state === 'running';
+  }
+
+  /**
+   * Synthesised score for the cinematic intro. `offset` is how many seconds of the
+   * timeline have already played, so music can join late after a gesture unlocks audio.
+   * Returns a function that fades the score out and tears it down.
+   */
+  public playIntroScore(offset: number, cue: IntroCues, total: number): () => void {
+    this.initCtx();
+    const ctx = this.ctx, master = this.masterGain;
+    if (!ctx || !master) return () => {};
+    const now = ctx.currentTime;
+    const at = (t: number) => now + Math.max(0, t - offset); // timeline seconds -> context time
+    const live = (t: number) => t >= offset;
+    const bus = ctx.createGain();
+    bus.gain.value = 1;
+    bus.connect(master);
+    const nodes: AudioScheduledSourceNode[] = [];
+    const tone = (type: OscillatorType, f0: number, f1: number, t0: number, dur: number, peak: number, attack = 0.02, dest: AudioNode = bus) => {
+      if (t0 + dur < offset) return;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      const s = at(t0), e = s + dur;
+      osc.type = type;
+      osc.frequency.setValueAtTime(f0, s);
+      if (f1 !== f0) osc.frequency.exponentialRampToValueAtTime(f1, e);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(peak, s + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, e);
+      osc.connect(g); g.connect(dest);
+      osc.start(s); osc.stop(e + 0.05);
+      nodes.push(osc);
+    };
+    const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const noise = (t0: number, dur: number, freq: number, q: number, peak: number, attack: number, type: BiquadFilterType = 'bandpass') => {
+      if (t0 + dur < offset) return;
+      const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = noiseBuf; src.loop = true;
+      filt.type = type; filt.frequency.value = freq; filt.Q.value = q;
+      const s = at(t0), e = s + dur;
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(peak, s + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, e);
+      src.connect(filt); filt.connect(g); g.connect(bus);
+      src.start(s); src.stop(e + 0.05);
+      nodes.push(src);
+    };
+
+    // Low drone that swells in the awakening and breathes through the film.
+    const droneLow = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 200;
+    droneLow.gain.setValueAtTime(0.0001, now);
+    const dg = (t: number, v: number) => droneLow.gain.linearRampToValueAtTime(v, at(t));
+    dg(offset, offset < 4 ? 0.0001 : 0.2); dg(4, 0.2); dg(16, 0.16); dg(19.3, 0.34); dg(22.4, 0.18); dg(total, 0.0001);
+    lp.connect(droneLow); droneLow.connect(bus);
+    for (const [type, f] of [['sawtooth', 55], ['triangle', 82.41], ['sawtooth', 55.4]] as [OscillatorType, number][]) {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(lp);
+      o.start(now); o.stop(at(total) + 0.1); nodes.push(o);
+    }
+    // Wind through the forest.
+    noise(0, 8, 700, 0.6, 0.05, 3.5);
+    noise(7, 9, 500, 0.5, 0.04, 3);
+    // Scene 2: slow minor pad (Am) as the maps drift by.
+    [220, 261.63, 329.63, 440].forEach((f, i) => tone('sine', f, f, 4.2 + i * 0.25, 7, 0.05, 2.2));
+    // Wizard summon: rising crystalline arpeggio. Kael: warm steel ring.
+    if (live(cue.wizard - 0.2)) [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone('sine', f, f, cue.wizard + i * 0.09, 1.6, 0.09));
+    tone('sine', 110, 220, cue.wizard - 0.3, 0.7, 0.14, 0.3);
+    tone('triangle', 196, 196, cue.kael, 2.2, 0.1, 0.03);
+    tone('triangle', 293.66, 293.66, cue.kael + 0.05, 2, 0.07, 0.03);
+    noise(cue.kael - 0.05, 0.25, 4200, 2, 0.05, 0.01);
+    // Boss awakening: riser from the silhouette to the roar, heartbeat pulses under its steps.
+    tone('sawtooth', 90, 700, cue.silhouette, cue.roar - cue.silhouette, 0.07, 1.8);
+    noise(cue.silhouette, cue.roar - cue.silhouette, 1800, 1, 0.07, 2.4);
+    for (let i = 0; i < 4; i++) tone('sine', 60, 55, cue.silhouette + 0.2 + i * 0.5, 0.4, 0.2, 0.02);
+    const boom = (t: number, peak: number) => { tone('sine', 140, 32, t, 1.2, peak, 0.005); noise(t, 0.6, 260, 0.7, peak * 0.7, 0.005, 'lowpass'); };
+    boom(cue.roar, 0.5);
+    // Combat showcase: Kael's slash lands, then the clash.
+    boom(cue.impact, 0.32);
+    boom(cue.clash, 0.38);
+    noise(cue.clash, 0.5, 3000, 1.2, 0.08, 0.01);
+    // Logo: a bell chord with long shimmer.
+    [196, 293.66, 392, 587.33, 783.99, 1174.66].forEach((f, i) => tone('sine', f, f, cue.logo + i * 0.04, 5, i < 3 ? 0.13 : 0.06, 0.03));
+    boom(cue.logo, 0.3);
+    noise(cue.logo, 3, 5200, 2, 0.04, 0.8);
+
+    return () => {
+      const t = ctx.currentTime;
+      bus.gain.cancelScheduledValues(t);
+      bus.gain.setValueAtTime(bus.gain.value, t);
+      bus.gain.linearRampToValueAtTime(0.0001, t + 0.5);
+      window.setTimeout(() => {
+        for (const n of nodes) { try { n.stop(); } catch { /* already stopped */ } }
+        try { bus.disconnect(); } catch { /* ignore */ }
+      }, 700);
+    };
+  }
+}
+
+/** Reads a response body, reporting bytes as they arrive. */
+async function readBody(r: Response, onProgress?: (received: number, total: number) => void): Promise<ArrayBuffer> {
+  if (!onProgress || !r.body) return r.arrayBuffer();
+  const total = Number(r.headers.get('Content-Length')) || 0;
+  const reader = r.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); received += value.byteLength;
+    onProgress(received, total);
+  }
+  const out = new Uint8Array(received);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.byteLength; }
+  return out.buffer;
 }
 
 export const sounds = new SoundEngine();

@@ -1,0 +1,92 @@
+{
+  "narrator": {
+    "en": {
+      "n1": {
+        "file": "n1.mp3",
+        "kind": "intro",
+        "seconds": 2.61,
+        "error": 0.286,
+        "hash": "ee315141f089"
+      },
+      "n2": {
+        "file": "n2.mp3",
+        "kind": "intro",
+        "seconds": 3.83,
+        "error": 0.0,
+        "hash": "f73620e2247d"
+      },
+      "n3": {
+        "file": "n3.mp3",
+        "kind": "intro",
+        "seconds": 2.88,
+        "error": 0.0,
+        "hash": "7474e6fc6639"
+      },
+      "n4": {
+        "file": "n4.mp3",
+        "kind": "intro",
+        "seconds": 2.35,
+        "error": 0.0,
+        "hash": "e577ba9b831a"
+      },
+      "n5": {
+        "file": "n5.mp3",
+        "kind": "intro",
+        "seconds": 1.33,
+        "error": 0.0,
+        "hash": "d166418831d0"
+      },
+      "forge": {
+        "file": "forge.mp3",
+        "kind": "dialogue",
+        "seconds": 3.86,
+        "error": 0.0,
+        "hash": "5585662f708b"
+      }
+    },
+    "vi": {
+      "n1": {
+        "file": "n1.mp3",
+        "kind": "intro",
+        "seconds": 3.37,
+        "error": 0.077,
+        "hash": "3edbacf97a21"
+      },
+      "n2": {
+        "file": "n2.mp3",
+        "kind": "intro",
+        "seconds": 3.94,
+        "error": 0.0,
+        "hash": "2730b10e1607"
+      },
+      "n3": {
+        "file": "n3.mp3",
+        "kind": "intro",
+        "seconds": 3.74,
+        "error": 0.0,
+        "hash": "f04566d2a820"
+      },
+      "n4": {
+        "file": "n4.mp3",
+        "kind": "intro",
+        "seconds": 2.08,
+        "error": 0.0,
+        "hash": "3da917efced7"
+      },
+      "n5": {
+        "file": "n5.mp3",
+        "kind": "intro",
+        "seconds": 1.59,
+        "error": 0.0,
+        "hash": "c4cebe21c724"
+      },
+      "forge": {
+        "file": "forge.mp3",
+        "kind": "dialogue",
+        "seconds": 2.87,
+        "error": 0.0,
+        "hash": "e6bdb9539275"
+      }
+    }
+  }
+}

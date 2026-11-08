@@ -1,0 +1,557 @@
+{
+  "_doc": "Spoken content only (no code). Each line: id, en, vi. Narrator 'intro' lines also carry 'at'/'until' (intro timeline seconds). Kinds: intro, dialogue, idle, combatStart, attack, skill (one id per real skill), ultimate (the class's heaviest skill, shouted at full force), damage, lowHealth, dodge, kill, victory, defeat, event (boss phase/armor moments). Performance style per kind is set in tools/voice/generate_lines.py (STYLE). Regenerate audio after editing: tools/voice/generate_lines.py Shout spelling follows tools/voice/expressive-report.json: English skill names in CAPS with '!' (Vietnamese stays in normal case: CAPS measurably hurt OmniVoice's Vietnamese clarity), ultimates with '!!!', a '...' beat before the name for build-up.",
+  "narrator": {
+    "intro": [
+      {
+        "id": "n1",
+        "at": 1.2,
+        "until": 4.6,
+        "en": "Long ago... when the Emberforge still burned...",
+        "vi": "Thuở xa xưa... khi lò rèn Emberforge vẫn còn rực lửa..."
+      },
+      {
+        "id": "n2",
+        "at": 4.9,
+        "until": 9.6,
+        "en": "the forest learned to remember. Every step. Every echo.",
+        "vi": "khu rừng đã học cách ghi nhớ. Từng bước chân. Từng tiếng vọng."
+      },
+      {
+        "id": "n3",
+        "at": 16.5,
+        "until": 19.3,
+        "en": "But in the frozen dark... something ancient stirs.",
+        "vi": "Nhưng trong bóng tối băng giá... một thứ cổ xưa đã thức giấc."
+      },
+      {
+        "id": "n4",
+        "at": 23.1,
+        "until": 25.6,
+        "en": "This is the legend of... Second Me.",
+        "vi": "Đây là truyền thuyết về... Second Me."
+      },
+      {
+        "id": "n5",
+        "at": 25.9,
+        "until": 27.6,
+        "en": "Your past is the key.",
+        "vi": "Quá khứ chính là chìa khóa."
+      }
+    ],
+    "dialogue": [
+      {
+        "id": "forge",
+        "en": "Five relics, gathered at last. Now... the forge awakens.",
+        "vi": "Năm di vật đã hội tụ. Giờ đây... lò rèn thức tỉnh."
+      }
+    ]
+  },
+  "aeris": {
+    "intro": [
+      {
+        "id": "intro",
+        "at": 11.3,
+        "until": 13.6,
+        "en": "The path remembers. And so do I.",
+        "vi": "Lối mòn ghi nhớ. Và ta cũng vậy."
+      }
+    ],
+    "dialogue": [
+      {
+        "id": "start1",
+        "en": "Record the path. Let my echo do the rest.",
+        "vi": "Ghi lại lối đi. Phần còn lại để tiếng vọng lo."
+      },
+      {
+        "id": "start2",
+        "en": "Listen. The forest is whispering again.",
+        "vi": "Nghe kìa. Khu rừng lại đang thì thầm."
+      }
+    ],
+    "idle": [
+      {
+        "id": "idle1",
+        "en": "Every echo leaves a trace.",
+        "vi": "Mỗi tiếng vọng đều để lại dấu vết."
+      },
+      {
+        "id": "idle2",
+        "en": "Patience. The way will open.",
+        "vi": "Kiên nhẫn. Lối đi rồi sẽ mở."
+      }
+    ],
+    "combatStart": [
+      {
+        "id": "battle1",
+        "en": "The storm stirs. Let us begin.",
+        "vi": "Bão tố đang cuộn trào. Bắt đầu thôi."
+      }
+    ],
+    "attack": [
+      {
+        "id": "atk1",
+        "en": "Begone!",
+        "vi": "Biến đi!"
+      },
+      {
+        "id": "atk2",
+        "en": "Away!",
+        "vi": "Lui ra!"
+      },
+      {
+        "id": "atk3",
+        "en": "Strike!",
+        "vi": "Trúng!"
+      }
+    ],
+    "skill": [
+      {
+        "id": "orbs",
+        "en": "By the tempest... STORM ORBS!",
+        "vi": "Hỡi giông tố... Cầu sét!"
+      },
+      {
+        "id": "fire",
+        "en": "FIRE BOLT!",
+        "vi": "Đạn lửa!"
+      },
+      {
+        "id": "stone",
+        "en": "Stone, guard me! STONE SHIELD!",
+        "vi": "Đá ơi, che chở ta! Khiên đá!"
+      }
+    ],
+    "ultimate": [
+      {
+        "id": "lightning",
+        "en": "Heavens, split open... LIGHTNING!!!",
+        "vi": "Trời cao, xé toạc... Tia sét!!!"
+      }
+    ],
+    "damage": [
+      {
+        "id": "dmg1",
+        "en": "Agh!",
+        "vi": "Á!"
+      },
+      {
+        "id": "dmg2",
+        "en": "Ngh... not yet!",
+        "vi": "Hự... chưa đâu!"
+      },
+      {
+        "id": "dmg3",
+        "en": "A scratch. Nothing more.",
+        "vi": "Chỉ là vết xước."
+      }
+    ],
+    "lowHealth": [
+      {
+        "id": "low1",
+        "en": "[sigh] My strength... is fading...",
+        "vi": "[sigh] Sức lực... đang cạn dần..."
+      },
+      {
+        "id": "low2",
+        "en": "Hold on... just a little longer...",
+        "vi": "Cố lên... thêm chút nữa thôi..."
+      }
+    ],
+    "dodge": [
+      {
+        "id": "dodge1",
+        "en": "Too slow.",
+        "vi": "Chậm quá."
+      },
+      {
+        "id": "dodge2",
+        "en": "Not today.",
+        "vi": "Hụt rồi."
+      }
+    ],
+    "kill": [
+      {
+        "id": "kill1",
+        "en": "One ward falls.",
+        "vi": "Một trụ đã vỡ."
+      },
+      {
+        "id": "kill2",
+        "en": "Shattered.",
+        "vi": "Vỡ tan rồi."
+      }
+    ],
+    "victory": [
+      {
+        "id": "win1",
+        "en": "Another memory, set free.",
+        "vi": "Thêm một ký ức được giải thoát."
+      }
+    ],
+    "defeat": [
+      {
+        "id": "lose1",
+        "en": "The echo... fades...",
+        "vi": "Tiếng vọng... tắt dần..."
+      }
+    ]
+  },
+  "kael": {
+    "intro": [
+      {
+        "id": "intro",
+        "at": 14.3,
+        "until": 16.2,
+        "en": "Stand behind me. The ember still burns.",
+        "vi": "Đứng sau ta. Ngọn lửa vẫn còn cháy."
+      }
+    ],
+    "dialogue": [
+      {
+        "id": "start1",
+        "en": "Eyes forward. We cross together.",
+        "vi": "Nhìn thẳng phía trước. Chúng ta cùng vượt qua."
+      },
+      {
+        "id": "start2",
+        "en": "Steady now. This ground is ours.",
+        "vi": "Vững vàng. Mảnh đất này là của chúng ta."
+      }
+    ],
+    "idle": [
+      {
+        "id": "idle1",
+        "en": "Steady. Hold the line.",
+        "vi": "Vững vàng. Giữ vững trận tuyến."
+      },
+      {
+        "id": "idle2",
+        "en": "My blade is ready.",
+        "vi": "Lưỡi kiếm của ta đã sẵn sàng."
+      }
+    ],
+    "combatStart": [
+      {
+        "id": "battle1",
+        "en": "Draw steel! We end this here!",
+        "vi": "Rút kiếm! Kết thúc ở đây!"
+      }
+    ],
+    "attack": [
+      {
+        "id": "atk1",
+        "en": "Hyah!",
+        "vi": "Hây!"
+      },
+      {
+        "id": "atk2",
+        "en": "Take this!",
+        "vi": "Đỡ này!"
+      },
+      {
+        "id": "atk3",
+        "en": "For the forge!",
+        "vi": "Vì lò rèn!"
+      }
+    ],
+    "skill": [
+      {
+        "id": "sanctuary",
+        "en": "Light, shelter us... LIGHT SANCTUARY!",
+        "vi": "Ánh sáng, che chở... Pháp trận ánh sáng!"
+      },
+      {
+        "id": "haste",
+        "en": "Speed... HASTE!",
+        "vi": "Nhanh lên... Tăng tốc!"
+      },
+      {
+        "id": "armor",
+        "en": "Armor up! Hold the line!",
+        "vi": "Giáp lên! Giữ vững trận tuyến!"
+      }
+    ],
+    "ultimate": [
+      {
+        "id": "wave",
+        "en": "All my strength... SWORD WAVE!!!",
+        "vi": "Dồn hết sức... Kiếm quang!!!"
+      }
+    ],
+    "damage": [
+      {
+        "id": "dmg1",
+        "en": "Argh!",
+        "vi": "Á!"
+      },
+      {
+        "id": "dmg2",
+        "en": "Ugh! Still standing!",
+        "vi": "Hự! Ta vẫn đứng vững!"
+      },
+      {
+        "id": "dmg3",
+        "en": "Is that all?",
+        "vi": "Chỉ vậy thôi sao?"
+      }
+    ],
+    "lowHealth": [
+      {
+        "id": "low1",
+        "en": "[sigh] Not yet... I can still stand...",
+        "vi": "[sigh] Chưa đâu... ta vẫn còn đứng được..."
+      },
+      {
+        "id": "low2",
+        "en": "Breathe... hold the line...",
+        "vi": "Thở đi... giữ vững..."
+      }
+    ],
+    "dodge": [
+      {
+        "id": "dodge1",
+        "en": "Hup! Missed me!",
+        "vi": "Hụt rồi!"
+      },
+      {
+        "id": "dodge2",
+        "en": "Too wide!",
+        "vi": "Trượt rồi!"
+      }
+    ],
+    "kill": [
+      {
+        "id": "kill1",
+        "en": "One down!",
+        "vi": "Hạ một!"
+      },
+      {
+        "id": "kill2",
+        "en": "Broken! Who's next?",
+        "vi": "Vỡ rồi! Tiếp theo!"
+      }
+    ],
+    "victory": [
+      {
+        "id": "win1",
+        "en": "The ember endures.",
+        "vi": "Ngọn lửa vẫn trường tồn."
+      }
+    ],
+    "defeat": [
+      {
+        "id": "lose1",
+        "en": "Forgive me... I faltered.",
+        "vi": "Thứ lỗi cho ta... ta đã gục ngã."
+      }
+    ]
+  },
+  "rivet": {
+    "intro": [
+      {
+        "id": "intro",
+        "en": "Rivet zero seven. Online.",
+        "vi": "Rivet không bảy. Đã kích hoạt."
+      }
+    ],
+    "dialogue": [
+      {
+        "id": "start1",
+        "en": "Route analysis complete. Proceeding.",
+        "vi": "Phân tích lộ trình hoàn tất. Tiến hành."
+      }
+    ],
+    "idle": [
+      {
+        "id": "idle1",
+        "en": "Awaiting orders.",
+        "vi": "Đang chờ lệnh."
+      }
+    ],
+    "combatStart": [
+      {
+        "id": "battle1",
+        "en": "Hostile detected. Engaging.",
+        "vi": "Phát hiện địch. Giao chiến."
+      }
+    ],
+    "attack": [
+      {
+        "id": "atk1",
+        "en": "Cut.",
+        "vi": "Cắt."
+      },
+      {
+        "id": "atk2",
+        "en": "Slice.",
+        "vi": "Chém."
+      }
+    ],
+    "skill": [
+      {
+        "id": "fire",
+        "en": "Fire bolt. Launch.",
+        "vi": "Đạn lửa. Phóng."
+      },
+      {
+        "id": "armor",
+        "en": "Armor plating.",
+        "vi": "Giáp gia cố."
+      },
+      {
+        "id": "haste",
+        "en": "Haste mode.",
+        "vi": "Chế độ tăng tốc."
+      }
+    ],
+    "ultimate": [
+      {
+        "id": "overdrive",
+        "en": "OVERDRIVE!!! Limiters off!",
+        "vi": "Quá tải!!! Gỡ bỏ giới hạn!"
+      }
+    ],
+    "damage": [
+      {
+        "id": "dmg1",
+        "en": "Damage!",
+        "vi": "Hư hại!"
+      },
+      {
+        "id": "dmg2",
+        "en": "Hull breach.",
+        "vi": "Vỏ giáp bị thủng."
+      }
+    ],
+    "lowHealth": [
+      {
+        "id": "low1",
+        "en": "Warning. Power critical.",
+        "vi": "Cảnh báo. Năng lượng nguy cấp."
+      }
+    ],
+    "dodge": [
+      {
+        "id": "dodge1",
+        "en": "Evaded.",
+        "vi": "Đã né."
+      }
+    ],
+    "kill": [
+      {
+        "id": "kill1",
+        "en": "Target destroyed.",
+        "vi": "Đã hạ mục tiêu."
+      }
+    ],
+    "victory": [
+      {
+        "id": "win1",
+        "en": "Objective complete.",
+        "vi": "Mục tiêu hoàn thành."
+      }
+    ],
+    "defeat": [
+      {
+        "id": "lose1",
+        "en": "Power... failing.",
+        "vi": "Năng lượng... cạn kiệt."
+      }
+    ]
+  },
+  "guardian": {
+    "intro": [
+      {
+        "id": "intro",
+        "en": "[laughter] Little echoes... you dare wake me?",
+        "vi": "[laughter] Những tiếng vọng nhỏ bé... dám đánh thức ta sao?"
+      }
+    ],
+    "combatStart": [
+      {
+        "id": "battle1",
+        "en": "Turn back... or freeze where you stand!",
+        "vi": "Quay về đi... hoặc đóng băng tại chỗ!"
+      }
+    ],
+    "attack": [
+      {
+        "id": "atk1",
+        "en": "Shatter!",
+        "vi": "Vỡ vụn!"
+      },
+      {
+        "id": "atk2",
+        "en": "Kneel!",
+        "vi": "Quỳ xuống!"
+      },
+      {
+        "id": "atk3",
+        "en": "Crush!",
+        "vi": "Nghiền nát!"
+      }
+    ],
+    "skill": [
+      {
+        "id": "hail",
+        "en": "HAILSTORM!",
+        "vi": "Mưa đá!"
+      },
+      {
+        "id": "hail2",
+        "en": "Feel the winter... HAILSTORM!",
+        "vi": "Nếm mùa đông đi... Mưa đá!"
+      }
+    ],
+    "damage": [
+      {
+        "id": "dmg1",
+        "en": "Insolent...",
+        "vi": "Láo xược..."
+      },
+      {
+        "id": "dmg2",
+        "en": "[dissatisfaction-hnn] Pest!",
+        "vi": "[dissatisfaction-hnn] Lũ sâu bọ!"
+      }
+    ],
+    "lowHealth": [
+      {
+        "id": "low1",
+        "en": "No... the ice... cannot... melt!",
+        "vi": "Không... băng giá... không thể tan!"
+      }
+    ],
+    "event": [
+      {
+        "id": "phase2",
+        "en": "You will freeze where you stand.",
+        "vi": "Ngươi sẽ đóng băng ngay tại chỗ."
+      },
+      {
+        "id": "phase3",
+        "en": "ENOUGH! The winter takes you all!",
+        "vi": "Đủ rồi! Mùa đông sẽ nuốt chửng tất cả!"
+      },
+      {
+        "id": "armor",
+        "en": "My wards... broken?! You will pay!",
+        "vi": "Kết giới của ta... vỡ rồi sao?! Ngươi sẽ phải trả giá!"
+      }
+    ],
+    "victory": [
+      {
+        "id": "win1",
+        "en": "Silence returns.",
+        "vi": "Sự im lặng trở lại."
+      }
+    ],
+    "defeat": [
+      {
+        "id": "lose1",
+        "en": "[sigh] The ice... breaks... winter... ends...",
+        "vi": "[sigh] Băng giá... vỡ tan... mùa đông... đã hết..."
+      }
+    ]
+  }
+}

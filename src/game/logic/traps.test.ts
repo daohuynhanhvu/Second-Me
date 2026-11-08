@@ -48,7 +48,7 @@ test('pause freezes the checkpoint clock and boss arena has no checkpoint deadli
 });
 
 test('damaging traps warn before impact and vines slow without dealing damage',()=>{
-  for(const kind of ['crusher','rocks'] as const) {
+  for(const kind of ['crusher','rocks','spikes'] as const) {
     const trap={kind,x:0,y:0,width:80,height:80,period:4,offset:0};
     assert.equal(trapPhase(trap,0),'idle');assert.equal(trapPhase(trap,3),'warning');assert.equal(trapPhase(trap,3.8),'impact');
     assert.equal(trapEffects([trap],{x:40,y:40},3).damage,false);
@@ -69,15 +69,23 @@ test('vine movement slowdown clears on leaving and trap impact cannot drain heal
   advance(.2);assert.equal(game.health,4);
 });
 
-test('all five trials contain three distinct trap types in clear walkable space; boss has none',()=>{
+test('all five trials contain at least three distinct trap types in clear walkable space; boss has none',()=>{
   for(const level of LEVELS.slice(0,5)) {
-    assert.equal(new Set(level.traps!.map(t=>t.kind)).size,3);
+    assert.ok(new Set(level.traps!.map(t=>t.kind)).size>=3);
     for(const trap of level.traps!) {
       assert.ok(!level.walls.some(w=>rectIntersects(trap,w)),`level ${level.id} trap overlaps wall at ${trap.x},${trap.y}`);
       assert.ok(!level.plates.some(p=>rectIntersects(trap,p)),`level ${level.id} unsafe checkpoint`);
     }
   }
   assert.equal(LEVELS[5].traps,undefined);
+});
+
+test('spike plates take every second crusher slot once a trial has two or more',()=>{
+  for(const level of LEVELS.slice(0,5)) {
+    const slots=level.traps!.filter(t=>t.kind==='crusher'||t.kind==='spikes').map(t=>t.kind);
+    assert.deepEqual(slots,slots.map((_,i)=>i%2?'spikes':'crusher'),`level ${level.id}`);
+  }
+  assert.ok(LEVELS.slice(2,5).every(l=>l.traps!.some(t=>t.kind==='spikes')));
 });
 
 test('time shards appear every three seconds nearby and add four seconds once',t=>{

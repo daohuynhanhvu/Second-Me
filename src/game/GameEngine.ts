@@ -29,6 +29,8 @@ import { GameRenderer } from './rendering/renderer.ts';
 import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
+import { voice, type VoiceRole } from './logic/voice.ts';
+import { music, type MusicScene } from './logic/music.ts';
 
 export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | 'wave';
 const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'], mechanical: ['fire','armor','haste'] };
@@ -60,6 +62,7 @@ export interface HUDState {
   defeatReason: 'timeout' | 'damage';
   volume: number;
   reducedMotion: boolean;
+  voiceVolume: number;
   showHints: boolean;
   devUnlocked: boolean;
   language: Language;
@@ -75,11 +78,23 @@ export interface HUDState {
   activeBuff: string;
   skillDrop: CombatSkill | null;
   mechanicalOwned: boolean;
+  /** Level id the loading screen is preparing, or null for the first load into the lobby. */
+  loadingLevel?: number | null;
 }
 
 export class GameEngine {
   // Screen state
   public screen: GameScreen = 'intro';
+  /** Set by the UI while the cinematic intro covers the stage. */
+  public suspendVisuals = false;
+  /**
+   * Set by the app UI: entering a level (picking one, the next one, the boss) shows the
+   * loading screen first. Off by default, so tests and headless runs enter levels directly.
+   */
+  public levelLoading = false;
+  /** The level the loading screen is preparing; `built` once it is set up behind the screen. */
+  private pendingLevel: { idx: number; built: boolean; after?: () => void } | null = null;
+  private stageBlank = false;
   public currentLevelIdx: number = 0;
   public currentLevel: LevelData;
 
@@ -113,6 +128,15 @@ export class GameEngine {
   public boss: BossState | null = null;
   public bossDeathElapsed = 0;
   private bossDeathPending = false;
+  // Voice-over bookkeeping (lines are pre-rendered; see src/game/logic/voice.ts).
+  private lastVoicedLevel = -1;
+  private idleTime = 0;
+  private lastBossPhase = 1;
+  private lastBossMode = '';
+  private bossLowVoiced = false;
+  /** An ultimate's hit waits for its shout so the skill name lands with the impact. */
+  private pendingUltimate: { kind: CombatSkill; time: number } | null = null;
+  private get voiceRole(): VoiceRole { return this.characterClass === 'swordsman' ? 'kael' : this.characterClass === 'mechanical' ? 'rivet' : 'aeris'; }
   public health = 5;
   public invulnerability = 0;
   public attackCooldown = 0;
@@ -187,18 +211,20 @@ export class GameEngine {
       const value = JSON.parse(localStorage.getItem('second-me-settings-v1') ?? '{}');
       sounds.setMuted(value.muted === true);
       sounds.setVolume(typeof value.volume === 'number' ? value.volume : 0.25);
+      sounds.setVoiceVolume(typeof value.voiceVolume === 'number' ? value.voiceVolume : 1);
       this.reducedMotion = value.reducedMotion === true;
       this.showHints = value.showHints !== false;
       this.language = value.language === 'vi' ? 'vi' : 'en';
       this.characterClass = MECHANICAL_ENABLED && value.characterClass === 'mechanical' && this.campaign.mechanicalOwned ? 'mechanical' : value.characterClass === 'swordsman' ? 'swordsman' : 'mage';
       setCurrentLanguage(this.language);
+      voice.lang = this.language;
       if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', this.reducedMotion);
     } catch { /* Defaults keep the game playable. */ }
   }
 
   private saveSettings() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-settings-v1', JSON.stringify({
-      muted: sounds.getMuted(), volume: sounds.getVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
+      muted: sounds.getMuted(), volume: sounds.getVolume(), voiceVolume: sounds.getVoiceVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
     })); } catch { /* Ignore unavailable storage. */ }
   }
 
@@ -258,6 +284,7 @@ export class GameEngine {
   }
 
   public openLobby() {
+    this.pendingLevel = null;
     this.screen = 'loading';
     this.heldKeys.clear();
     document.body.dataset.state = 'loading';
@@ -266,13 +293,53 @@ export class GameEngine {
 
   public finishLoading() {
     if (this.screen !== 'loading') return;
-    this.goToLobby();
+    const next = this.pendingLevel;
+    if (!next) { this.goToLobby(); return; }
+    this.revealLoadedLevel();
+    this.pendingLevel = null;
+    this.beginLevel();
+    next.after?.();
+  }
+
+  /**
+   * Called as the loading screen starts to fade: builds the pending level and lets the canvas
+   * draw it, so the fade uncovers the level instead of the previous screen. Play (update,
+   * input, voice) only starts in finishLoading.
+   */
+  public revealLoadedLevel() {
+    const next = this.pendingLevel;
+    if (this.screen !== 'loading' || !next || next.built) return;
+    this.currentLevelIdx = next.idx;
+    this.buildLevel();
+    next.built = true;
+  }
+
+  /** Enters level `idx`, through the loading screen when the UI has one (see levelLoading). */
+  private enterLevel(idx: number, after?: () => void) {
+    if (!this.levelLoading) { this.currentLevelIdx = idx; this.restartLevel(); after?.(); return; }
+    if (this.screen === 'loading') return;   // already on its way to a level
+    voice.stopAll();
+    this.pendingLevel = { idx, built: false, after };
+    this.screen = 'loading';
+    this.heldKeys.clear();
+    document.body.dataset.state = 'loading';
+    this.notifyHUD();
   }
 
   public goToLobby() {
+    voice.stopAll();
     this.screen = 'lobby';
     this.heldKeys.clear();
     document.body.dataset.state = 'lobby';
+    this.notifyHUD();
+  }
+  /** Back to the painted title menu (from the lobby and its sub-screens). Progress is kept. */
+  public goToMainMenu() {
+    if (this.screen !== 'lobby' && this.screen !== 'shop' && this.screen !== 'characters') return;
+    voice.stopAll();
+    this.screen = 'intro';
+    this.heldKeys.clear();
+    document.body.dataset.state = 'intro';
     this.notifyHUD();
   }
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
@@ -324,7 +391,14 @@ export class GameEngine {
     }
   }
 
+  /** Restarts the current level at once (restart, retry after defeat: already loaded). */
   public restartLevel() {
+    this.buildLevel();
+    this.beginLevel();
+  }
+
+  /** Fresh state for the current level, without starting play. */
+  private buildLevel() {
     this.heldKeys.clear();
     this.renderer.reset();
     this.currentLevel = this.cloneLevel(LEVELS[this.currentLevelIdx]);
@@ -352,14 +426,33 @@ export class GameEngine {
     this.bossDeathElapsed = 0;
     this.bossDeathPending = false;
     this.lastReward = null;
+  }
+
+  private beginLevel() {
     this.screen = 'playing';
     document.body.dataset.state = 'playing';
     this.showBanner(`Bắt đầu lại ${this.currentLevel.name}`);
+    this.voiceLevelStart();
     this.notifyHUD();
+  }
+
+  /** Opening line for a level: the boss taunts in the arena; heroes speak on first entry only. */
+  private voiceLevelStart() {
+    voice.stopAll();
+    void voice.preload(this.voiceRole);
+    if (this.boss) {
+      // The Guardian laughs at the intruders, then the hero answers with a battle cry.
+      void voice.preload('guardian');
+      voice.say('guardian', 'intro', { delay: 0.6 });
+      voice.say(this.voiceRole, 'combatStart', { delay: 4.4 });
+    } else if (this.lastVoicedLevel !== this.currentLevel.id) voice.say(this.voiceRole, 'dialogue', { delay: 0.5 });
+    this.lastVoicedLevel = this.currentLevel.id;
+    this.idleTime = 0; this.lastBossPhase = 1; this.lastBossMode = ''; this.bossLowVoiced = false; this.pendingUltimate = null;
   }
 
   public nextLevel() {
     if (this.currentLevel.id === 5) {
+      voice.say('narrator', 'dialogue', { id: 'forge', delay: 0.4 });
       this.screen = 'forge';
       this.heldKeys.clear();
       document.body.dataset.state = 'forge';
@@ -367,41 +460,35 @@ export class GameEngine {
       return;
     }
     if (this.currentLevelIdx + 1 < LEVELS.length) {
-      this.currentLevelIdx++;
-      this.restartLevel();
-      this.showBanner(`${this.currentLevel.name}: ${this.currentLevel.subtitle}`);
-      this.notifyHUD();
+      this.enterLevel(this.currentLevelIdx + 1, () => {
+        this.showBanner(`${this.currentLevel.name}: ${this.currentLevel.subtitle}`);
+        this.notifyHUD();
+      });
     } else {
-      // The final completion action starts a fresh run immediately.
-      this.currentLevelIdx = 0;
+      // The final completion action starts a fresh run.
       this.campaign.reset();
-      this.restartLevel();
+      this.enterLevel(0);
     }
   }
 
   public selectLevel(idx: number) {
     const campaignComplete = this.campaign.bossDefeated;
     if (!this.devUnlocked && !campaignComplete && (idx > this.campaign.unlockedLevel || (idx === 5 && !this.campaign.forged))) return;
-    if (idx >= 0 && idx < LEVELS.length) {
-      this.currentLevelIdx = idx;
-      this.restartLevel();
-      this.screen = 'playing';
-      document.body.dataset.state = 'playing';
-      this.notifyHUD();
-    }
+    if (idx >= 0 && idx < LEVELS.length) this.enterLevel(idx);
   }
 
   public goToTitle() { this.goToLobby(); }
 
   public toggleAudio() { sounds.toggleMute(); this.saveSettings(); this.notifyHUD(); }
   public setVolume(value: number) { sounds.setVolume(value); this.saveSettings(); this.notifyHUD(); }
+  public setVoiceVolume(value: number) { sounds.setVoiceVolume(value); this.saveSettings(); this.notifyHUD(); }
   public setReducedMotion(value: boolean) {
     this.reducedMotion = value;
     if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', value);
     this.saveSettings(); this.notifyHUD();
   }
   public setShowHints(value: boolean) { this.showHints = value; this.saveSettings(); this.notifyHUD(); }
-  public setLanguage(value: Language) { this.language = value; setCurrentLanguage(value); if (typeof document !== 'undefined') document.title = value === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge'; this.saveSettings(); this.notifyHUD(); }
+  public setLanguage(value: Language) { this.language = value; setCurrentLanguage(value); voice.lang = value; if (typeof document !== 'undefined') document.title = value === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge'; this.saveSettings(); this.notifyHUD(); }
 
   public unlockDevMode() {
     this.devUnlocked = true;
@@ -422,9 +509,7 @@ export class GameEngine {
 
   public enterBoss() {
     if (this.screen !== 'forge' || !this.campaign.forged) return;
-    this.currentLevelIdx = 5;
-    this.restartLevel();
-    this.showBanner('Chuột trái: tấn công · Chuột phải: kỹ năng · Shift: lướt né.', 6);
+    this.enterLevel(5, () => this.showBanner('Chuột trái: tấn công · Chuột phải: kỹ năng · Shift: lướt né.', 6));
   }
 
   private finishBossHit() {
@@ -439,7 +524,9 @@ export class GameEngine {
       this.bossDeathElapsed = 0;
       this.heldKeys.clear();
       sounds.playVictory();
-    }
+      voice.say('guardian', 'defeat');
+      voice.say(this.voiceRole, 'victory', { delay: 2.4 });
+    } else voice.say('guardian', 'damage', { chance: 0.25, cooldown: 7 });
     this.notifyHUD();
   }
 
@@ -456,6 +543,10 @@ export class GameEngine {
       pillar.hp=Math.max(0,pillar.hp-amount);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
+      if(pillar.hp===0) {
+        voice.say(this.voiceRole, 'kill');
+        if(this.boss.armor===0) voice.say('guardian', 'event', { id: 'armor', delay: 1.2 });
+      }
       if(pillar.hp===0)this.showBanner(this.boss.armor===0
         ? (this.language==='vi'?'Bốn trụ đã bị phá · Boss mất giáp!':'All four pillars destroyed · Boss armor broken!')
         : (this.language==='vi'?`Đã phá trụ · Còn ${this.boss.armor/25} trụ`:`Pillar destroyed · ${this.boss.armor/25} remaining`));
@@ -495,16 +586,33 @@ export class GameEngine {
     else if(kind==='armor')this.armorShield=1;
     else if(kind==='haste')this.hasteTime=6;
     else if(aim) {
-      const damage=kind==='fire'?35:kind==='lightning'?50:55;
-      if(this.damageCombatTarget(aim.x,aim.y,damage,65) && kind==='fire' && this.boss?.armor===0) { this.fireBurnTime=3; this.fireBurnTick=1; }
-      this.combatFlash={x:aim.x,y:aim.y,kind,time:.65};
+      if(kind==='lightning' || kind==='wave') {
+        // Ultimate: shout the build-up, and release the hit on the skill name.
+        const length = voice.lengthOf(this.voiceRole, kind);
+        const said = voice.say(this.voiceRole, 'ultimate', { id: kind });
+        const hold = said && length ? Math.min(1.6, Math.max(0, length - 0.45)) : 0;
+        if(hold > 0) { this.pendingUltimate = { kind, time: hold }; this.combatFlash={x:this.player.x,y:this.player.y,kind,time:hold+.2}; this.notifyHUD(); return; }
+      } else voice.say(this.voiceRole, 'skill', { id: kind });
+      this.releaseCombatSkill(kind);
+      return;
     }
+    if(kind==='stone' || kind==='armor' || kind==='haste') voice.say(this.voiceRole, 'skill', { id: kind });
+    this.notifyHUD();
+  }
+
+  private releaseCombatSkill(kind:CombatSkill) {
+    const aim=this.combatAim();
+    if(!aim) return;
+    const damage=kind==='fire'?35:kind==='lightning'?50:55;
+    if(this.damageCombatTarget(aim.x,aim.y,damage,65) && kind==='fire' && this.boss?.armor===0) { this.fireBurnTime=3; this.fireBurnTick=1; }
+    this.combatFlash={x:aim.x,y:aim.y,kind,time:.65};
     this.notifyHUD();
   }
 
   public attack(target?: { x: number; y: number }) {
     if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
+    voice.say(this.voiceRole, 'attack');
     if (this.characterClass === 'mage') {
       const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
       const aim = target ?? fallback;
@@ -534,6 +642,10 @@ export class GameEngine {
       this.overdrive = 5;
       this.skillCooldown = 10;
     }
+    // Shout the real skill name: Storm Orbs / Light Sanctuary; Rivet's Overdrive is its ultimate.
+    if (this.characterClass === 'mage') voice.say('aeris', 'skill', { id: 'orbs' });
+    else if (this.characterClass === 'swordsman') voice.say('kael', 'skill', { id: 'sanctuary' });
+    else voice.say('rivet', 'ultimate', { id: 'overdrive' });
     this.notifyHUD();
   }
 
@@ -562,6 +674,7 @@ export class GameEngine {
     this.dodgeTime = 0.16;
     this.dodgeCooldown = 1.2;
     this.invulnerability = Math.max(this.invulnerability, 0.4);
+    voice.say(this.voiceRole, 'dodge');
   }
 
   private takeDamage() {
@@ -574,7 +687,10 @@ export class GameEngine {
     if (this.health === 0) {
       this.defeatReason = 'damage';
       this.screen = 'defeat'; this.heldKeys.clear(); document.body.dataset.state = 'gameover';
-    }
+      voice.say(this.voiceRole, 'defeat');
+      if (this.boss) voice.say('guardian', 'victory', { delay: 2.2 });
+    } else if (this.health <= 2) voice.say(this.voiceRole, 'lowHealth'); // breathless, not just another grunt
+    else voice.say(this.voiceRole, 'damage');
     this.notifyHUD();
   }
 
@@ -825,6 +941,17 @@ export class GameEngine {
     this.canvas?.removeEventListener('contextmenu', this.handleCanvasContextMenu);
   }
 
+  /** Which background track fits right now (files and naming: src/game/logic/music.ts). */
+  private musicScene(): MusicScene {
+    if (this.suspendVisuals) return 'intro';
+    switch (this.screen) {
+      case 'playing': case 'paused': case 'victory': case 'forge': return this.boss ? 'boss' : 'level';
+      case 'defeat': return 'defeat';
+      case 'ending': return 'ending';
+      default: return 'menu';
+    }
+  }
+
   // --- Game Loop ---
 
   private loop = (timestamp: number) => {
@@ -838,10 +965,24 @@ export class GameEngine {
       this.update(dt);
     }
 
-    this.render();
+    // While a full-screen cinematic covers the stage, skip the hidden canvas and HUD churn.
+    // The loading screen covers the stage: skip the hidden canvas until a level is set up behind
+    // it. Blank it once, so the fade-out never uncovers the previous level's last frame.
+    if (this.screen === 'loading' && !this.pendingLevel?.built) {
+      if (!this.stageBlank && this.ctx && this.canvas) {
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.fillStyle = '#071510';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.stageBlank = true;
+      }
+    } else {
+      this.stageBlank = false;
+      if (!this.suspendVisuals) this.render();
+    }
+    music.set(this.musicScene(), this.screen === 'paused');
 
     // Check throttled HUD update
-    if (timestamp - this.lastHUDNotify >= 80) {
+    if (!this.suspendVisuals && timestamp - this.lastHUDNotify >= 80) {
       this.lastHUDNotify = timestamp;
       this.notifyHUD();
     }
@@ -867,6 +1008,7 @@ export class GameEngine {
       if (this.legTimeRemaining <= 0.000001) {
         this.legTimeRemaining = 0;
         this.defeatReason = 'timeout';
+        voice.say(this.voiceRole, 'defeat');
         this.screen = 'defeat';
         this.heldKeys.clear();
         document.body.dataset.state = 'gameover';
@@ -876,6 +1018,9 @@ export class GameEngine {
     }
     this.gameTime += dt;
     this.elapsedLevelTime += dt;
+    // Idle bark after standing still for a while (voice director enforces a long cooldown).
+    this.idleTime = this.player.isMoving ? 0 : this.idleTime + dt;
+    if (this.idleTime > 14) { this.idleTime = 0; voice.say(this.voiceRole, 'idle'); }
     this.trappedTime = Math.max(0, this.trappedTime - dt);
     if (this.legTimeRemaining !== null) {
       this.pickupSpawnTimer -= dt;
@@ -895,6 +1040,7 @@ export class GameEngine {
     this.updatePersonalSkill(dt);
     this.hasteTime=Math.max(0,this.hasteTime-dt);
     if(this.combatFlash) { this.combatFlash.time-=dt; if(this.combatFlash.time<=0)this.combatFlash=null; }
+    if(this.pendingUltimate) { this.pendingUltimate.time-=dt; if(this.pendingUltimate.time<=0) { const k=this.pendingUltimate.kind; this.pendingUltimate=null; this.releaseCombatSkill(k); } }
     if(this.boss) {
       this.skillDropTimer-=dt;
       if(this.skillDropTimer<=0) { this.skillDropTimer+=5; this.spawnCombatSkill(); }
@@ -1130,7 +1276,17 @@ export class GameEngine {
     if (this.screen !== 'playing') return;
     if (this.boss) {
       const echoTarget=this.echo && (this.echo.aggroTime??0)>0 ? this.echo : null;
-      if (updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed))) {
+      const burstBefore = this.boss.burstRemaining;
+      const bossHit = updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed));
+      if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
+      this.lastBossPhase = this.boss.phase;
+      // Slam wind-up: the shout is timed to end exactly as the blow lands.
+      if (this.boss.mode === 'warning' && this.lastBossMode !== 'warning')
+        voice.say('guardian', 'attack', { chance: 0.45, cooldown: 5, priority: 3, alignEnd: Math.max(0.3, this.boss.timer) });
+      this.lastBossMode = this.boss.mode;
+      if (burstBefore <= 0 && this.boss.burstRemaining > 0) voice.say('guardian', 'skill', { chance: 0.6, cooldown: 9 });
+      if (!this.bossLowVoiced && this.boss.hp > 0 && this.boss.hp < this.boss.maxHp * 0.15) { this.bossLowVoiced = true; voice.say('guardian', 'lowHealth'); }
+      if (bossHit) {
         if(echoTarget) { this.echo=null;this.showBanner(this.language==='vi'?'Echo đã chặn một đòn và biến mất.':'Echo took a hit and vanished.'); }
         else this.takeDamage();
       }
@@ -1146,6 +1302,7 @@ export class GameEngine {
     this.screen = 'victory';
     document.body.dataset.state = 'gameover';
     sounds.playVictory();
+    voice.say(this.voiceRole, 'victory', { delay: 0.3 });
     this.renderer.particles.emit(
       this.currentLevel.exit.x + this.currentLevel.exit.width / 2,
       this.currentLevel.exit.y + this.currentLevel.exit.height / 2,
@@ -1161,6 +1318,8 @@ export class GameEngine {
   private render() {
     if (!this.ctx || !this.canvas) return;
 
+    this.renderer.stage.levelTime = this.elapsedLevelTime;
+    this.renderer.stage.exitOpen = this.legTimeRemaining === null || this.checkpointIndex >= this.currentLevel.plates.length;
     this.renderer.render(
       this.ctx,
       this.canvas.width,
@@ -1210,6 +1369,7 @@ export class GameEngine {
         defeatReason: this.defeatReason,
         volume: sounds.getVolume(),
         reducedMotion: this.reducedMotion,
+        voiceVolume: sounds.getVoiceVolume(),
         showHints: this.showHints,
         devUnlocked: this.devUnlocked,
         language: this.language,
@@ -1221,6 +1381,7 @@ export class GameEngine {
         lastRating: this.lastRating,
         skillCooldown: this.skillCooldown,
         mechanicalOwned: this.campaign.mechanicalOwned,
+        loadingLevel: this.pendingLevel ? LEVELS[this.pendingLevel.idx].id : null,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
         activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ×${this.stoneShield}`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ×${this.armorShield}`:'',

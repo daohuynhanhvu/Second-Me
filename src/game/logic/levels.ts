@@ -324,8 +324,11 @@ const trapLayouts: [import('./types.ts').Trap['kind'], number, number, number, n
 for (let i = 0; i < 5; i++) {
   // Replace the old generic glowing damage circles with distinct readable traps.
   LEVELS[i].hazards = [];
+  // Every second crusher is a spike plate instead: same zone and timing, different look.
+  let crushers = 0;
   LEVELS[i].traps = trapLayouts[i].map(([kind,x,y,width,height], index) => ({
-    kind, x, y, width, height, period: 3.8 - i * 0.25, offset: (index % 3) * 0.35,
+    kind: kind === 'crusher' && crushers++ % 2 === 1 ? 'spikes' as const : kind,
+    x, y, width, height, period: 3.8 - i * 0.25, offset: (index % 3) * 0.35,
   }));
   LEVELS[i].description = `10 seconds per leg · ${LEVELS[i].plates.length} runes. Use Echo to hold gates; dodge crushers and falling rocks, and cross slowing vines.`;
 }

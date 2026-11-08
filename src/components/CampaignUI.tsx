@@ -1,5 +1,5 @@
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
 import { ArrowRight, RotateCcw, Home, Pause, Volume2, VolumeX, Lock, Sword, Hammer, Check, Shield, Flame, Backpack, Bell, Settings, Map, Play, X, SlidersHorizontal, ShoppingBasket } from 'lucide-react';
@@ -15,22 +15,10 @@ function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
     : <WizardAvatar/>;
 }
 
-export function Intro({ engine }: { engine: GameEngine | null }) {
-  return localize(<div className="intro-screen overlay"><div className="mist mist-one"/><div className="mist mist-two"/>
-    <div className="intro-mark"><WizardAvatar/><span>THE ANCIENT PATH REMEMBERS</span></div>
-    <div className="intro-copy"><span className="eyebrow gold">CHAPTER II · THE EMBERFORGE</span><h1>SECOND<br/><em>ME</em></h1><p>Echoes of the Wild</p>
-      <button className="intro-enter" onClick={() => engine?.openLobby()}>BƯỚC VÀO KHU RỪNG <ArrowRight size={18}/></button><small>ENTER / SPACE</small></div>
-    <div className="intro-runes">◇　✦　◈　✺　◆</div>
-  </div>);
-}
-
-export function Loading() {
-  return localize(<div className="loading-screen overlay"><div className="loading-sigil"><WizardAvatar/><i/><i/><i/></div><span className="eyebrow gold">ĐANG ĐÁNH THỨC KHU RỪNG</span><h2>Những lối mòn đang hiện ra...</h2><div className="loading-line"><i/></div><p>Chuẩn bị Echo và lắng nghe ký ức.</p></div>);
-}
-
 export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | null; hud: HUDState; close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel settings-panel"><div className="panel-top"><span className="eyebrow gold">CÀI ĐẶT TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng cài đặt" onClick={close}><X size={18}/></button></div><h2>Điều chỉnh trải nghiệm</h2>
     <label className="setting-row"><span><Volume2 size={18}/><b>Âm lượng</b><small>Âm thanh hiệu ứng và môi trường</small></span><input aria-label="Âm lượng" type="range" min="0" max="1" step="0.05" value={hud.volume} onChange={e=>engine?.setVolume(Number(e.target.value))}/><strong>{Math.round(hud.volume*100)}%</strong></label>
+    <label className="setting-row"><span><Volume2 size={18}/><b>Giọng nói</b><small>Lồng tiếng nhân vật và người kể chuyện</small></span><input aria-label="Giọng nói" type="range" min="0" max="1" step="0.05" value={hud.voiceVolume} onChange={e=>engine?.setVoiceVolume(Number(e.target.value))}/><strong>{Math.round(hud.voiceVolume*100)}%</strong></label>
     <label className="setting-row switch-row"><span><VolumeX size={18}/><b>Tắt âm</b><small>Tắt toàn bộ âm thanh trò chơi</small></span><input type="checkbox" checked={hud.isMuted} onChange={()=>engine?.toggleAudio()}/><i/></label>
     <label className="setting-row switch-row"><span><SlidersHorizontal size={18}/><b>Giảm chuyển động</b><small>Giảm sương, rung và hiệu ứng lặp</small></span><input type="checkbox" checked={hud.reducedMotion} onChange={e=>engine?.setReducedMotion(e.target.checked)}/><i/></label>
     <label className="setting-row switch-row"><span><Map size={18}/><b>Hướng dẫn trong màn</b><small>Hiện nhãn bẫy và gợi ý điều khiển</small></span><input type="checkbox" checked={hud.showHints} onChange={e=>engine?.setShowHints(e.target.checked)}/><i/></label>
@@ -50,7 +38,14 @@ export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
   const [bag, setBag] = useState(false);
   const complete = engine?.campaign.bossDefeated === true;
   const next = Math.min(hud.completed.length, 5);
-  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><button className="character-entry" onClick={()=>engine?.openCharacters()} aria-label={hud.language==='vi'?'Chọn nhân vật':'Choose character'} title={hud.characterClass==='swordsman'?'Kael · Swordsman':'Aeris · Mage'}><SelectedCharacterAvatar hud={hud}/></button><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button onClick={()=>engine?.openCharacters()} aria-label={(hud.language==='vi'?'Chọn nhân vật: ':'Choose character: ')+(hud.characterClass==='swordsman'?'Kael':'Aeris')} title={(hud.language==='vi'?'Đang chọn: ':'Selected: ')+(hud.characterClass==='swordsman'?'Kael · Kiếm sĩ':'Aeris · Pháp sư')}><SelectedCharacterAvatar hud={hud}/> {hud.language==='vi'?'NHÂN VẬT':'CHARACTERS'} · {hud.characterClass==='swordsman'?'Kael':'Aeris'}</button><button onClick={()=>setBag(true)}><Backpack size={17}/> {hud.language==='vi'?'TÚI ĐỒ':'INVENTORY'}</button><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
+  // Esc returns to the main menu, unless a lobby panel is open (Esc is for closing it then).
+  useEffect(() => {
+    if (panel !== 'none' || bag) return;
+    const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape') { e.preventDefault(); engine?.goToMainMenu(); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panel, bag, engine]);
+  return localize(<div className="lobby-screen overlay"><div className="lobby-canopy"/><header className="lobby-header"><div><button className="character-entry" onClick={()=>engine?.openCharacters()} aria-label={hud.language==='vi'?'Chọn nhân vật':'Choose character'} title={hud.characterClass==='swordsman'?'Kael · Swordsman':'Aeris · Mage'}><SelectedCharacterAvatar hud={hud}/></button><span><b>SECOND ME</b><small>THE EMBERFORGE</small></span></div><nav><button className="lobby-home" onClick={()=>engine?.goToMainMenu()} title={hud.language==='vi'?'Về menu chính (Esc)':'Back to main menu (Esc)'}><Home size={15}/> {hud.language==='vi'?'MENU CHÍNH':'MAIN MENU'}</button><button onClick={()=>engine?.openCharacters()} aria-label={(hud.language==='vi'?'Chọn nhân vật: ':'Choose character: ')+(hud.characterClass==='swordsman'?'Kael':'Aeris')} title={(hud.language==='vi'?'Đang chọn: ':'Selected: ')+(hud.characterClass==='swordsman'?'Kael · Kiếm sĩ':'Aeris · Pháp sư')}><SelectedCharacterAvatar hud={hud}/> {hud.language==='vi'?'NHÂN VẬT':'CHARACTERS'} · {hud.characterClass==='swordsman'?'Kael':'Aeris'}</button><button onClick={()=>setBag(true)}><Backpack size={17}/> {hud.language==='vi'?'TÚI ĐỒ':'INVENTORY'}</button><button onClick={()=>setPanel('news')}><Bell size={17}/><i/> THÔNG BÁO</button><button onClick={()=>setPanel('settings')}><Settings size={17}/> CÀI ĐẶT</button></nav></header>
     <div className="lobby-layout"><aside className="lobby-welcome"><span className="eyebrow gold">TRẠI NGHỈ ECHO</span><h1>{complete ? 'Khu rừng đã thức giấc.' : hud.completed.length ? 'Hành trình vẫn đang gọi.' : 'Lối mòn đầu tiên đang chờ.'}</h1><p>{complete ? 'Toàn bộ ký ức đã được giải phóng. Bạn có thể quay lại bất kỳ màn nào.' : 'Thu hồi năm di vật, rèn vũ khí của class và đối mặt với Thủ Vệ Băng.'}</p>
       <button className="secondary lobby-character-link" onClick={()=>engine?.openCharacters()}>{hud.language==='vi'?'NHÂN VẬT & CLASS':'CHARACTERS & CLASSES'} <ArrowRight size={15}/></button>
       {!complete && <button className="primary lobby-continue" onClick={()=>hud.completed.length ? engine?.continueGame() : engine?.selectLevel(0)}><Play size={18}/>{hud.completed.length ? `TIẾP TỤC · MÀN 0${next+1}` : 'BẮT ĐẦU MÀN 01'}</button>}

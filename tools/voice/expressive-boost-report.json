@@ -1,0 +1,222 @@
+{
+  "kael": {
+    "vi": [
+      {
+        "round": 0,
+        "note": "existing battle prompt"
+      },
+      {
+        "round": 1,
+        "takes": [
+          {
+            "seed": 5,
+            "err": 1.643,
+            "sim": 0.972,
+            "f0": 121.3,
+            "pitch_up_st": 0.1,
+            "spread": 2.83,
+            "rms_db": -19.29,
+            "arousal": 1.196
+          },
+          {
+            "seed": 17,
+            "err": 0.036,
+            "sim": 0.941,
+            "f0": 106.3,
+            "pitch_up_st": -2.2,
+            "spread": 2.08,
+            "rms_db": -20.94,
+            "arousal": -1.612
+          },
+          {
+            "seed": 23,
+            "err": 0.036,
+            "sim": 0.956,
+            "f0": 124.5,
+            "pitch_up_st": 0.55,
+            "spread": 2.74,
+            "rms_db": -19.46,
+            "arousal": 1.591
+          },
+          {
+            "seed": 41,
+            "err": 0.036,
+            "sim": 0.94,
+            "f0": 108.7,
+            "pitch_up_st": -1.8,
+            "spread": 2.56,
+            "rms_db": -21.48,
+            "arousal": -1.127
+          },
+          {
+            "seed": 58,
+            "err": 0.071,
+            "sim": 0.958,
+            "f0": 117.6,
+            "pitch_up_st": -0.45,
+            "spread": 2.02,
+            "rms_db": -20.25,
+            "arousal": 0.219
+          },
+          {
+            "seed": 77,
+            "err": 1.643,
+            "sim": 0.966,
+            "f0": 120.0,
+            "pitch_up_st": -0.1,
+            "spread": 2.88,
+            "rms_db": -19.61,
+            "arousal": 0.965
+          },
+          {
+            "seed": 91,
+            "err": 0.036,
+            "sim": 0.958,
+            "f0": 117.2,
+            "pitch_up_st": -0.5,
+            "spread": 2.59,
+            "rms_db": -19.55,
+            "arousal": 0.475
+          },
+          {
+            "seed": 104,
+            "err": 0.036,
+            "sim": 0.971,
+            "f0": 112.6,
+            "pitch_up_st": -1.2,
+            "spread": 2.77,
+            "rms_db": -20.76,
+            "arousal": -0.344
+          },
+          {
+            "seed": 133,
+            "err": 0.036,
+            "sim": 0.909,
+            "f0": 106.3,
+            "pitch_up_st": -2.2,
+            "spread": 2.28,
+            "rms_db": -21.05,
+            "arousal": -1.559
+          },
+          {
+            "seed": 150,
+            "err": 0.036,
+            "sim": 0.944,
+            "f0": 115.9,
+            "pitch_up_st": -0.7,
+            "spread": 3.12,
+            "rms_db": -19.82,
+            "arousal": 0.42
+          }
+        ],
+        "picked": 23
+      },
+      {
+        "round": 2,
+        "takes": [
+          {
+            "seed": 5,
+            "err": 0.036,
+            "sim": 0.917,
+            "f0": 123.1,
+            "pitch_up_st": 0.35,
+            "spread": 3.12,
+            "rms_db": -19.97,
+            "arousal": 1.448
+          },
+          {
+            "seed": 17,
+            "err": 1.643,
+            "sim": 0.937,
+            "f0": 119.3,
+            "pitch_up_st": -0.2,
+            "spread": 2.92,
+            "rms_db": -20.31,
+            "arousal": 0.776
+          },
+          {
+            "seed": 23,
+            "err": 1.643,
+            "sim": 0.905,
+            "f0": 123.5,
+            "pitch_up_st": 0.4,
+            "spread": 3.3,
+            "rms_db": -20.5,
+            "arousal": 1.48
+          },
+          {
+            "seed": 41,
+            "err": 0.036,
+            "sim": 0.885,
+            "f0": 123.5,
+            "pitch_up_st": 0.4,
+            "spread": 3.05,
+            "rms_db": -20.57,
+            "arousal": 1.382
+          },
+          {
+            "seed": 58,
+            "err": 0.143,
+            "sim": 0.916,
+            "f0": 122.1,
+            "pitch_up_st": 0.2,
+            "spread": 2.54,
+            "rms_db": -19.81,
+            "arousal": 1.118
+          },
+          {
+            "seed": 77,
+            "err": 0.036,
+            "sim": 0.953,
+            "f0": 117.2,
+            "pitch_up_st": -0.5,
+            "spread": 3.48,
+            "rms_db": -20.01,
+            "arousal": 0.718
+          },
+          {
+            "seed": 91,
+            "err": 0.036,
+            "sim": 0.946,
+            "f0": 122.1,
+            "pitch_up_st": 0.2,
+            "spread": 2.55,
+            "rms_db": -20.34,
+            "arousal": 1.042
+          },
+          {
+            "seed": 104,
+            "err": 0.036,
+            "sim": 0.922,
+            "f0": 122.8,
+            "pitch_up_st": 0.3,
+            "spread": 2.82,
+            "rms_db": -19.61,
+            "arousal": 1.346
+          },
+          {
+            "seed": 133,
+            "err": 0.036,
+            "sim": 0.941,
+            "f0": 124.2,
+            "pitch_up_st": 0.5,
+            "spread": 2.82,
+            "rms_db": -19.91,
+            "arousal": 1.499
+          },
+          {
+            "seed": 150,
+            "err": 0.036,
+            "sim": 0.946,
+            "f0": 119.3,
+            "pitch_up_st": -0.2,
+            "spread": 3.45,
+            "rms_db": -20.38,
+            "arousal": 0.95
+          }
+        ],
+        "picked": 133
+      }
+    ]
+  }
+}
