@@ -81,7 +81,19 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
   scene.drawGateThresholds = (ctx, lvl) => { if (!forestReady('door')) orig.drawGateThresholds(ctx, lvl); };
   scene.drawGates = (ctx, lvl) => {
     if (!forestReady('door')) return orig.drawGates(ctx, lvl);
-    for (const door of lvl.doors) drawDoor(ctx, door);
+    for (const door of lvl.doors) {
+      drawDoor(ctx, door);
+      // Gate labels identify simultaneous requirements, especially the reusable Echo in trial 5.
+      ctx.save();ctx.font='bold 9px ui-monospace,monospace';ctx.textAlign='center';
+      for(let i=0;i<door.requiredPlates.length;i++) {
+        const index=lvl.plates.findIndex(p=>p.id===door.requiredPlates[i]),pressed=lvl.plates[index]?.isPressed;
+        const x=door.x+door.width+10,y=door.y+14+i*17;
+        ctx.fillStyle='#10251ded';ctx.fillRect(x-6,y-7,13,14);
+        ctx.strokeStyle=pressed?'#aee4c2':'#ab956d';ctx.strokeRect(x-6,y-7,13,14);
+        ctx.fillStyle=pressed?'#cbffe0':'#ddc595';ctx.fillText(String(index+1),x,y+3);
+      }
+      ctx.restore();
+    }
   };
 
   scene.drawWalls = (ctx, lvl, time) => {

@@ -5,6 +5,11 @@
 
 import { pointInRect, rectIntersects, getCharacterBoundingBox } from './collision.ts';
 import { PressurePlate, SecurityDoor, ExitPortal, Rect } from './types.ts';
+import type { LevelData } from './types.ts';
+
+export function isPuzzleExitOpen(level:LevelData,checkpoint:number):boolean {
+  return checkpoint>=level.plates.length && (level.exitRequiredPlates??[]).every(id=>level.plates.some(p=>p.id===id&&p.isPressed));
+}
 
 export interface CharacterPosition {
   x: number;

@@ -172,3 +172,11 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 .hero-select-back{top:1.8%;right:1.8%;width:auto;height:auto;min-width:70px;min-height:38px;padding:7px 15px;border:1px solid #9eb69e;background:#10291fd9;color:#eef5dc;border-radius:5px;box-shadow:0 2px 8px #06130fb3;font:600 14px system-ui,sans-serif}
 .hero-select-back:hover,.hero-select-back:focus-visible{background:#254c39;border-color:#a0e5bf;outline:2px solid #a0e5bf;outline-offset:2px}
 @media(max-width:720px) and (orientation:portrait){.hero-select-back{top:1.5%;right:3%;min-width:65px;min-height:38px;font-size:13px}}
+/* Menus use the window; play and its overlays share one correctly scaled world rectangle. */
+.adventure-app{width:100%;height:100dvh;min-width:0;min-height:0}
+.game-stage[data-screen]{width:100%;height:100%;max-height:none;aspect-ratio:auto;min-width:0;min-height:0}
+.game-stage[data-screen]:is([data-screen=playing],[data-screen=paused],[data-screen=victory],[data-screen=defeat],[data-screen=ending]){width:min(100vw,calc(100dvh * 16 / 9));height:min(100dvh,calc(100vw * 9 / 16));aspect-ratio:16/9}
+.game-stage[data-screen]>canvas{inset:0;width:100%;height:100%;display:block}
+@media(min-width:761px){.journey-lobby .journey-layout{max-width:1600px;width:100%;margin-inline:auto;box-sizing:border-box}.journey-lobby .journey-chart{min-height:0}}
+@media(min-width:1400px){.journey-lobby .journey-layout{grid-template-columns:280px minmax(0,1fr);padding:32px 40px;gap:40px}.journey-lobby .journey-camp{gap:24px;padding-top:20px}.journey-lobby .journey-camp h1{font-size:44px!important}.journey-lobby .camp-intro{font-size:13px}.journey-lobby .camp-continue{min-height:70px}.journey-lobby .chart-heading{padding:22px 26px}.journey-lobby .chart-heading h2{font-size:24px}.journey-lobby .chart-detail{padding:20px 26px;min-height:95px}}
+@media(min-width:761px) and (max-height:560px){.journey-lobby .journey-layout{overflow-y:auto;grid-template-rows:minmax(440px,1fr)}}

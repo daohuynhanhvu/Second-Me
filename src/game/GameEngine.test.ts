@@ -349,5 +349,5 @@ test('yyyy removes the active deadline and keeps all subsequent trials untimed',
   engine.selectLevel(0);
   const plate=engine.currentLevel.plates[0];engine.player.x=plate.x+plate.width/2;engine.player.y=plate.y+plate.height/2;
   controls.update(.05);assert.equal(engine.checkpointIndex,1);assert.equal(engine.legTimeRemaining,null);
-  const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,10);
+  const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,16);
 });

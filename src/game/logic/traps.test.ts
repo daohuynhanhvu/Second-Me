@@ -18,33 +18,33 @@ function setup(t: TestContext, index = 0) {
   return { game, controls, advance, checkpoint };
 }
 
-test('ten-second timeout shows defeat and retry resets every stage of the attempt', t => {
+test('per-level timeout shows defeat and retry resets every stage of the attempt', t => {
   const { game, advance } = setup(t);
-  advance(9.99); assert.equal(game.screen,'playing');
+  advance(15.99); assert.equal(game.screen,'playing');
   advance(.01); assert.equal(game.screen,'defeat'); assert.equal(game.defeatReason,'timeout');
   assert.equal(game.legTimeRemaining,0); assert.equal(game.campaign.completed.length,0);
-  game.restartLevel(); assert.equal(game.legTimeRemaining,10); assert.equal(game.checkpointIndex,0);
+  game.restartLevel(); assert.equal(game.legTimeRemaining,16); assert.equal(game.checkpointIndex,0);
   assert.equal(game.screen,'playing'); assert.equal(game.echo,null);
 });
 
-test('only the player reaching the next new checkpoint replenishes ten seconds', t => {
+test('only the player reaching the next new checkpoint replenishes the level budget', t => {
   const { game, advance, checkpoint } = setup(t,1);
   checkpoint(1); assert.equal(game.checkpointIndex,0); // Out of order.
-  advance(1); checkpoint(0); assert.equal(game.checkpointIndex,1); assert.equal(game.legTimeRemaining,10);
-  advance(1); assert.ok(game.legTimeRemaining! < 9.01); // Staying cannot farm time.
+  advance(1); checkpoint(0); assert.equal(game.checkpointIndex,1); assert.equal(game.legTimeRemaining,18);
+  advance(1); assert.ok(game.legTimeRemaining! < 17.01); // Staying cannot farm time.
   game.toggleRecording();game.toggleRecording();game.spawnEcho();
   const next=game.currentLevel.plates[1]; game.echo!.x=next.x+25;game.echo!.y=next.y+25;game.echo!.status='finished';
-  advance(.5);assert.equal(game.checkpointIndex,1);assert.ok(game.legTimeRemaining!<8.51);
-  checkpoint(1);assert.equal(game.checkpointIndex,2);assert.equal(game.legTimeRemaining,10);
-  advance(10);assert.equal(game.screen,'defeat'); // Final portal leg is timed too.
+  advance(.5);assert.equal(game.checkpointIndex,1);assert.ok(game.legTimeRemaining!<16.51);
+  checkpoint(1);assert.equal(game.checkpointIndex,2);assert.equal(game.legTimeRemaining,18);
+  advance(18);assert.equal(game.screen,'defeat'); // Final portal leg is timed too.
 });
 
 test('pause freezes the checkpoint clock and boss arena has no checkpoint deadline',t=>{
   const { game, advance }=setup(t);
   advance(1); const remaining=game.legTimeRemaining;game.pauseGame();advance(8);
-  assert.equal(game.legTimeRemaining,remaining);game.resumeGame();advance(1);assert.ok(game.legTimeRemaining!<8.01);
+  assert.equal(game.legTimeRemaining,remaining);game.resumeGame();advance(1);assert.ok(game.legTimeRemaining!<14.01);
   game.currentLevelIdx=5;game.restartLevel();assert.equal(game.legTimeRemaining,null);
-  game.boss!.timer=100;game.boss!.burstCooldown=100;advance(10);assert.equal(game.screen,'playing');assert.equal(game.defeatReason,'damage');
+  game.boss!.timer=100;game.boss!.burstCooldown=100;advance(18);assert.equal(game.screen,'playing');assert.equal(game.defeatReason,'damage');
 });
 
 test('damaging traps warn before impact and vines slow without dealing damage',()=>{
@@ -80,17 +80,16 @@ test('all five trials contain at least three distinct trap types in clear walkab
   assert.equal(LEVELS[5].traps,undefined);
 });
 
-test('spike plates take every second crusher slot once a trial has two or more',()=>{
-  for(const level of LEVELS.slice(0,5)) {
-    const slots=level.traps!.filter(t=>t.kind==='crusher'||t.kind==='spikes').map(t=>t.kind);
-    assert.deepEqual(slots,slots.map((_,i)=>i%2?'spikes':'crusher'),`level ${level.id}`);
+test('later trials contain both crushers and spikes with staggered cycles',()=>{
+  for(const level of LEVELS.slice(1,5)) {
+    assert.ok(level.traps!.some(t=>t.kind==='crusher'));assert.ok(level.traps!.some(t=>t.kind==='spikes'));
+    assert.ok(new Set(level.traps!.filter(t=>t.kind!=='vines').map(t=>t.offset)).size>=2);
   }
-  assert.ok(LEVELS.slice(2,5).every(l=>l.traps!.some(t=>t.kind==='spikes')));
 });
 
-test('time shards appear every three seconds nearby and add four seconds once',t=>{
+test('each leg offers one safe time shard worth three seconds',t=>{
   const {game,advance}=setup(t);
-  advance(2.99); assert.equal(game.timePickup,null);
+  advance(4.99); assert.equal(game.timePickup,null);
   advance(.02); assert.ok(game.timePickup);
   const shard=game.timePickup as {x:number;y:number} | null;
   assert.ok(shard);
@@ -99,8 +98,9 @@ test('time shards appear every three seconds nearby and add four seconds once',t
   const remaining=game.legTimeRemaining!;
   game.player.x=shard.x;game.player.y=shard.y;advance(.01);
   assert.equal(game.timePickup,null);
-  assert.ok(Math.abs(game.legTimeRemaining!-(remaining+4-.01))<.001);
-  advance(.01);assert.ok(game.legTimeRemaining!<remaining+4);
+  assert.ok(Math.abs(game.legTimeRemaining!-(remaining+3-.01))<.001);
+  advance(.01);assert.ok(game.legTimeRemaining!<remaining+3);
+  advance(6);assert.equal(game.timePickup,null,'cannot farm a second shard in the same leg');
 });
 
 test('a crusher hit roots the player for a quarter second',t=>{
@@ -110,4 +110,11 @@ test('a crusher hit roots the player for a quarter second',t=>{
   game.currentLevel.traps=[]; controls.heldKeys.add('KeyD');
   const x=game.player.x;advance(.2);assert.equal(game.player.x,x);
   advance(.1);assert.ok(game.player.x>x);
+});
+
+test('only one time potion can be spent per leg, and the next rune resets the allowance',t=>{
+  const {game,checkpoint}=setup(t);game.campaign.timeItems=2;
+  assert.equal(game.useTimeItem(),true);assert.equal(game.useTimeItem(),false);
+  assert.equal(game.campaign.timeItems,1);
+  checkpoint(0);assert.equal(game.useTimeItem(),true);assert.equal(game.campaign.timeItems,0);
 });

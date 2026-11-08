@@ -43,7 +43,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       ctx.fillStyle = current ? '#dfbe80' : '#172920'; ctx.fill();
       ctx.strokeStyle = visited ? '#8bd8b4' : '#dfbe80'; ctx.lineWidth = current ? 3 : 1; ctx.stroke();
       ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = current ? '#18281f' : '#e3d8b8';
-      ctx.fillText(visited ? '✓' : `${index+1}`,cx,cy+4);
+      ctx.fillText(`${index+1}`,cx,cy+4);
       if (current) {
         ctx.strokeStyle = '#f3d79b'; ctx.setLineDash([6,5]); ctx.strokeRect(plate.x-8,plate.y-8,plate.width+16,plate.height+16); ctx.setLineDash([]);
       }
