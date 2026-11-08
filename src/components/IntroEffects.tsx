@@ -2,13 +2,33 @@ import type { CSSProperties } from 'react';
 
 // All coordinates follow the supplied 1376 × 768 painting. The art and this
 // overlay scale together, so the camera and the menu stay completely still.
+// Centers of the isolated yellow and green glows removed from the original
+// painting. Each now has its own drift and twinkle instead of a baked-in light.
 const fireflies = [
-  [154, 256, 2.1, 0.3], [190, 237, 1.6, 2.2], [114, 374, 2.1, 1.1],
-  [175, 352, 2.3, 3.7], [432, 337, 2.7, 0.9], [475, 371, 3.2, 2.8],
-  [510, 407, 2.5, 4.1], [522, 344, 2, 1.8], [580, 363, 2.1, 0.4],
-  [605, 351, 2.6, 3.2], [738, 309, 2.2, 1.6], [740, 343, 1.6, 4.7],
-  [676, 393, 1.7, 2.5], [497, 529, 2.8, 0.7], [434, 533, 1.8, 3.4],
-  [141, 514, 1.6, 2.9], [202, 580, 2.1, 1.3], [648, 508, 2.2, 4.3],
+  [972, 32, 'gold'], [1088, 51, 'gold'], [1011, 62, 'gold'], [1035, 69, 'gold'],
+  [981, 75, 'gold'], [954, 87, 'gold'], [1060, 93, 'gold'], [976, 97, 'gold'],
+  [948, 106, 'gold'], [999, 105, 'gold'], [996, 120, 'gold'], [1021, 135, 'gold'],
+  [191, 239, 'gold'], [155, 259, 'gold'], [401, 274, 'mint'], [437, 295, 'mint'],
+  [598, 281, 'mint'], [740, 293, 'gold'], [762, 299, 'mint'], [682, 299, 'mint'],
+  [524, 311, 'mint'], [741, 317, 'gold'], [130, 319, 'gold'], [433, 339, 'gold'],
+  [755, 340, 'mint'], [127, 350, 'gold'], [649, 351, 'gold'], [671, 354, 'mint'],
+  [605, 360, 'gold'], [521, 363, 'gold'], [579, 367, 'gold'], [480, 372, 'gold'],
+  [782, 377, 'mint'], [707, 395, 'mint'], [594, 399, 'mint'], [427, 400, 'mint'],
+  [750, 402, 'gold'], [543, 407, 'gold'], [503, 410, 'gold'], [456, 412, 'mint'],
+  [630, 416, 'gold'], [477, 450, 'gold'], [551, 456, 'mint'], [507, 464, 'gold'],
+  [193, 477, 'mint'], [434, 481, 'mint'], [446, 511, 'gold'], [534, 528, 'gold'],
+  [428, 537, 'gold'], [426, 555, 'mint'], [490, 579, 'gold'], [689, 557, 'mint'],
+  [535, 547, 'mint'], [1343, 583, 'gold'], [848, 642, 'gold'], [1101, 696, 'gold'],
+] as const;
+
+const portalMotes = [
+  [252, 325], [279, 323], [359, 332], [264, 334], [373, 335],
+  [241, 350], [248, 349], [226, 362], [288, 364], [321, 374],
+  [391, 380], [252, 379], [401, 395], [257, 424], [313, 427],
+  [301, 434], [318, 433], [324, 447], [278, 451], [314, 472],
+  [308, 487], [308, 489], [293, 497], [225, 551], [228, 550],
+  [376, 578], [342, 333], [304, 461], [314, 452], [271, 533],
+  [380, 548], [246, 578], [358, 578], [371, 601], [303, 533],
 ] as const;
 
 // These soft plasma contours travel inward. The spiral lines in the painting
@@ -40,6 +60,14 @@ export function IntroEffects() {
           <path d={plasmaContour} fill="none" stroke="#d0ffe7" strokeWidth="2.8" opacity=".55"/>
         </g>)}
         <ellipse className="portal-core" cx="309" cy="445" rx="55" ry="82" fill="url(#intro-portal-core)"/>
+        <g className="portal-motes">
+          {portalMotes.map(([x, y], index) => <circle key={index} cx={x} cy={y} r={1.4 + index % 4 * .35} fill={index % 5 === 0 ? '#e8ffc4' : '#9dffe6'} style={{
+            '--mote-x': `${(309 - x) * .75}px`,
+            '--mote-y': `${(445 - y) * .75}px`,
+            '--mote-delay': `${-index * .43}s`,
+            '--mote-duration': `${3.4 + index % 6 * .44}s`,
+          } as CSSProperties}/>)}
+        </g>
       </g>
       <g className="rune-glow rune-one" fill="none" stroke="#86fff0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M63 548 L53 508 L69 521 M55 518 L67 525"/>
@@ -51,7 +79,18 @@ export function IntroEffects() {
         <path d="M1299 521 L1312 487 L1291 501 L1307 510 M1301 520 L1288 537"/>
       </g>
       <g className="intro-fireflies">
-        {fireflies.map(([x, y, radius, delay], index) => <circle key={index} cx={x} cy={y} r={radius} fill="#ffe887" style={{ '--fly-delay': `${delay}s`, '--fly-duration': `${5 + index % 5}s`, '--fly-x': `${(index % 3 - 1) * 12}px` } as CSSProperties}/>)}
+        {fireflies.map(([x, y, kind], index) => <circle key={index} cx={x} cy={y} r={kind === 'gold' ? 2.2 + index % 3 * .5 : 1.7 + index % 3 * .45} fill={kind === 'gold' ? '#ffe887' : '#83ffe1'} style={{
+          '--fly-color': kind === 'gold' ? '#ffe078' : '#53f6d5',
+          '--fly-delay': `${-index * .71}s`,
+          '--fly-duration': `${6.4 + index % 7 * .61}s`,
+          '--twinkle-duration': `${3.1 + index % 5 * .73}s`,
+          '--fly-x1': `${index % 2 ? 10 + index % 8 : -11 - index % 7}px`,
+          '--fly-y1': `${-9 - index % 9}px`,
+          '--fly-x2': `${index % 3 ? -8 - index % 9 : 11 + index % 6}px`,
+          '--fly-y2': `${-18 - index % 11}px`,
+          '--fly-x3': `${index % 2 ? -5 - index % 8 : 8 + index % 6}px`,
+          '--fly-y3': `${-5 - index % 6}px`,
+        } as CSSProperties}/>)}
       </g>
     </svg>
   </div>;
