@@ -7,15 +7,17 @@
 .intro-scene-effects{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
 .intro-magic{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .portal-breath{animation:portal-breathe 4.2s ease-in-out infinite}
-.portal-vortex{transform-box:view-box;transform-origin:309px 445px;animation:portal-turn 15s linear infinite}
+.plasma-wave{transform-box:view-box;transform-origin:309px 445px;animation:plasma-inward 3.9s linear infinite}
+.portal-core{transform-box:view-box;transform-origin:309px 445px;animation:plasma-core 3.9s ease-in-out infinite}
 .rune-glow{opacity:.35;filter:drop-shadow(0 0 7px #49f9e6);animation:rune-pulse 3.5s ease-in-out infinite}
 .rune-two{animation-delay:-1.1s}.rune-three{animation-delay:-2.2s}
 .intro-fireflies circle{opacity:.2;filter:drop-shadow(0 0 5px #ffe078);animation:firefly-drift var(--fly-duration) ease-in-out var(--fly-delay) infinite}
 .intro-foliage-patch{position:absolute;inset:0;background:url('/assets/menu/second-me-forest.jpg') center / 100% 100% no-repeat;opacity:.9;animation:foliage-sway 5.8s ease-in-out infinite alternate}
-.foliage-left{clip-path:polygon(0 59%,25% 59%,25% 100%,0 100%);mask-image:radial-gradient(ellipse 17% 22% at 7% 84%,#000 16%,transparent 100%);transform-origin:6% 100%}
-.foliage-center{clip-path:polygon(39% 74%,69% 74%,69% 100%,39% 100%);mask-image:radial-gradient(ellipse 14% 14% at 54% 90%,#000 12%,transparent 100%);transform-origin:54% 100%;animation-delay:-2.6s;animation-duration:7.2s}
-.foliage-right{clip-path:polygon(84% 76%,100% 76%,100% 100%,84% 100%);mask-image:radial-gradient(ellipse 10% 12% at 97% 94%,#000 13%,transparent 100%);transform-origin:97% 100%;animation-delay:-1.5s;animation-duration:6.5s}
-@keyframes portal-turn{to{transform:rotate(360deg)}}
+.foliage-left{clip-path:polygon(0 70%,12% 70%,12% 100%,0 100%);mask-image:radial-gradient(ellipse 8% 18% at 4% 91%,#000 16%,transparent 100%);transform-origin:4% 100%}
+.foliage-center{clip-path:polygon(49% 75%,63% 75%,63% 100%,49% 100%);mask-image:radial-gradient(ellipse 7% 9% at 56% 89%,#000 12%,transparent 100%);transform-origin:56% 100%;animation-delay:-2.6s;animation-duration:7.2s}
+.foliage-right{clip-path:polygon(94% 82%,100% 82%,100% 100%,94% 100%);mask-image:radial-gradient(ellipse 6% 13% at 97% 93%,#000 13%,transparent 100%);transform-origin:97% 100%;animation-delay:-1.5s;animation-duration:6.5s}
+@keyframes plasma-inward{0%{transform:scale(1.13);opacity:0}18%{opacity:.65}70%{opacity:.76}100%{transform:scale(.12);opacity:0}}
+@keyframes plasma-core{0%,100%{transform:scale(.72);opacity:.28}45%{opacity:.48}78%{transform:scale(1.08);opacity:.7}}
 @keyframes portal-breathe{50%{opacity:.5}}
 @keyframes rune-pulse{0%,100%{opacity:.18;filter:drop-shadow(0 0 4px #49f9e6)}50%{opacity:.76;filter:drop-shadow(0 0 13px #65fff0)}}
 @keyframes firefly-drift{0%,100%{opacity:.08;transform:translate(0,4px) scale(.65)}45%{opacity:.94;transform:translate(var(--fly-x),-13px) scale(1.15)}70%{opacity:.45;transform:translate(calc(var(--fly-x) * .55),-22px) scale(.8)}}

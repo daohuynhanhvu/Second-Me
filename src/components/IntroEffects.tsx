@@ -11,18 +11,15 @@ const fireflies = [
   [141, 514, 1.6, 2.9], [202, 580, 2.1, 1.3], [648, 508, 2.2, 4.3],
 ] as const;
 
-function spiralPath(phase: number) {
-  return Array.from({ length: 110 }, (_, index) => {
-    const t = index / 109;
-    const radius = 7 + 121 * t;
-    const angle = phase + t * Math.PI * 4.6;
-    const x = 309 + Math.cos(angle) * radius * 0.77;
-    const y = 445 + Math.sin(angle) * radius * 1.18;
-    return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
-  }).join(' ');
-}
-
-const spirals = [0, Math.PI * 2 / 3, Math.PI * 4 / 3].map(spiralPath);
+// These soft plasma contours travel inward. The spiral lines in the painting
+// remain untouched, and no element in the stone arch is transformed.
+const plasmaContour = Array.from({ length: 96 }, (_, index) => {
+  const angle = index / 96 * Math.PI * 2;
+  const ripple = 1 + Math.sin(angle * 5) * .025 + Math.sin(angle * 9) * .015;
+  const x = 309 + Math.cos(angle) * 84 * ripple;
+  const y = 445 + Math.sin(angle) * 126 * ripple;
+  return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+}).join(' ') + ' Z';
 
 export function IntroEffects() {
   return <div className="intro-scene-effects" aria-hidden="true">
@@ -33,16 +30,16 @@ export function IntroEffects() {
       <defs>
         <clipPath id="intro-portal-clip"><ellipse cx="309" cy="445" rx="105" ry="158"/></clipPath>
         <radialGradient id="intro-portal-light"><stop offset="0" stopColor="#bdffcb" stopOpacity=".23"/><stop offset=".55" stopColor="#2ae9bd" stopOpacity=".14"/><stop offset="1" stopColor="#19d5b2" stopOpacity="0"/></radialGradient>
+        <radialGradient id="intro-portal-core"><stop offset="0" stopColor="#d7ffe5" stopOpacity=".62"/><stop offset=".38" stopColor="#52ffc9" stopOpacity=".32"/><stop offset="1" stopColor="#31e8b6" stopOpacity="0"/></radialGradient>
         <filter id="intro-soft-glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
       </defs>
       <ellipse className="portal-breath" cx="309" cy="445" rx="104" ry="157" fill="url(#intro-portal-light)"/>
       <g clipPath="url(#intro-portal-clip)">
-        <g className="portal-vortex">
-          {spirals.map((path, index) => <g key={index}>
-            <path d={path} fill="none" stroke={index === 0 ? '#dbffb1' : '#60f4d0'} strokeWidth="13" strokeLinecap="round" opacity=".46" filter="url(#intro-soft-glow)"/>
-            <path d={path} fill="none" stroke={index === 0 ? '#e7ffb6' : '#8dffe1'} strokeWidth={index === 0 ? 2.8 : 1.9} strokeLinecap="round" opacity=".55"/>
-          </g>)}
-        </g>
+        {[0, 1, 2].map(index => <g className="plasma-wave" style={{ animationDelay: `${index * -1.3}s` }} key={index}>
+          <path d={plasmaContour} fill="none" stroke="#86ffda" strokeWidth="19" filter="url(#intro-soft-glow)"/>
+          <path d={plasmaContour} fill="none" stroke="#d0ffe7" strokeWidth="2.8" opacity=".55"/>
+        </g>)}
+        <ellipse className="portal-core" cx="309" cy="445" rx="55" ry="82" fill="url(#intro-portal-core)"/>
       </g>
       <g className="rune-glow rune-one" fill="none" stroke="#86fff0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M63 548 L53 508 L69 521 M55 518 L67 525"/>
