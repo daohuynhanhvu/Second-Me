@@ -117,7 +117,8 @@ class VoiceDirector {
    * Intro narration: schedules each timed line against the film clock `now()` (seconds).
    * Lines whose moment has passed are skipped, so starting late or skipping never doubles up.
    */
-  playTimeline(entries: { role: VoiceRole; id: string; at: number }[], now: () => number): () => void {
+  playTimeline(entries: { role: VoiceRole; id: string; at: number }[], now: () => number,
+    onLine?: (start: number, duration: number) => void): () => void {
     const g = sounds.graph();
     if (!g || sounds.getMuted()) return () => {};
     const bus = g.ctx.createGain();
@@ -137,8 +138,10 @@ class VoiceDirector {
           const src = g.ctx.createBufferSource(), gain = g.ctx.createGain();
           gain.gain.value = CAST[role]?.gain ?? 1;
           src.buffer = buf; src.connect(gain); gain.connect(bus);
-          src.start(g.ctx.currentTime + Math.max(0, at - t));
+          const start = g.ctx.currentTime + Math.max(0, at - t);
+          src.start(start);
           sources.push(src);
+          onLine?.(start, buf.duration);
         });
       }
     });

@@ -1,3 +1,4 @@
+import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
 import { drawMechanicalSprite } from './mechanicalSprite.ts';
 import type { GameEngine } from '../GameEngine.ts';
 import { drawTrap, trapSpritesReady } from './traps.ts';
@@ -104,25 +105,20 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.restore();
   }
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  for(const orb of game.orbitOrbs) {
-    ctx.save();ctx.globalAlpha=Math.min(1,orb.life);ctx.shadowColor='#82cfff';ctx.shadowBlur=8;
-    const x=game.player.x+Math.cos(orb.angle)*36,y=game.player.y-12+Math.sin(orb.angle)*28;
-    ctx.fillStyle='#bceaff';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,y-4);ctx.lineTo(x+1,y);ctx.lineTo(x-2,y+4);ctx.stroke();ctx.restore();
+  for (const orb of game.orbitOrbs) {
+    const x = game.player.x + Math.cos(orb.angle) * 36, y = game.player.y - 12 + Math.sin(orb.angle) * 28;
+    ctx.save(); ctx.globalAlpha *= Math.min(1, orb.life);
+    drawLightningOrb(ctx, x, y, orb.angle + Math.PI / 2, 6, time); ctx.restore();
   }
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
   if(game.characterClass==='swordsman' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   if (game.characterClass === 'mage' && game.campaign.forged && !game.exitTravelRemaining) {
-    ctx.save(); ctx.translate(game.player.x+17, game.player.y);
-    ctx.strokeStyle='#b69262'; ctx.lineWidth=7; ctx.beginPath();ctx.moveTo(0,11);ctx.lineTo(3,-39);ctx.stroke();
-    ctx.shadowColor='#84fff2';ctx.shadowBlur=20;ctx.fillStyle='#80f5e9';ctx.beginPath();ctx.arc(3,-46,11,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+    drawMageStaff(ctx, game.player.x, game.player.y, game.player.direction);
   }
   for (const shot of game.magicShots) {
     const t = Math.min(1, shot.age / 0.3);
-    const x = shot.x + (shot.targetX-shot.x)*t, y=shot.y+(shot.targetY-shot.y)*t;
-    ctx.save();ctx.shadowColor=shot.skill?'#f7dc83':'#82fff4';ctx.shadowBlur=25;
-    ctx.fillStyle=shot.skill?'#ffe7a4':'#b5fff7';ctx.beginPath();ctx.arc(x,y,shot.skill?18:9,0,Math.PI*2);ctx.fill();ctx.restore();
+    const x = shot.x + (shot.targetX - shot.x) * t, y = shot.y + (shot.targetY - shot.y) * t;
+    drawLightningOrb(ctx, x, y, Math.atan2(shot.targetY - shot.y, shot.targetX - shot.x), shot.skill ? 14 : 10, time);
   }
   if(game.skillDrop) {
     const drop=game.skillDrop;

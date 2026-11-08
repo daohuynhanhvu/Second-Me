@@ -29,15 +29,20 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
 @keyframes foliage-sway{from{transform:translateX(-1px) rotate(-.16deg)}to{transform:translateX(2px) rotate(.23deg)}}
 .intro-accessible-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .intro-mobile-title{display:none}
-.intro-language{position:absolute;z-index:3;top:21.4%;left:74.4%;width:10%;display:flex;align-items:center;justify-content:center;gap:7px;color:#d0c789;font:700 clamp(10px,.8vw,14px)/1.3 system-ui,'Segoe UI',sans-serif;text-shadow:0 2px 4px #000}
+.intro-language{position:absolute;z-index:3;top:23.6%;left:72.4%;width:10%;display:flex;align-items:center;justify-content:center;gap:7px;color:#d0c789;font:700 clamp(10px,.8vw,14px)/1.3 system-ui,'Segoe UI',sans-serif;text-shadow:0 2px 4px #000}
 .intro-language button{border:0;background:none;color:#a7aa91;padding:3px 4px;font:inherit;letter-spacing:.08em}
 .intro-language button.selected,.intro-language button:hover{color:#fff0ae;text-decoration:underline;text-underline-offset:4px}
-.intro-menu{position:absolute;z-index:2;left:66.2%;top:28%;width:23.5%;height:49%;padding:3px 6px;display:grid;grid-template-rows:repeat(5,1fr);background:linear-gradient(105deg,#102621,#132b27 55%,#0e211e);box-shadow:inset 0 0 28px #04110c85,0 0 12px #09170f80;border:1px solid #8e926a50;border-radius:4px}
-.intro-menu-item{position:relative;min-width:0;width:100%;border:1px solid transparent;border-radius:3px;background:transparent;color:#f2e5ab;font:700 clamp(13px,2.05vw,31px)/1.15 'Second Me Serif',Georgia,serif;letter-spacing:.01em;text-shadow:2px 3px 1px #07120e,-1px -1px #523e1c;white-space:nowrap;transition:background .18s,border-color .18s,color .18s}
-.intro-menu-item:hover:not(:disabled),.intro-menu-item:focus-visible,.intro-menu-item.selected{color:#fff1b5;background:linear-gradient(90deg,#bdab5b24,#c3b46c11);border-color:#e5d38d;box-shadow:inset 0 0 14px #d4c37922,0 0 10px #f4d97920}
+/* Fills the painted frame's opening (x 912-1242, y 172-606 of the 1376x768 art) so nothing painted shows
+   between the stone and the panel, including the painted START GAME highlight, which reaches x 1240.
+   Below it the right pillar comes in to x 1222, so the clip steps in there instead of covering stone.
+   The padding keeps the items at y 215-591, x 918-1216, and leaves room for EN / VI at the top.
+   Padding % is of the screen width, i.e. art px / 1376. */
+.intro-menu{position:absolute;z-index:2;left:66.28%;top:22.4%;width:23.98%;height:56.5%;padding:3.13% 1.89% 1.09% .44%;box-sizing:border-box;clip-path:polygon(0 0,100% 0,100% 31.8%,94% 34.6%,94% 100%,0 100%);display:grid;grid-template-rows:repeat(5,1fr);background:linear-gradient(105deg,#102621,#132b27 55%,#0e211e);box-shadow:inset 0 0 28px #04110c85;border:0;border-radius:2px}
+.intro-menu-item{position:relative;min-width:0;width:100%;border:1px solid transparent;border-radius:3px;background:transparent;color:#f2e5ab;font:700 clamp(13px,1.9vw,29px)/1.15 'Second Me Serif',Georgia,serif;letter-spacing:.01em;text-shadow:2px 3px 1px #07120e,-1px -1px #523e1c;white-space:nowrap;transition:background .18s,border-color .18s,color .18s}
+.intro-menu-item.selected{color:#fff1b5;background:linear-gradient(90deg,#bdab5b24,#c3b46c11);border-color:#e5d38d;box-shadow:inset 0 0 14px #d4c37922,0 0 10px #f4d97920}
 .intro-menu-item:disabled{opacity:.45}
-.intro-menu-item>span{position:absolute;top:50%;transform:translateY(-50%);font-size:.8em;color:#ecdd93}
-.intro-menu-item>span:first-child{left:5%}.intro-menu-item>span:last-child{right:5%}
+
+
 .intro-dialog{z-index:50}.intro-dialog .panel{max-width:440px}.intro-dialog .primary{width:100%;margin-top:16px}
 .adventure-app:lang(vi) .lobby-welcome h1,.adventure-app:lang(vi) .node-number,.lobby-welcome h1,.lobby-header b,.node-number{font-family:'Second Me Serif',Georgia,serif!important}
 @media(max-aspect-ratio:4/3){
@@ -52,3 +57,17 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
   .intro-menu-item{font-size:clamp(17px,4.2vw,24px)}
 }
 @media(max-height:500px) and (max-aspect-ratio:4/3){.intro-mobile-title{top:1%;gap:1px}.intro-mobile-title strong{font-size:26px}.intro-language{top:21%}.intro-menu{height:64%;bottom:2%}.intro-menu-item{font-size:15px}}
+
+/* Stone slab items: public/assets/menu/stone-button.png (tools/assets/prepare_menu_buttons.py) holds 5 slab
+   shapes (columns, --slab picks one) x 3 layers (rows: base, face, lit face), each 304x78 painting px for a
+   298x75 item. The base (thickness + shadow) stays; the face, carrying the label, rises 3 px when the item
+   is selected (more thickness shows under it) and sinks 2 px while pressed. */
+.intro-menu-item{background:none!important;border:0!important;box-shadow:none!important;padding:0;isolation:isolate;overflow:visible}
+.intro-menu-item::before,.intro-menu-face{position:absolute;left:-1%;right:-1%;top:-1.9%;bottom:-1.9%;background-image:url('/assets/menu/stone-button.png');background-size:500% 300%;background-repeat:no-repeat;image-rendering:pixelated}
+.intro-menu-item::before{content:'';z-index:-1;background-position:calc(var(--slab) * 25%) 0}
+.intro-menu-face{display:block;background-position:calc(var(--slab) * 25%) 50%;transition:transform .17s cubic-bezier(.3,1.8,.55,1)}
+.intro-menu-label{position:absolute;left:0;right:0;top:9%;height:69.2%;display:flex;align-items:center;justify-content:center}
+.intro-menu-item.selected .intro-menu-face{background-position-y:100%;transform:translateY(-3.85%)}
+.intro-menu-item:active:not(:disabled) .intro-menu-face{transform:translateY(2.56%);transition-duration:.06s}
+.intro-menu-item:disabled{opacity:1;color:#a8a283}
+.intro-menu-item:disabled::before,.intro-menu-item:disabled .intro-menu-face{filter:brightness(.55) saturate(.6)}
