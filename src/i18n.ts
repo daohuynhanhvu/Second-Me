@@ -43,7 +43,7 @@ const pairs: [string, string][] = [
   ['Volume', 'Âm lượng'], ['Effects and ambient sound', 'Âm thanh hiệu ứng và môi trường'],
   ['Mute', 'Tắt âm'], ['Mute all game audio', 'Tắt toàn bộ âm thanh trò chơi'],
   ['Reduce motion', 'Giảm chuyển động'], ['Reduce fog, shake and repeated effects', 'Giảm sương, rung và hiệu ứng lặp'],
-  ['In-game labels', 'Nhãn trong màn'], ['Show trap and time shard labels', 'Hiện nhãn bẫy và mảnh thời gian'],
+  ['In-game labels', 'Nhãn trong màn'], ['Show time shard labels', 'Hiện nhãn mảnh thời gian'],
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['GAME NEWS', 'THÔNG BÁO TRÒ CHƠI'], ['New echoes in the forest', 'Tiếng vọng mới trong rừng'],
