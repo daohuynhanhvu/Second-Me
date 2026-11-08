@@ -13,6 +13,18 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
   const [chestOpen, setChestOpen] = useState(true);
   const [chestDialog, setChestDialog] = useState(false);
   const [message, setMessage] = useState('');
+  const [turnRequest, setTurnRequest] = useState(0);
+  const [turnFrame, setTurnFrame] = useState(0);
+  useEffect(() => {
+    if (!turnRequest || hud.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setTurnFrame(0); return; }
+    let frame = 0;
+    const timer = window.setInterval(() => {
+      frame++;
+      if (frame >= 8) { window.clearInterval(timer); setTurnFrame(0); }
+      else setTurnFrame(frame);
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [turnRequest, hud.reducedMotion]);
   useEffect(() => {
     if (!chestDialog) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setChestDialog(false); } };
@@ -26,10 +38,10 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
     setMessage(vi?'Cảm ơn bạn đã mua hàng!':'Thank you for your purchase!');
   };
   return <div className={`tanuki-shop${hud.reducedMotion?' reduced-motion':''}`}>
-    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop.png')} alt=""/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
+    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><div className="tanuki-turn-sprite" style={{backgroundImage:`url(${asset('ui/tanuki-shop-turn.png')})`,backgroundPosition:`${(turnFrame%4)*100/3}% ${Math.floor(turnFrame/4)*100}%`}}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
     <div className="tanuki-scene-controls">
       <div className="tanuki-speech" aria-live="polite">{say}</div>
-      <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>setSpeech(speech === 'shop' ? 'welcome' : 'shop')}/>
+      <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');setTurnRequest(n=>n+1);}}/>
       <button className={`tanuki-chest ${chestOpen?'':'is-closed'}`} aria-label={vi?'Mở rương thưởng':'Open reward chest'} onClick={()=>{setChestOpen(false);setChestDialog(true);}}>
         {!chestOpen && <span className="tanuki-closed-chest" aria-hidden="true"><i/></span>}
         <span className="tanuki-chest-label">{vi?'RƯƠNG THƯỞNG':'REWARD CHEST'}</span>

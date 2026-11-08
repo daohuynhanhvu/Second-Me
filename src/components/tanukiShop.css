@@ -14,3 +14,6 @@
 .tanuki-shop.reduced-motion .tanuki-flame{animation:none;opacity:.5}
 @media(min-width:761px) and (max-height:850px){.tanuki-panel{top:16%;padding:9px}.tanuki-panel-heading{padding:6px}.tanuki-panel-heading h2{margin:3px 0;font-size:clamp(17px,1.75vw,28px)}.tanuki-tabs{margin:8px 0}.tanuki-tabs button{padding:7px}.tanuki-product{padding:8px;gap:10px}.tanuki-product-art{width:75px}.tanuki-product-art img{height:70px}.tanuki-product p{margin-bottom:4px}.tanuki-product-bottom{margin-top:4px}.tanuki-product button{padding:5px 16px}.tanuki-purchase-message{margin-top:5px}.tanuki-chest-label{bottom:9%}}
 .tanuki-clock svg{display:block;width:48px;height:55px;margin:0 auto;image-rendering:pixelated}.tanuki-closed-chest,.tanuki-closed-chest:before{border-radius:0}
+/* Eight redrawn pixel-art views follow the uploaded stall's 360° turn. */
+.tanuki-turn-sprite{position:absolute;top:10%;left:5%;width:78%;aspect-ratio:1;background-repeat:no-repeat;background-size:400% 200%;image-rendering:pixelated}
+@media(max-width:760px){.tanuki-turn-sprite{width:65%;top:4%;left:8%}}

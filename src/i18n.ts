@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Tanuki’s animated stall', 'Quầy Tanuki chuyển động'],
+  ['Tanuki and the stall now turn in a new pixel-art animation when you talk.', 'Tanuki và quầy hàng có chuyển động xoay mới theo phong cách pixel khi bạn trò chuyện.'],
   ['The new Tanuki shop', 'Cửa hàng Tanuki mới'],
   ['Visit Tanuki to buy items, chat and discover the reward chest in preparation.', 'Ghé quầy Tanuki để mua vật phẩm, trò chuyện và khám phá rương thưởng đang chuẩn bị.'],
   ['A new look for coins', 'Diện mạo mới cho xu'],
