@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { GameEngine } from '../GameEngine.ts';
 import { trapEffects, trapPhase } from './traps.ts';
 import { sounds } from './sound.ts';
+import { puzzleBalance } from './balance.ts';
 import { LEVELS } from './levels.ts';
 import { rectIntersects } from './collision.ts';
 sounds.setMuted(true);
@@ -11,7 +12,7 @@ function setup(t: TestContext, index = 0) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous ? Object.defineProperty(globalThis,'document',previous) : Reflect.deleteProperty(globalThis,'document'));
-  const game = new GameEngine(); game.currentLevelIdx = index; game.restartLevel();
+  const game = new GameEngine(); game.currentLevelIdx = index; game.restartLevel();game.enemies=[];
   const controls = game as unknown as { update(dt: number): void; heldKeys: Set<string> };
   const advance = (seconds: number) => { for(let i=0; i<Math.round(seconds*100); i++) controls.update(.01); };
   const checkpoint = (index: number) => { const p = game.currentLevel.plates[index]; game.player.x=p.x+p.width/2; game.player.y=p.y+p.height/2; advance(.01); };
@@ -30,13 +31,13 @@ test('per-level timeout shows defeat and retry resets every stage of the attempt
 test('only the player reaching the next new checkpoint replenishes the level budget', t => {
   const { game, advance, checkpoint } = setup(t,1);
   checkpoint(1); assert.equal(game.checkpointIndex,0); // Out of order.
-  advance(1); checkpoint(0); assert.equal(game.checkpointIndex,1); assert.equal(game.legTimeRemaining,18);
-  advance(1); assert.ok(game.legTimeRemaining! < 17.01); // Staying cannot farm time.
+  advance(1); checkpoint(0); assert.equal(game.checkpointIndex,1); assert.equal(game.legTimeRemaining,puzzleBalance(2).legSeconds);
+  advance(1); assert.ok(game.legTimeRemaining! < puzzleBalance(2).legSeconds-.99); // Staying cannot farm time.
   game.toggleRecording();game.toggleRecording();game.spawnEcho();
   const next=game.currentLevel.plates[1]; game.echo!.x=next.x+25;game.echo!.y=next.y+25;game.echo!.status='finished';
-  advance(.5);assert.equal(game.checkpointIndex,1);assert.ok(game.legTimeRemaining!<16.51);
-  checkpoint(1);assert.equal(game.checkpointIndex,2);assert.equal(game.legTimeRemaining,18);
-  advance(18);assert.equal(game.screen,'defeat'); // Final portal leg is timed too.
+  advance(.5);assert.equal(game.checkpointIndex,1);assert.ok(game.legTimeRemaining!<puzzleBalance(2).legSeconds-1.49);
+  checkpoint(1);assert.equal(game.checkpointIndex,2);assert.equal(game.legTimeRemaining,puzzleBalance(2).legSeconds);
+  advance(puzzleBalance(2).legSeconds);assert.equal(game.screen,'defeat'); // Final portal leg is timed too.
 });
 
 test('pause freezes the checkpoint clock and boss arena has no checkpoint deadline',t=>{
@@ -44,7 +45,7 @@ test('pause freezes the checkpoint clock and boss arena has no checkpoint deadli
   advance(1); const remaining=game.legTimeRemaining;game.pauseGame();advance(8);
   assert.equal(game.legTimeRemaining,remaining);game.resumeGame();advance(1);assert.ok(game.legTimeRemaining!<14.01);
   game.currentLevelIdx=5;game.restartLevel();assert.equal(game.legTimeRemaining,null);
-  game.boss!.timer=100;game.boss!.burstCooldown=100;advance(18);assert.equal(game.screen,'playing');assert.equal(game.defeatReason,'damage');
+  game.boss!.timer=100;game.boss!.burstCooldown=100;advance(puzzleBalance(2).legSeconds);assert.equal(game.screen,'playing');assert.equal(game.defeatReason,'damage');
 });
 
 test('damaging traps warn before impact and vines slow without dealing damage',()=>{

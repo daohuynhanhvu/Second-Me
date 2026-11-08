@@ -68,6 +68,7 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
   const t = TEXT[language];
   return (
     <div ref={root} className={`loading-v2 overlay${reducedMotion ? ' still' : ''}`} data-phase="loading" role="progressbar" aria-label={t.loading} aria-valuemin={0} aria-valuemax={100}>
+      <div className="lv-frame">
       <div className="lv-world">
         <img className="lv-bg" src={`${import.meta.env.BASE_URL}assets/loading/background.jpg`} alt="" draggable={false}/>
         {/* Shown when the portal transition starts: the arch and bar are then canvas sprites. */}
@@ -93,7 +94,8 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
         <strong>{t.loading} <span ref={percent}>0</span>%</strong>
         <p>{t.caption}</p>
       </div>
-      {import.meta.env.DEV && <pre ref={perf} className="lv-perf" aria-hidden="true"/>}
+      </div>
+      {import.meta.env.DEV && new URLSearchParams(location.search).get('perf') === '1' && <pre ref={perf} className="lv-perf" aria-hidden="true"/>}
     </div>
   );
 }

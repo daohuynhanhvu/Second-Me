@@ -188,3 +188,7 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 .hero-select-scene{container-type:inline-size}
 .hero-select-title{left:34.5%;width:31%;font-size:clamp(10px,1.9cqw,30px)!important;letter-spacing:0!important}
 @media(max-width:720px) and (orientation:portrait){.hero-select-title{left:27%;width:46%;font-size:clamp(9px,2.6cqw,13px)!important;letter-spacing:-.2px!important}}
+
+/* Loading art, canvas actors and progress labels share the authored 1376x768 frame. */
+.lv-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,calc(100dvh * 1376 / 768));aspect-ratio:1376/768;container-type:inline-size}
+.lv-frame .lv-bg{object-fit:contain}

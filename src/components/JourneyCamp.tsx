@@ -2,9 +2,18 @@ import React, { useState } from 'react';
 import { ArrowRight, Check, Compass, Flame, Lock, Play, RotateCcw, ShoppingBasket, Snowflake, Sword, Users } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
-import { MATERIALS } from '../game/logic/campaign.ts';
+import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
 import './JourneyCamp.css';
+import { JourneyAmbience } from './JourneyAmbience.tsx';
 
+// Traced in the painting's native 1536x1024 coordinates, including each bend.
+const trailSegments = [
+ 'M215 737 C213 670 246 624 278 604 C310 580 365 580 382 548 C402 514 392 487 412 462 C428 436 439 425 434 410 L430 369',
+ 'M430 369 L434 420 C482 426 500 474 509 520 C517 569 523 586 575 599 C624 611 668 639 707 645',
+ 'M707 645 C744 620 749 584 757 552 C766 522 791 516 782 488 C776 465 760 454 765 424 C772 385 797 360 840 353 C877 350 908 339 937 328',
+ 'M937 328 C977 339 1006 352 1004 390 C999 429 1011 449 1050 464 C1101 483 1149 508 1198 522',
+ 'M1198 522 C1240 491 1271 448 1278 405 C1284 379 1327 362 1355 346 C1382 331 1377 303 1364 278 C1355 248 1351 210 1352 174',
+];
 const positions = [[14,72],[28,36],[46,63],[61,32],[78,51],[88,17]];
 export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number}) {
   const vi=hud.language==='vi';
@@ -19,7 +28,7 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
       <h1>{complete?(vi?'Khu rừng đã thức giấc.':'The forest awakens.'):(vi?'Lần theo tiếng vọng.':'Follow the echoes.')}</h1>
       <p className="camp-intro">{vi?'Giữa những tán cây, một ký ức vẫn đang chờ bạn tìm lại.':'Beyond the canopy, a forgotten memory is waiting to be found.'}</p>
       <div className="camp-progress"><span>{vi?'HÀNH TRÌNH CỦA BẠN':'YOUR JOURNEY'}<b>{String(count).padStart(2,'0')} <small>/ 06</small></b></span><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}><i style={{width:`${count/6*100}%`}}/></div></div>
-      <div className="camp-relics"><span>{vi?'DI VẬT ĐÃ TÌM':'RELICS RECOVERED'}<b>{hud.completed.length}/5</b></span><div>{MATERIALS.map((material,i)=><span key={material.id} title={material.name} className={hud.completed.includes(i+1)?'found':''}>{hud.completed.includes(i+1)?<Check size={13}/>:<Lock size={12}/>}</span>)}</div></div>
+      <div className="camp-relics"><span>{vi?'ẤN NÂNG ECHO':'ECHO UPGRADE RUNES'}<b>{Object.values(hud.echoRunes??{}).reduce((a,n)=>a+n,0)}</b></span><div>{ECHO_RUNES.map(r=><span key={r.id} title={vi?r.vi:r.en} className={(hud.echoRunes?.[r.id]??0)>0?'found':''}><b>{r.glyph}</b><small>{hud.echoRunes?.[r.id]??0}</small></span>)}</div></div>
       <button className="camp-hero" onClick={()=>engine?.openCharacters()}><span className="camp-hero-mark"><Users size={20}/></span><span><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}<em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):(vi?'Pháp sư':'Mage')}</em></b></span><ArrowRight size={16}/></button>
       <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={17} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}<small>{complete?'ECHO GROVE':LEVELS[next].subtitle}</small></span><ArrowRight size={18}/></button>
       <div className="camp-tools"><button onClick={()=>engine?.openShop()}><ShoppingBasket size={17}/><span>{vi?'Cửa hàng':'Shop'}</span><b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></button><button className="camp-new" onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
@@ -27,8 +36,12 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
     </aside>
     <section className="journey-chart" aria-label={vi?'Bản đồ hành trình':'Journey map'}>
       <header className="chart-heading"><div><span><Compass size={13}/>{vi?'BẢN ĐỒ HÀNH TRÌNH':'THE WILDERNESS'}</span><h2>{vi?'Khu rừng của những ký ức':'A forest of forgotten memories'}</h2></div><span className="chart-chapter">{vi?'CHƯƠNG I':'CHAPTER I'}<b>THE EMBERFORGE</b></span></header>
-      <div className="journey-world">
-        <svg className="journey-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M14 72 C12 54 20 40 28 36 S37 70 46 63 S49 31 61 32 S66 56 78 51 S88 36 88 17"/></svg>
+      <div className={`journey-world${hud.reducedMotion?' map-still':''}`}>
+        <svg className="journey-path" viewBox="0 0 1536 1024" aria-hidden="true">
+          {trailSegments.map((d,i)=><path key={i} d={d} className={unlocked(i+1)?'trail-open':'trail-locked'}/>)}
+        </svg>
+        <JourneyAmbience/>
+
         <div className="chart-north" aria-hidden="true">N<span>↑</span></div>
         {LEVELS.map((item,i)=>{
           const ready=unlocked(i),done=i<5?hud.completed.includes(i+1):complete,current=i===next&&!complete;
@@ -42,7 +55,7 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
         })}
         <span className="world-caption">{vi?'Mỗi lối mòn lưu giữ một tiếng vọng.':'Every trail holds an echo.'}</span>
       </div>
-      <footer className="chart-detail"><span className={`detail-symbol ${inspect===5?'ice':''}`}>{inspect===5?<Snowflake size={23}/>:<Compass size={23}/>}</span><div>{inspect===null?<><small>{vi?'KHÁM PHÁ KHU RỪNG':'EXPLORE THE FOREST'}</small><strong>{vi?'Chọn lối mòn của bạn':'Choose your next trail'}</strong><p>{vi?'Rê chuột lên dấu mốc để xem thông tin. Chạm để xem trên điện thoại.':'Hover over a waypoint to reveal its story. On mobile, tap to preview.'}</p></>:<><small>{vi?'LỐI MÒN':'TRAIL'} 0{active+1}</small><strong>{level.subtitle}</strong><p>{active===5&&!hud.forged?(vi?'Thu thập 5 di vật và rèn vũ khí để mở đấu trường.':'Recover five relics and forge your weapon to enter.'):unlocked(active)?(vi?'Chọn dấu mốc để vào màn. Trên điện thoại, chạm lần nữa để vào.':'Select to enter. On mobile, tap again to enter.'):(vi?'Hoàn thành lối mòn trước để mở khóa.':'Complete the previous trail to unlock.')}</p></>}</div><span className="chart-legend"><i/>{vi?'ĐÃ KHÁM PHÁ':'EXPLORED'}<i/>{vi?'CHƯA MỞ':'UNDISCOVERED'}</span></footer>
+      <footer className="chart-detail"><span className={`detail-symbol ${inspect===5?'ice':''}`}>{inspect===5?<Snowflake size={23}/>:<Compass size={23}/>}</span><div>{inspect===null?<><small>{vi?'KHÁM PHÁ KHU RỪNG':'EXPLORE THE FOREST'}</small><strong>{vi?'Chọn lối mòn của bạn':'Choose your next trail'}</strong><p>{vi?'Rê chuột lên dấu mốc để xem thông tin. Chạm để xem trên điện thoại.':'Hover over a waypoint to reveal its story. On mobile, tap to preview.'}</p></>:<><small>{vi?'LỐI MÒN':'TRAIL'} 0{active+1}</small><strong>{level.subtitle}</strong><p>{active===5&&!hud.forged?(vi?'Hoàn thành 5 màn và chuẩn bị vũ khí để mở đấu trường.':'Complete five trails and prepare your weapon to enter.'):unlocked(active)?(vi?'Chọn dấu mốc để vào màn. Trên điện thoại, chạm lần nữa để vào.':'Select to enter. On mobile, tap again to enter.'):(vi?'Hoàn thành lối mòn trước để mở khóa.':'Complete the previous trail to unlock.')}</p></>}</div><span className="chart-legend"><i/>{vi?'ĐÃ KHÁM PHÁ':'EXPLORED'}<i/>{vi?'CHƯA MỞ':'UNDISCOVERED'}</span></footer>
     </section>
   </div>;
 }

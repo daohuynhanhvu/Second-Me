@@ -92,6 +92,7 @@ function arena(t: { after(fn: () => void): void }, hero: ComboHero) {
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { body: { dataset: {}, classList: { toggle() {} } } } });
   t.after(() => old ? Object.defineProperty(globalThis, 'document', old) : Reflect.deleteProperty(globalThis, 'document'));
   const g = new GameEngine(); g.screen = 'playing'; g.characterClass = hero; g.boss = createBoss();
+  g.currentLevel.walls = []; g.currentLevel.doors = [];          // an open arena: no wall in the way
   g.boss.pillars.forEach(p => p.hp = 0); g.boss.armor = 0;
   g.boss.x = 600; g.boss.y = 320; g.player.x = hero === 'mage' ? 420 : 560; g.player.y = 338;
   return g;

@@ -24,11 +24,12 @@ function spriteSheet(name: string): HTMLCanvasElement | undefined {
   return;
 }
 
-export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, moving: boolean, echo: boolean, time: number, attacking = false) {
+export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, moving: boolean, echo: boolean, time: number, attacking = false, attackProgress = 0) {
+  attacking = attacking && (direction === 'left' || direction === 'right');
   const image = spriteSheet(attacking ? 'Attack' : 'Walk');
   if (!image) return;
   const row = attacking ? 2 : direction === 'up' ? 0 : direction === 'down' ? 2 : 1;
-  const frame = attacking ? Math.floor(time * 18) % 8 : moving ? Math.floor(time * 10) % 8 : 0;
+  const frame = attacking ? Math.min(7, Math.max(0, Math.floor(attackProgress * 8))) : moving ? Math.floor(time * 10) % 8 : 0;
   ctx.save(); ctx.translate(Math.round(x), Math.round(y));
   if (direction === 'left') ctx.scale(-1, 1);
   if (echo) { ctx.globalAlpha *= .7; ctx.filter = 'brightness(1.6) sepia(1) saturate(4) hue-rotate(135deg)'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 12; }

@@ -1,3 +1,6 @@
+import { createEnemies, updateEnemies, type Enemy } from './logic/enemies.ts';
+import { ECHO_RUNES, type EchoRuneId, type EchoRuneStock } from './logic/echoRunes.ts';
+import { segmentCircle, segmentWall } from './logic/combatGeometry.ts';
 import { puzzleBalance, SHARD_BONUS, PUZZLE_HINTS } from './logic/balance.ts';
 import { TutorialDirector, type GuideTopic } from './logic/tutorials.ts';
 import { isPuzzleExitOpen } from './logic/puzzle.ts';
@@ -44,7 +47,8 @@ export interface ComboShot { x: number; y: number; vx: number; vy: number; life:
 export interface ComboFx { kind: 'arc' | 'spin' | 'impact' | 'nova' | 'charge'; x: number; y: number; angle: number; radius: number; life: number; max: number; heavy?: boolean; flip?: boolean }
 export interface DamageText { x: number; y: number; text: string; life: number; max: number; heavy: boolean; blocked?: boolean }
 /** Hit circles of the combat targets (game px), for sword arcs and spells. */
-const PILLAR_R = 26, BOSS_R = 44;
+const PILLAR_R = 26, BOSS_R = 44, ENEMY_R = 26;
+type CombatTarget = BossState | BossState['pillars'][number] | Enemy;
 /** Kael's swings: reach of the arc's centre in front of him, its radius, how many it can hit. */
 const KAEL_SWINGS = [
   { reach: 46, radius: 48, max: 1 },          // Quick Slash
@@ -80,6 +84,11 @@ export interface HUDState {
   completed: number[];
   forged: boolean;
   lastReward: number | null;
+  lastRuneReward?:EchoRuneId|null;
+  echoRunes?:EchoRuneStock;
+  activeEchoRunes?:EchoRuneId[];
+  pendingRuneChoices?:EchoRuneId[];
+  enemiesRemaining?:number;
   health: number;
   bossHp: number;
   bossPhase: number;
@@ -213,6 +222,9 @@ export class GameEngine {
   public dodgeCooldown = 0;
   public dodgeTime = 0;
   public lastReward: number | null = null;
+  public lastRuneReward:EchoRuneId|null=null;
+  public activeEchoRunes=new Set<EchoRuneId>();
+  public enemies:Enemy[]=[];
   public legTimeRemaining: number | null = null;
   public timePickup: { x: number; y: number } | null = null;
   public pickupSpawnTimer = 5;
@@ -235,7 +247,7 @@ export class GameEngine {
   public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
   public buyMechanical() { if(!MECHANICAL_ENABLED || this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
 
-  public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
+  public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean; duration?:number }[] = [];
   /** Kael's / Aeris's four-hit normal attack (logic/combo.ts); null for other classes. */
   public combo: Combo | null = null;
   /** Where the combo is aimed (latest press). */
@@ -408,6 +420,7 @@ export class GameEngine {
   }
 
   public goToLobby() {
+    this.activeEchoRunes.clear();
     voice.stopAll();
     this.screen = 'lobby';
     this.heldKeys.clear();
@@ -439,6 +452,7 @@ export class GameEngine {
   }
 
   public startGame() {
+    if(this.campaign.pendingRuneChoices.length){this.goToLobby();return;}
     this.campaign.reset();
     this.currentLevelIdx = 0;
     this.screen = 'playing';
@@ -447,6 +461,7 @@ export class GameEngine {
   }
 
   public continueGame() {
+    if(this.campaign.pendingRuneChoices.length){this.goToLobby();return;}
     if (this.campaign.bossDefeated) { this.goToLobby(); return; }
     if (this.campaign.canForge) {
       this.currentLevelIdx = 4;
@@ -473,6 +488,7 @@ export class GameEngine {
 
   /** Restarts the current level at once (restart, retry after defeat: already loaded). */
   public restartLevel() {
+    if(this.campaign.pendingRuneChoices.length){this.goToLobby();return;}
     this.buildLevel();
     this.beginLevel();
   }
@@ -506,6 +522,7 @@ export class GameEngine {
     this.combatHits = [];
     this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
+    this.enemies=createEnemies(this.currentLevel);
     this.magicShots = [];
     this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
     preloadComboSprites();
@@ -517,7 +534,7 @@ export class GameEngine {
     this.lastRating = null;
     this.bossDeathElapsed = 0;
     this.bossDeathPending = false;
-    this.lastReward = null;
+    this.lastReward = null;this.lastRuneReward=null;this.activeEchoRunes.clear();
   }
 
   private beginLevel() {
@@ -545,6 +562,7 @@ export class GameEngine {
   }
 
   public nextLevel() {
+    if(this.campaign.pendingRuneChoices.length)return;
     if (this.currentLevel.id === 5) {
       voice.say('narrator', 'dialogue', { id: 'forge', delay: 0.4 });
       this.screen = 'forge';
@@ -566,6 +584,7 @@ export class GameEngine {
   }
 
   public selectLevel(idx: number) {
+    if(this.campaign.pendingRuneChoices.length){this.goToLobby();return;}
     const campaignComplete = this.campaign.bossDefeated;
     if (!this.devUnlocked && !campaignComplete && (idx > this.campaign.unlockedLevel || (idx === 5 && !this.campaign.forged))) return;
     if (idx >= 0 && idx < LEVELS.length) this.enterLevel(idx);
@@ -626,11 +645,15 @@ export class GameEngine {
   }
 
   private combatAim() {
+    const enemy=this.enemies.filter(e=>e.hp>0&&Math.hypot(e.x-this.player.x,e.y-this.player.y)<450&&!getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors).some(w=>segmentWall(this.player,e,w,0)!==null)).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
+    if(enemy)return {x:enemy.x,y:enemy.y};
     const pillar = this.boss?.pillars.filter(p=>p.hp>0).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
     return pillar ? {x:pillar.x,y:pillar.y} : this.boss ? {x:this.boss.x,y:this.boss.y} : null;
   }
 
   private damageCombatTarget(x:number,y:number,amount:number,radius=65) {
+    const enemy=this.enemies.filter(e=>e.hp>0&&Math.hypot(e.x-x,e.y-y)<=radius).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];
+    if(enemy) return this.strike(enemy, amount);
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
     const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
     if(pillar) return this.strike(pillar, amount);
@@ -639,10 +662,19 @@ export class GameEngine {
   }
 
   /**
-   * The game's one damage rule, for every hit: Light Sanctuary adds 20%, a pillar takes the
-   * damage, the boss takes it only once every pillar is down. Shows the damage number.
+   * The game's one damage rule, for every hit: Light Sanctuary adds 20%; an enemy or a pillar
+   * takes the damage, the boss takes it only once every pillar is down. Shows the damage number.
    */
-  private strike(target: BossState | BossState['pillars'][number], amount: number, heavy = false): boolean {
+  private strike(target: CombatTarget, amount: number, heavy = false): boolean {
+    if (this.enemies.includes(target as Enemy)) {
+      const enemy = target as Enemy;
+      if (enemy.hp <= 0) return false;
+      if(this.insideLightCircle)amount*=1.2;const dealt=Math.min(enemy.hp,amount);enemy.hp=Math.max(0,enemy.hp-amount);enemy.hitFlash=.18;
+      this.combatHits.push({x:enemy.x,y:enemy.y-30,damage:Math.round(dealt*10)/10,life:.7,broken:enemy.hp===0});this.combatHits=this.combatHits.slice(-24);
+      this.renderer.emitMagic('sparkle',enemy.x,enemy.y,heavy?48:24);sounds.playIceHit(false);
+      if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(4,this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
+      this.notifyHUD();return true;
+    }
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
     if(this.insideLightCircle) amount *= 1.2;
     if(target !== this.boss) {
@@ -691,16 +723,26 @@ export class GameEngine {
     if (this.damageTexts.length > 24) this.damageTexts.shift();
   }
 
+  /** Living targets with their hit radius: enemies, then the boss's pillars and the boss. */
+  private combatTargets(): { t: CombatTarget; r: number }[] {
+    const list: { t: CombatTarget; r: number }[] = this.enemies.filter(e => e.hp > 0).map(t => ({ t, r: ENEMY_R }));
+    if (this.boss && !this.bossDeathPending && this.boss.hp > 0) {
+      for (const p of this.boss.pillars) if (p.hp > 0) list.push({ t: p, r: PILLAR_R });
+      list.push({ t: this.boss, r: BOSS_R });
+    }
+    return list;
+  }
+
   /**
-   * Strikes every target whose hit circle overlaps (x, y, radius), nearest first, at most
-   * `max` of them, each at most once per hit (`group` holds those already struck).
+   * Strikes every target whose hit circle overlaps (x, y, radius) and that no wall hides from
+   * the hero, nearest first, at most `max` of them, each at most once per hit (`group` holds
+   * those already struck).
    */
   private damageArea(x: number, y: number, radius: number, amount: number, group: Set<object>, max: number, heavy = false) {
-    if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return 0;
-    const near: { t: BossState | BossState['pillars'][number]; d: number }[] = [];
-    for (const p of this.boss.pillars) if (p.hp > 0) { const d = Math.hypot(p.x - x, p.y - y); if (d <= radius + PILLAR_R) near.push({ t: p, d }); }
-    const db = Math.hypot(this.boss.x - x, this.boss.y - y);
-    if (db <= radius + BOSS_R) near.push({ t: this.boss, d: db });
+    const walls = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
+    const near = this.combatTargets()
+      .map(({ t, r }) => ({ t, r, d: Math.hypot(t.x - x, t.y - y) }))
+      .filter(({ t, r, d }) => d <= radius + r && !walls.some(w => segmentWall(this.player, t, w) !== null));
     near.sort((a, b) => a.d - b.d);
     let hits = 0;
     for (const { t } of near) {
@@ -714,15 +756,34 @@ export class GameEngine {
     return hits;
   }
 
+  private updateMagicShots(dt:number) {
+    const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
+    this.magicShots=this.magicShots.filter(shot=>{
+      const duration=shot.duration??.3, before=Math.min(1,shot.age/duration);
+      shot.age+=dt;const after=Math.min(1,shot.age/duration);
+      const point=(t:number)=>({x:shot.x+(shot.targetX-shot.x)*t,y:shot.y+(shot.targetY-shot.y)*t});
+      const a=point(before),b=point(after);
+      let first=Infinity;
+      for(const wall of walls){const t=segmentWall(a,b,wall);if(t!==null)first=Math.min(first,t);}
+      let hit:{x:number;y:number}|undefined;
+      for(const target of [...this.enemies.filter(e=>e.hp>0),...(this.boss?[...this.boss.pillars.filter(p=>p.hp>0),this.boss]:[])]) {
+        const t=segmentCircle(a,b,target,target===this.boss?40:26);
+        if(t!==null&&t<first){first=t;hit=target;}
+      }
+      if(hit)this.damageCombatTarget(hit.x,hit.y,shot.skill?40:15,10);
+      return first===Infinity&&shot.age<duration;
+    });
+  }
+
   private spawnCombatSkill() {
-    if(!this.boss)return;
+    if(!this.boss||this.skillDrop)return;
     const skills=CLASS_SKILLS[this.characterClass];
     const kind=skills[Math.floor(Math.random()*skills.length)];
     const angle=Math.random()*Math.PI*2;
     const x=Math.max(80,Math.min(1200,this.player.x+Math.cos(angle)*105));
     const y=Math.max(85,Math.min(630,this.player.y+Math.sin(angle)*105));
     this.skillDrop={kind,x,y,fall:0};
-    this.showBanner(this.language==='vi'?'Ô kỹ năng đã rơi xuống!':'A skill pickup has landed!');
+    this.showBanner(this.language==='vi'?'Ấn kỹ năng đã xuất hiện trên mặt đất.':'A skill rune has appeared on the ground.');
   }
 
   private collectCombatSkill(kind:CombatSkill) {
@@ -796,20 +857,26 @@ export class GameEngine {
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
     this.attackAngle = Math.atan2(recordedAim.y - this.player.y, recordedAim.x - this.player.x);
+    const dx=recordedAim.x-this.player.x,dy=recordedAim.y-this.player.y;
+    if(Math.hypot(dx,dy)>1)this.player.direction=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
     voice.say(this.voiceRole, 'attack');
     if (this.characterClass === 'mage') {
-      const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
-      const aim = target ?? fallback;
-      const reach = Math.hypot(aim.x - this.player.x, aim.y - this.player.y);
-      const scale = Math.min(1, 450 / Math.max(1, reach));
-      this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: this.player.x + (aim.x - this.player.x) * scale, targetY: this.player.y + (aim.y - this.player.y) * scale, age: 0, skill: false });
-      this.renderer.emitMagic('summon', this.player.x, this.player.y - 10, 38);
+      const origin={x:this.player.x+(this.player.direction==='left'?-20:20),y:this.player.y-24};
+      const dx=recordedAim.x-origin.x,dy=recordedAim.y-origin.y,reach=Math.hypot(dx,dy),scale=Math.min(1,450/Math.max(1,reach));
+      const targetX=origin.x+dx*scale,targetY=origin.y+dy*scale;
+      this.magicShots.push({...origin,targetX,targetY,age:0,skill:false,duration:Math.max(.08,Math.hypot(targetX-origin.x,targetY-origin.y)/900)});
+      this.attackFlash=.16;
     } else {
       this.attackFlash = 0.22;
-      const aim=target ?? this.combatAim();
-      if(aim && Math.hypot(aim.x-this.player.x,aim.y-this.player.y)<=112)
-        this.damageCombatTarget(aim.x,aim.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,55);
+      const candidates=[...this.enemies.filter(e=>e.hp>0),...(this.boss?[...this.boss.pillars.filter(p=>p.hp>0),this.boss]:[])];
+      const hit=candidates.filter(p=>{
+        const dx=p.x-this.player.x,dy=p.y-this.player.y,distance=Math.hypot(dx,dy);
+        const angle=Math.atan2(dy,dx)-this.attackAngle;
+        return distance<=112&&Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)))<=Math.PI/2.5;
+      }).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
+      if(hit&&!getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors).some(w=>segmentWall(this.player,hit,w)!==null))
+        this.damageCombatTarget(hit.x,hit.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,10);
     }
     this.notifyHUD();
   }
@@ -882,17 +949,27 @@ export class GameEngine {
       const r = resolveMovement(this.player.x, this.player.y, this.player.x + this.lunge.vx * step, this.player.y + this.lunge.vy * step, 24, 24, obstacles);
       this.player.x = r.x; this.player.y = r.y;
     }
+    // Spells sweep their path each frame, so they cannot skip a target or pass through a wall.
+    const walls = this.comboShots.length ? getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors) : [];
     for (const shot of this.comboShots) {
-      shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
-      if (!this.boss || this.bossDeathPending) continue;
-      const hitR = shot.radius;
-      for (const t of [...this.boss.pillars.filter(p => p.hp > 0), this.boss]) {
-        const r = t === this.boss ? BOSS_R : PILLAR_R;
-        if (shot.group.has(t) || Math.hypot(t.x - shot.x, t.y - shot.y) > r + hitR) continue;
+      const a = { x: shot.x, y: shot.y }, b = { x: shot.x + shot.vx * dt, y: shot.y + shot.vy * dt };
+      shot.x = b.x; shot.y = b.y; shot.life -= dt;
+      let wallAt = Infinity;
+      for (const w of walls) { const t = segmentWall(a, b, w); if (t !== null) wallAt = Math.min(wallAt, t); }
+      const hits = this.combatTargets()
+        .filter(({ t }) => !shot.group.has(t))
+        .map(({ t, r }) => ({ t, at: segmentCircle(a, b, t, r + shot.radius) }))
+        .filter((h): h is { t: CombatTarget; at: number } => h.at !== null && h.at < wallAt)
+        .sort((p, q) => p.at - q.at);
+      for (const { t, at } of hits) {
         shot.group.add(t);
         this.strike(t, shot.amount, shot.heavy);
-        this.renderer.emitMagic('sparkle', shot.x, shot.y, 36);
+        this.renderer.emitMagic('sparkle', a.x + (b.x - a.x) * at, a.y + (b.y - a.y) * at, 36);
         if (!shot.pierce) { shot.life = 0; break; }
+      }
+      if (wallAt < Infinity && shot.life > 0) {
+        shot.life = 0;
+        this.renderer.emitMagic('sparkle', a.x + (b.x - a.x) * wallAt, a.y + (b.y - a.y) * wallAt, 14);
       }
     }
     this.comboShots = this.comboShots.filter(s => s.life > 0);
@@ -947,7 +1024,7 @@ export class GameEngine {
   }
 
   public dodge() {
-    if (this.screen !== 'playing' || !this.boss || this.dodgeCooldown > 0) return;
+    if (this.screen !== 'playing' || (!this.boss&&!this.enemies.some(e=>e.hp>0)) || this.dodgeCooldown > 0) return;
     this.combo?.cancel(); this.lunge.time = 0;           // a dodge breaks the combo
     this.dodgeTime = 0.16;
     this.dodgeCooldown = 1.2;
@@ -1069,7 +1146,7 @@ export class GameEngine {
       events: this.recorder.getEvents().map(event=>({...event})),
       nextEvent: 0,
       stability: 100,
-      aggroTime: this.boss ? 3 : undefined,
+      aggroTime: this.currentLevel.id>=2 ? (this.activeEchoRunes.has('lure')?6:3) : undefined,
       attackTimer: 0,
       characterClass: this.characterClass,
     };
@@ -1101,17 +1178,37 @@ export class GameEngine {
     }
   }
 
+  public chooseRune(id:EchoRuneId):boolean {
+    if(!['victory','lobby'].includes(this.screen)||!this.campaign.chooseRune(id))return false;
+    this.lastRuneReward=id;this.notifyHUD();return true;
+  }
+  public canUseEchoRune(id:EchoRuneId):boolean {
+    if(this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
+    if(id==='call')return this.echoCharges+(this.echoFreeSummon?1:0)<4;
+    if(id==='restore')return this.echoes.some(e=>(e.stability??100)<100);
+    return !this.activeEchoRunes.has(id);
+  }
+  public useEchoRune(id:EchoRuneId):boolean {
+    if(!ECHO_RUNES.some(r=>r.id===id)||!this.canUseEchoRune(id)||!this.campaign.spendRune(id))return false;
+    if(id==='call')this.echoCharges=Math.min(4-(this.echoFreeSummon?1:0),this.echoCharges+1);
+    else if(id==='restore')for(const echo of this.echoes)echo.stability=Math.min(100,(echo.stability??100)+50);
+    else {this.activeEchoRunes.add(id);if(id==='lure')for(const echo of this.echoes)echo.aggroTime=Math.max(echo.aggroTime??0,6);}
+    const rune=ECHO_RUNES.find(r=>r.id===id)!;
+    this.showBanner(`${rune.glyph} ${this.language==='vi'?rune.vi:rune.en} · ${this.language==='vi'?'Đã dùng 1 ấn':'1 rune consumed'}`);
+    this.notifyHUD();return true;
+  }
+
   private replayEchoEvent(event: EchoEvent) {
-    if (!this.echo || !this.boss) return;
+    if (!this.echo || (!this.boss&&!this.enemies.some(e=>e.hp>0))) return;
     const originX=this.echo.x, originY=this.echo.y;
     const angle=Math.atan2(event.targetY-event.y,event.targetX-event.x);
-    const targets=[...this.boss.pillars.filter(p=>p.hp>0),...(this.boss.armor===0?[this.boss]:[])];
+    const targets=[...this.enemies.filter(e=>e.hp>0),...(this.boss?[...this.boss.pillars.filter(p=>p.hp>0),...(this.boss.armor===0?[this.boss]:[])]:[])];
     const target=targets.filter(p=>Math.hypot(p.x-originX,p.y-originY)<(event.kind==='skill'?180:150))
       .map(p=>({p,offset:Math.abs(Math.atan2(Math.sin(Math.atan2(p.y-originY,p.x-originX)-angle),Math.cos(Math.atan2(p.y-originY,p.x-originX)-angle)))}))
       .filter(item=>item.offset<=(this.pingTarget&&Math.hypot(item.p.x-this.pingTarget.x,item.p.y-this.pingTarget.y)<45?Math.PI/6:Math.PI/9))
       .sort((a,b)=>(this.pingTarget?Math.hypot(a.p.x-this.pingTarget.x,a.p.y-this.pingTarget.y)-Math.hypot(b.p.x-this.pingTarget.x,b.p.y-this.pingTarget.y):a.offset-b.offset))[0]?.p;
     const x=target?.x??originX+Math.cos(angle)*120, y=target?.y??originY+Math.sin(angle)*120;
-    this.damageCombatTarget(x,y,event.kind==='skill'?15:10, event.kind==='skill'?75:65);
+    this.damageCombatTarget(x,y,(event.kind==='skill'?15:10)*(this.activeEchoRunes.has('power')?1.3:1), event.kind==='skill'?75:65);
     this.renderer.emitMagic('sparkle',x,y,event.kind==='skill'?65:36);
   }
 
@@ -1330,6 +1427,8 @@ export class GameEngine {
   };
 
   private discoverMechanics() {
+    if(this.enemies.some(e=>e.hp>0&&Math.hypot(e.x-this.player.x,e.y-this.player.y)<230))this.guides.offer('enemies');
+    if(this.currentLevel.id>=2&&Object.values(this.campaign.echoRunes).some(n=>n>0))this.guides.offer('upgradeRunes');
     const offer=(id:GuideTopic)=>this.guides.offer(id);
     if(this.boss){
       offer('shield');
@@ -1438,11 +1537,13 @@ export class GameEngine {
       }
     }
     this.updateCombo(dt);
-    for (const shot of this.magicShots) {
-      shot.age += dt;
-      if (shot.age >= 0.3) this.damageCombatTarget(shot.targetX,shot.targetY,shot.skill?40:15,shot.skill?110:55);
-    }
-    this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
+    this.updateMagicShots(dt);
+    const enemyEchoes=[...this.echoes];
+    updateEnemies(this.enemies,this.currentLevel,this.player,enemyEchoes,dt,target=>{
+      if(target.echoIndex===null)this.takeDamage();
+      else {const echo=enemyEchoes[target.echoIndex];if(!echo)return;echo.stability=(echo.stability??100)-25*(this.activeEchoRunes.has('guard')?.65:1);if(echo.stability<=0)this.echoes=this.echoes.filter(e=>e!==echo);}
+    });
+    if(this.screen!=='playing')return;
     this.attackFlash = Math.max(0, this.attackFlash - dt);
     for (const hit of this.combatHits) hit.life -= dt;
     this.combatHits = this.combatHits.filter(hit => hit.life > 0);
@@ -1589,11 +1690,11 @@ export class GameEngine {
         );
       }
     }
-    if(this.boss && this.echo) {
+    if((this.boss||this.enemies.length) && this.echo) {
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
     }
     if(this.echo?.status==='paused' || this.echo?.status==='finished') {
-      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0);
+      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0)*(this.activeEchoRunes.has('guard')?.65:1);
       if(this.echo.stability<=0){this.echo=null;this.echoGrace=2;}
     }
 
@@ -1677,7 +1778,7 @@ export class GameEngine {
       const burstBefore = this.boss.burstRemaining;
       const bossHit = updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player);
       if(echoTarget&&modeBefore==='warning'&&this.boss.mode==='strike'&&Math.hypot(echoTarget.x-this.boss.targetX,echoTarget.y-this.boss.targetY)<82) {
-        echoTarget.stability=(echoTarget.stability??100)-30;
+        echoTarget.stability=(echoTarget.stability??100)-30*(this.activeEchoRunes.has('guard')?.65:1);
         if(echoTarget.stability<=0){this.echoes=this.echoes.filter(e=>e!==echoTarget);this.echoGrace=2;}
         this.showBanner(this.language==='vi'?'Echo đã đỡ cú đập băng.':'Echo absorbed the ice slam.');
       }
@@ -1701,7 +1802,9 @@ export class GameEngine {
   }
 
   private handleVictory() {
+    if(this.screen!=='playing')return;
     this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
+    this.lastRuneReward=this.campaign.lastRuneDrop;
     this.lastReward = this.campaign.award(this.currentLevel.id) ? this.currentLevel.id : null;
     this.screen = 'victory';
     document.body.dataset.state = 'gameover';
@@ -1774,6 +1877,7 @@ export class GameEngine {
         completed: [...this.campaign.completed],
         forged: this.campaign.forged,
         lastReward: this.lastReward,
+        lastRuneReward:this.lastRuneReward,echoRunes:{...this.campaign.echoRunes},activeEchoRunes:[...this.activeEchoRunes],pendingRuneChoices:[...this.campaign.pendingRuneChoices],enemiesRemaining:this.enemies.filter(e=>e.hp>0).length,
         health: this.health,
         bossHp: this.boss?.hp ?? 0,
         bossPhase: this.boss?.phase ?? 0,
