@@ -1,27 +1,24 @@
 import type { Trap } from '../logic/types.ts';
 import { trapPhase, IMPACT_SECONDS, warningSeconds } from '../logic/traps.ts';
-import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawStrip, forestReady, coreAspect, type Box } from './forestSprites.ts';
 
 /**
  * Trap drawing comes in layers so characters can stand between them:
  * - 'floor': plates, jaws, vines and warning rings (under characters; drawn by the renderer),
- * - 'overhead': falling boulders and labels (over characters; drawn after them),
+ * - 'overhead': falling boulders (over characters; drawn after them),
  * - 'all': the original procedural look, used until the hand-drawn art has loaded.
  */
 export type TrapLayer = 'all' | 'floor' | 'overhead';
 
 export const trapSpritesReady = () => forestReady('crusher', 'rocks', 'vines', 'spikes');
 
-const LABEL: Record<Trap['kind'], string> = { vines: 'DÂY LEO', crusher: 'BẪY DẬP', rocks: 'ĐÁ RƠI', spikes: 'BẪY GAI' };
-
-export function drawTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, showLabel = true, layer: TrapLayer = 'all') {
+export function drawTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, layer: TrapLayer = 'all') {
   if (layer === 'all' || !trapSpritesReady()) {
-    if (layer !== 'floor') drawTrapProcedural(ctx, trap, time, showLabel);
+    if (layer !== 'floor') drawTrapProcedural(ctx, trap, time);
     return;
   }
   if (layer === 'floor') drawTrapFloor(ctx, trap, time);
-  else { drawTrapOverhead(ctx, trap, time); if (showLabel) drawLabel(ctx, trap, time); }
+  else drawTrapOverhead(ctx, trap, time);
 }
 
 /** Seconds into the trap's cycle, and how far into its warning / impact windows. */
@@ -103,19 +100,8 @@ function tiles(b: Box, aspect: number): Box[] {
   return Array.from({ length: n }, (_, i) => ({ x: b.x + i * b.w / n, y: b.y, w: b.w / n, h: b.h }));
 }
 
-function drawLabel(ctx: CanvasRenderingContext2D, trap: Trap, time: number) {
-  const phase = trapPhase(trap, time);
-  const warning = phase === 'warning', impact = phase === 'impact';
-  ctx.save();
-  ctx.textAlign = 'center'; ctx.font = 'bold 10px sans-serif';
-  ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-  ctx.fillStyle = warning ? '#ffe0a3' : impact ? '#ffb399' : '#d2dbc3';
-  ctx.fillText(translate(trap.kind !== 'vines' && warning ? 'CẨN THẬN!' : LABEL[trap.kind], getCurrentLanguage()), trap.x + trap.width / 2, trap.y + trap.height + 14);
-  ctx.restore();
-}
-
 /** The original look, kept for the moment before the art has loaded. */
-function drawTrapProcedural(ctx: CanvasRenderingContext2D, trap: Trap, time: number, showLabel: boolean) {
+function drawTrapProcedural(ctx: CanvasRenderingContext2D, trap: Trap, time: number) {
   const { x, y, width: w, height: h, kind } = trap;
   const phase = trapPhase(trap, time);
   const warning = phase === 'warning', impact = phase === 'impact';
@@ -161,5 +147,4 @@ function drawTrapProcedural(ctx: CanvasRenderingContext2D, trap: Trap, time: num
     }
   }
   ctx.restore();
-  if (showLabel) drawLabel(ctx, trap, time);
 }

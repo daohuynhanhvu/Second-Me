@@ -57,7 +57,7 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
   };
 
   scene.drawRunes = (ctx, lvl, time) => {
-    if (trapSpritesReady()) for (const trap of lvl.traps ?? []) drawTrap(ctx, trap, state.levelTime, false, 'floor');
+    if (trapSpritesReady()) for (const trap of lvl.traps ?? []) drawTrap(ctx, trap, state.levelTime, 'floor');
     if (!forestReady('button')) return orig.drawRunes(ctx, lvl, time);
     for (const plate of lvl.plates) drawLinks(ctx, lvl, plate, time);
     for (const plate of lvl.plates) drawButton(ctx, plate, state.levelTime, time);
