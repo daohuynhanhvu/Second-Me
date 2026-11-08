@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['New Guardian frost effect', 'Hiệu ứng băng mới của boss'],
+  ['The Frost Guardian’s danger zones now have a new blue frost ring that appears clearly before the attack hits.', 'Vùng nguy hiểm của Thủ Vệ Băng có hiệu ứng vòng băng xanh mới, hiển thị rõ trước khi chiêu gây sát thương.'],
   ['Character facing update', 'Điều chỉnh hướng nhìn nhân vật'],
   ['Heroes and Echoes now face the direction they move, including in the boss arena.', 'Nhân vật và Echo giờ quay theo hướng di chuyển, kể cả trong đấu trường boss.'],
   ['A new character selection screen', 'Giao diện chọn nhân vật mới'],

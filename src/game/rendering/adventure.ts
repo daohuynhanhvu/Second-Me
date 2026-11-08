@@ -1,3 +1,4 @@
+import { drawBossFrostZone } from './bossFrostZone.ts';
 import { drawEnemies } from './enemies.ts';
 import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
 import { drawMechanicalSprite } from './mechanicalSprite.ts';
@@ -71,17 +72,13 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   const boss = game.boss;
   if (boss) {
     drawPillars(ctx, boss, time, game.reducedMotion);
-    for(const area of boss.burstAreas) {
-      ctx.beginPath();ctx.arc(area.x,area.y,area.radius,0,Math.PI*2);
-      ctx.fillStyle=area.struck?'rgba(137,231,255,.5)':'rgba(111,190,224,.16)';
-      ctx.strokeStyle=area.struck?'#defbff':'#8bd5ef';ctx.lineWidth=3;ctx.fill();ctx.stroke();
+    for (const area of boss.burstAreas) {
+      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion, area.timer);
     }
     if (boss.hp > 0 && (boss.mode === 'warning' || boss.mode === 'strike')) {
-      ctx.beginPath(); ctx.arc(boss.targetX, boss.targetY, 82, 0, Math.PI * 2);
-      ctx.fillStyle = boss.mode === 'warning' ? 'rgba(88,207,255,.18)' : 'rgba(91,220,255,.58)';
-      ctx.strokeStyle = '#8ee9ff'; ctx.lineWidth = 3; ctx.fill(); ctx.stroke();
-      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
-      ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90);
+      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, boss.mode === 'strike', time, game.reducedMotion);
+      ctx.save(); ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
+      ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
     }
     for (const shot of boss.projectiles) {
       ctx.beginPath(); ctx.arc(shot.x, shot.y, 7, 0, Math.PI * 2);

@@ -119,11 +119,12 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Điều chỉnh hướng nhìn nhân vật', description: 'Nhân vật và Echo giờ quay theo hướng di chuyển, kể cả trong đấu trường boss.' };
+const latestNews = { title: 'Hiệu ứng băng mới của boss', description: 'Vùng nguy hiểm của Thủ Vệ Băng có hiệu ứng vòng băng xanh mới, hiển thị rõ trước khi chiêu gây sát thương.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
     <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article>
+    <article><time>08.11.2026</time><div><h3>Điều chỉnh hướng nhìn nhân vật</h3><p>Nhân vật và Echo giờ quay theo hướng di chuyển, kể cả trong đấu trường boss.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Giao diện chọn nhân vật mới</h3><p>Màn chọn nhân vật có diện mạo rừng cổ mới. Xem trước Aeris hoặc Kael và nhấn Xác nhận để bắt đầu hành trình.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Trượng phép và cầu sét mới</h3><p>Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Diện mạo mới cho Aeris</h3><p>Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.</p></div></article>
