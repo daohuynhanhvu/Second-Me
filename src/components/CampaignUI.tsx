@@ -1,6 +1,7 @@
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
 import { IntroEffects } from './IntroEffects.tsx';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { drawSoldierSprite } from '../game/rendering/soldierSprite.ts';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
 import { ArrowRight, RotateCcw, Home, Pause, Volume2, VolumeX, Lock, Sword, Hammer, Check, Shield, Flame, Backpack, Bell, Settings, Map, Play, X, SlidersHorizontal, ShoppingBasket } from 'lucide-react';
@@ -10,9 +11,17 @@ import { LEVELS } from '../game/logic/levels.ts';
 
 const wizardImage = `${import.meta.env.BASE_URL}assets/blue-wizard/idle/00.png`;
 function WizardAvatar({className=''}:{className?:string}) { return <span className={`wizard-avatar ${className}`}><img src={wizardImage} alt="Pháp sư Echo"/></span>; }
+function KaelPortrait() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const draw = () => { const ctx = ref.current?.getContext('2d'); if (ctx) { ctx.clearRect(0, 0, 70, 70); drawSoldierSprite(ctx, 35, 55, 'down', false, false, 0); } };
+    draw(); const timer = window.setInterval(draw, 250); return () => window.clearInterval(timer);
+  }, []);
+  return <canvas ref={ref} width={70} height={70} role="img" aria-label="Kael"/>;
+}
 function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
   return hud.characterClass==='swordsman'
-    ? <span className="selected-soldier-avatar"><img src={`${import.meta.env.BASE_URL}assets/soldier/Soldier_Idle.png`} alt={hud.language==='vi'?'Kael · Kiếm sĩ':'Kael · Swordsman'}/></span>
+    ? <span className="selected-soldier-avatar"><KaelPortrait/></span>
     : <WizardAvatar/>;
 }
 
@@ -119,7 +128,7 @@ const classOptions = [
   {name:'Fenrir',id:'beast', icon:'◆', en:'Beast', vi:'Dã thú', ready:false},
 ] as const;
 
-function SwordsmanPortrait() { return <span className="soldier-profile"><img src={`${import.meta.env.BASE_URL}assets/soldier/Soldier_Idle.png`} alt="Kiếm sĩ"/></span>; }
+function SwordsmanPortrait() { return <span className="soldier-profile"><KaelPortrait/></span>; }
 
 export function Characters({engine,hud}:{engine:GameEngine|null;hud:HUDState}) {
   const vi=hud.language==='vi';
