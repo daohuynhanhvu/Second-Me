@@ -1,3 +1,4 @@
+import { TanukiShop } from './TanukiShop.tsx';
 import { puzzleBalance } from '../game/logic/balance.ts';
 import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
 import { EchoRuneStock, RuneChoicePicker, RuneChoiceDialog } from './EchoRunes.tsx';
@@ -122,11 +123,11 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Diện mạo mới cho xu', description: 'Xu gấu mèo pixel đã xuất hiện trong cửa hàng, túi đồ và phần thưởng của game.' };
+const latestNews = { title: 'Cửa hàng Tanuki mới', description: 'Ghé quầy Tanuki để mua vật phẩm, trò chuyện và khám phá rương thưởng đang chuẩn bị.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
-    <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article><article><time>08.11.2026</time><div><h3>Nhẫn tăng giới hạn</h3><p>Mua nhẫn trong cửa hàng với giá 30 xu để tăng giới hạn lên 6 Echo trong một màn. Hiệu ứng không cộng dồn.</p></div></article><article><time>08.11.2026</time><div><h3>Thứ tự thu hồi Echo</h3><p>Nhấn X để thu hồi Echo đã ở trên sân lâu nhất trước, theo thứ tự triệu hồi.</p></div></article>
+    <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article><article><time>08.11.2026</time><div><h3>Diện mạo mới cho xu</h3><p>Xu gấu mèo pixel đã xuất hiện trong cửa hàng, túi đồ và phần thưởng của game.</p></div></article><article><time>08.11.2026</time><div><h3>Nhẫn tăng giới hạn</h3><p>Mua nhẫn trong cửa hàng với giá 30 xu để tăng giới hạn lên 6 Echo trong một màn. Hiệu ứng không cộng dồn.</p></div></article><article><time>08.11.2026</time><div><h3>Thứ tự thu hồi Echo</h3><p>Nhấn X để thu hồi Echo đã ở trên sân lâu nhất trước, theo thứ tự triệu hồi.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Chiêu gai băng của boss</h3><p>Vòng phép băng xuất hiện cảnh báo, sau đó gai băng trồi lên gây sát thương rồi tan biến.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Echo tự chiến đấu</h3><p>Echo thu hút kẻ địch, tự chiến đấu trong phạm vi gần và mất ổn định theo sát thương và chỉ bị thu hồi khi ổn định về 0.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Hiệu ứng nổ băng của boss</h3><p>Vòng băng xoay rồi nổ thành những mảnh xanh khi Thủ Vệ Băng tung chiêu.</p></div></article>
@@ -160,10 +161,7 @@ export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
     <RuneChoiceDialog engine={engine} hud={hud}/>{panel==='news'&&<Notifications close={()=>setPanel('none')}/>} {panel==='settings'&&<SettingsPanel engine={engine} hud={hud} close={()=>setPanel('none')}/>}</div>);
 }
 
-export function Shop({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
-  const vi = hud.language === 'vi';
-  return <div className="modal-backdrop shop-screen"><div className="panel shop-panel"><span className="eyebrow gold">{vi?'CỬA HÀNG TRẠI NGHỈ':'CAMP SHOP'}</span><h2>{vi?'Kho báu thời gian':'Time supplies'}</h2><p className="muted">{vi?'Xu nhận khi hoàn thành màn: 3 sao = 12 xu · 2 sao = 8 xu · 1 sao = 4 xu.':'Earn coins by finishing levels: 3 stars = 12 · 2 stars = 8 · 1 star = 4.'}</p><div className="shop-balance"><CoinIcon/> {hud.coins} {vi?'xu':'coins'}</div><div className="shop-item"><div className="shop-item-art">✧<small>+2s</small></div><div><h3>{vi?'Bình thời gian':'Time potion'}</h3><p>{vi?'Dùng một lần để cộng 2 giây cho chặng hiện tại. Nhấn F trong màn chơi.':'Single use: add 2 seconds to the current leg. Press F while playing.'}</p><small>{vi?'Đang có':'Owned'}: {hud.timeItems}</small></div><button className="primary" disabled={hud.coins < 5} onClick={()=>engine?.buyTimeItem()}><CoinIcon/> {vi?'MUA · 5 XU':'BUY · 5 COINS'}</button></div><div className="shop-item"><img className="limit-ring-art" src={`${import.meta.env.BASE_URL}assets/effects/echo-limit-ring.png`} alt=""/><div><h3>{vi?"Nhẫn tăng giới hạn":"Echo limit ring"}</h3><p>{vi?"Tiêu hao 1 nhẫn để tăng giới hạn từ 4 lên 6 Echo trong màn hiện tại. Không cộng dồn.":"Consume one ring to raise the Echo limit from 4 to 6 for this level. Does not stack."}</p><small>{vi?"Đang có":"Owned"}: {hud.limitRings}</small></div><button className="primary" disabled={hud.coins<30} onClick={()=>engine?.buyLimitRing()}><CoinIcon/> {vi?"MUA · 30 XU":"BUY · 30 COINS"}</button></div>{MECHANICAL_ENABLED && <div className="shop-item"><MechanicalPortrait/><div><h3>Rivet-07 · {vi?'Cơ giới':'Mechanic'}</h3><p>{vi?'Cưa máy · Quá tải: tăng tốc đánh trong 5 giây. Mở khóa vĩnh viễn.':'Chainblade · Overdrive: faster attacks for 5 seconds. Permanent unlock.'}</p></div><button className="primary" disabled={hud.mechanicalOwned || hud.coins<100} onClick={()=>engine?.buyMechanical()}>{hud.mechanicalOwned?(vi?'ĐÃ SỞ HỮU':'OWNED'):<><CoinIcon/> {vi?'MUA · 100 XU':'BUY · 100 COINS'}</>}</button></div>}<button className="secondary" onClick={()=>engine?.goToLobby()}>{vi?'VỀ SẢNH':'BACK TO LOBBY'}</button></div></div>;
-}
+export function Shop({engine, hud}: {engine: GameEngine | null; hud: HUDState}) { return <TanukiShop engine={engine} hud={hud}/>; }
 
 export function Inventory({ hud, close,engine }: { hud: HUDState; close: () => void;engine?:GameEngine|null }) {
   const vi = hud.language === 'vi';

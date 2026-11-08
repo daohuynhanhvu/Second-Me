@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['The new Tanuki shop', 'Cửa hàng Tanuki mới'],
+  ['Visit Tanuki to buy items, chat and discover the reward chest in preparation.', 'Ghé quầy Tanuki để mua vật phẩm, trò chuyện và khám phá rương thưởng đang chuẩn bị.'],
   ['A new look for coins', 'Diện mạo mới cho xu'],
   ['Pixel raccoon coins now appear in the shop, inventory and game rewards.', 'Xu gấu mèo pixel đã xuất hiện trong cửa hàng, túi đồ và phần thưởng của game.'],
   ['Echo limit ring', 'Nhẫn tăng giới hạn'],
