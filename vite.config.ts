@@ -5,25 +5,25 @@ import path from 'path';
 import {defineConfig, type Plugin} from 'vite';
 
 /**
- * Lists public/assets/music as assets/music/index.json so the game can pick tracks by file
- * name (src/game/logic/music.ts). Live in dev (new files work after a page reload), written
- * once into the build.
+ * Lists public/assets/<folder> as assets/<folder>/index.json so the game can pick audio by
+ * file name (music: src/game/logic/music.ts, sound effects: src/game/logic/sfx.ts). Live in
+ * dev (new files work after a page reload), written once into the build.
  */
-function musicIndex(): Plugin {
-  const dir = path.resolve(__dirname, 'public/assets/music');
+function audioIndex(folder: string): Plugin {
+  const dir = path.resolve(__dirname, 'public/assets', folder);
   const list = () => (fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => /\.(mp3|ogg|wav|m4a)$/i.test(f)).sort() : []);
   return {
-    name: 'music-index',
+    name: `${folder}-index`,
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.split('?')[0].endsWith('/assets/music/index.json')) return next();
+        if (!req.url?.split('?')[0].endsWith(`/assets/${folder}/index.json`)) return next();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'no-store');
         res.end(JSON.stringify(list()));
       });
     },
     generateBundle() {
-      this.emitFile({type: 'asset', fileName: 'assets/music/index.json', source: JSON.stringify(list())});
+      this.emitFile({type: 'asset', fileName: `assets/${folder}/index.json`, source: JSON.stringify(list())});
     },
   };
 }
@@ -68,7 +68,7 @@ function assetIndex(): Plugin {
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss(), musicIndex(), assetIndex()],
+    plugins: [react(), tailwindcss(), audioIndex('music'), audioIndex('sfx'), assetIndex()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

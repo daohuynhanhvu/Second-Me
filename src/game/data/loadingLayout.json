@@ -21,12 +21,6 @@
   "w": 152,
   "h": 364
  },
- "streaks": {
-  "x": 236,
-  "y": 286,
-  "w": 320,
-  "h": 220
- },
  "runes": [
   {
    "x": 729,
@@ -52,6 +46,16 @@
   "w": 311,
   "h": 531
  },
+ "front": {
+  "w": 402,
+  "h": 531,
+  "pillar": 113,
+  "open": 176,
+  "cy": 262,
+  "sideW": 8,
+  "paintedOpen": 138,
+  "paintedFar": 60
+ },
  "barFrame": {
   "x": 294,
   "y": 529,
@@ -67,15 +71,5 @@
  "center": {
   "x": 688,
   "y": 384
- },
- "front": {
-  "w": 402,
-  "h": 531,
-  "pillar": 113,
-  "open": 176,
-  "cy": 262,
-  "sideW": 8,
-  "paintedOpen": 138,
-  "paintedFar": 60
  }
 }

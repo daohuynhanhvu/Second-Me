@@ -30,7 +30,8 @@ import {
   updateSecurityDoors,
   checkExitReached,
 } from './logic/puzzle.ts';
-import { LEVELS } from './logic/levels.ts';
+import { LEVELS, levelAt, TRAINING_IDX, TRAINING_LEVEL_ID } from './logic/levels.ts';
+import { TrainingStats } from './logic/training.ts';
 import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
 import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
@@ -66,6 +67,8 @@ export interface HUDState {
   guideLibrary?: boolean;
   screen: GameScreen;
   levelName: string;
+  /** In the dev-only training ground (logic/training.ts). */
+  training?: boolean;
   levelSubtitle: string;
   recordingStatus: RecordingStatus;
   recordingTimeRemaining: number;
@@ -225,6 +228,10 @@ export class GameEngine {
   public lastRuneReward:EchoRuneId|null=null;
   public activeEchoRunes=new Set<EchoRuneId>();
   public enemies:Enemy[]=[];
+  /** Damage readout of the dev training ground (logic/training.ts). */
+  public training = new TrainingStats();
+  /** True in the dev-only training ground. */
+  public get isTraining() { return this.currentLevel.id === TRAINING_LEVEL_ID; }
   public legTimeRemaining: number | null = null;
   public timePickup: { x: number; y: number } | null = null;
   public pickupSpawnTimer = 5;
@@ -271,6 +278,8 @@ export class GameEngine {
   public renderer = new GameRenderer();
   private gameTime = 0;
   private elapsedLevelTime = 0;
+  /** Seconds since the level started (read-only; the training board times its DPS by it). */
+  public get levelClock() { return this.elapsedLevelTime; }
   private bannerMessage = '';
   private bannerTimer = 0;
 
@@ -497,7 +506,7 @@ export class GameEngine {
   private buildLevel() {
     this.heldKeys.clear();
     this.renderer.reset();
-    this.currentLevel = this.cloneLevel(LEVELS[this.currentLevelIdx]);
+    this.currentLevel = this.cloneLevel(levelAt(this.currentLevelIdx));
     this.initPlayer();
     this.echoes = [];
     this.selectedEcho=0;
@@ -509,7 +518,8 @@ export class GameEngine {
     this.pingTarget = null;
     this.recorder.clear();
     this.elapsedLevelTime = 0;
-    this.legTimeRemaining = !this.devUnlocked && this.currentLevel.id <= 5 ? puzzleBalance(this.currentLevel.id).legSeconds : null;
+    this.legTimeRemaining = !this.devUnlocked && !this.isTraining && this.currentLevel.id <= 5 ? puzzleBalance(this.currentLevel.id).legSeconds : null;
+    this.training.reset();
     this.timePickup = null;
     this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
     this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false;
@@ -541,6 +551,7 @@ export class GameEngine {
     this.screen = 'playing';
     document.body.dataset.state = 'playing';
     this.showBanner(`Bắt đầu lại ${this.currentLevel.name}`);
+    if(this.isTraining){this.showBanner(this.language==='vi'?'Bãi tập (dev) · Hình nộm không chết, không đánh trả · Cổng ra để về trại':'Training ground (dev) · Dummies never die or fight back · Exit portal returns to camp',6);this.voiceLevelStart();this.notifyHUD();return;}
     if(this.tutorialEnabled)this.guides.offer(this.currentLevel.id===6?'shield':'echo');
     if(this.currentLevel.id<=5)this.showBanner(this.language==='vi'?PUZZLE_HINTS[this.currentLevel.id-1]:this.currentLevel.description,6);
     this.voiceLevelStart();
@@ -588,6 +599,12 @@ export class GameEngine {
     const campaignComplete = this.campaign.bossDefeated;
     if (!this.devUnlocked && !campaignComplete && (idx > this.campaign.unlockedLevel || (idx === 5 && !this.campaign.forged))) return;
     if (idx >= 0 && idx < LEVELS.length) this.enterLevel(idx);
+  }
+
+  /** The dev-only training ground (logic/training.ts). Does nothing outside dev mode. */
+  public enterTraining() {
+    if (!this.devUnlocked || this.campaign.pendingRuneChoices.length) return;
+    this.enterLevel(TRAINING_IDX);
   }
 
   public goToTitle() { this.goToLobby(); }
@@ -669,7 +686,16 @@ export class GameEngine {
     if (this.enemies.includes(target as Enemy)) {
       const enemy = target as Enemy;
       if (enemy.hp <= 0) return false;
-      if(this.insideLightCircle)amount*=1.2;const dealt=Math.min(enemy.hp,amount);enemy.hp=Math.max(0,enemy.hp-amount);enemy.hitFlash=.18;
+      if(this.insideLightCircle)amount*=1.2;
+      if (enemy.kind === 'dummy') {
+        // Training dummy: shows the full hit, refills instead of dying, no rewards.
+        enemy.hp -= amount; if (enemy.hp <= 0) enemy.hp = enemy.maxHp;
+        enemy.hitFlash = .18; enemy.timer = 0;
+        this.training.record(this.elapsedLevelTime, amount);
+        this.combatHits.push({x:enemy.x,y:enemy.y-46,damage:Math.round(amount*10)/10,life:.7,broken:heavy});this.combatHits=this.combatHits.slice(-24);
+        this.renderer.emitMagic('sparkle',enemy.x,enemy.y-20,heavy?48:24);sounds.playIceHit(false);
+        return true;
+      }const dealt=Math.min(enemy.hp,amount);enemy.hp=Math.max(0,enemy.hp-amount);enemy.hitFlash=.18;
       this.combatHits.push({x:enemy.x,y:enemy.y-30,damage:Math.round(dealt*10)/10,life:.7,broken:enemy.hp===0});this.combatHits=this.combatHits.slice(-24);
       this.renderer.emitMagic('sparkle',enemy.x,enemy.y,heavy?48:24);sounds.playIceHit(false);
       if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(4,this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
@@ -776,7 +802,7 @@ export class GameEngine {
   }
 
   private spawnCombatSkill() {
-    if(!this.boss||this.skillDrop)return;
+    if((!this.boss&&!this.isTraining)||this.skillDrop)return;
     const skills=CLASS_SKILLS[this.characterClass];
     const kind=skills[Math.floor(Math.random()*skills.length)];
     const angle=Math.random()*Math.PI*2;
@@ -888,6 +914,7 @@ export class GameEngine {
     const hit = COMBO_HITS[hero][step];
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:this.comboAim.x,targetY:this.comboAim.y});
     voice.say(this.voiceRole, 'attack');
+    if (hero === 'swordsman') sounds.playSlash(); else sounds.playSpell();
     this.attackCooldown = hitDuration(hit) / this.comboSpeed;      // the HUD's "recovering" hint
     const dx = this.comboAim.x - this.player.x, dy = this.comboAim.y - this.player.y, d = Math.hypot(dx, dy) || 1;
     if (hero === 'swordsman' && hit.heavy) {
@@ -916,7 +943,7 @@ export class GameEngine {
       this.damageArea(cx, cy, sw.radius, amount, group, sw.max, !!hit.heavy);
       if (step === 2) this.comboFx.push({ kind: 'spin', x: px, y: py + 8, angle, radius: sw.radius, life: 0.3, max: 0.3 });
       else this.comboFx.push({ kind: 'arc', x: px + ux * 18, y: py + uy * 18, angle, radius: sw.radius * 0.75, life: 0.22, max: 0.22, heavy: hit.heavy, flip: step === 1 });
-      if (hit.heavy) { this.comboFx.push({ kind: 'impact', x: cx, y: cy, angle, radius: 46, life: 0.35, max: 0.35 }); sounds.playPlateActivate(); }
+      if (hit.heavy) { this.comboFx.push({ kind: 'impact', x: cx, y: cy, angle, radius: 46, life: 0.35, max: 0.35 }); sounds.playFinisher(); }
     } else {
       const shot = (a: number, speed: number, radius: number, pierce: boolean, fromX = px + Math.cos(a) * 18, fromY = py - 4 + Math.sin(a) * 18) =>
         this.comboShots.push({ x: fromX, y: fromY, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 460 / speed, radius, amount, heavy: false, pierce, group });
@@ -933,7 +960,7 @@ export class GameEngine {
       } else {
         this.damageArea(px, py + 8, 150, amount, group, Infinity, true);
         this.comboFx.push({ kind: 'nova', x: px, y: py + 8, angle: 0, radius: 150, life: 0.45, max: 0.45 });
-        sounds.playPlateActivate();
+        sounds.playFinisher();
       }
     }
     this.notifyHUD();
@@ -1029,6 +1056,7 @@ export class GameEngine {
     this.dodgeTime = 0.16;
     this.dodgeCooldown = 1.2;
     this.invulnerability = Math.max(this.invulnerability, 0.4);
+    sounds.playDodge();
     voice.say(this.voiceRole, 'dodge');
   }
 
@@ -1523,7 +1551,7 @@ export class GameEngine {
     this.hasteTime=Math.max(0,this.hasteTime-dt);
     if(this.combatFlash) { this.combatFlash.time-=dt; if(this.combatFlash.time<=0)this.combatFlash=null; }
     if(this.pendingUltimate) { this.pendingUltimate.time-=dt; if(this.pendingUltimate.time<=0) { const k=this.pendingUltimate.kind; this.pendingUltimate=null; this.releaseCombatSkill(k); } }
-    if(this.boss) {
+    if(this.boss || this.isTraining) {
       this.skillDropTimer-=dt;
       if(this.skillDropTimer<=0) { this.skillDropTimer+=5; this.spawnCombatSkill(); }
       if(this.skillDrop) {
@@ -1532,7 +1560,7 @@ export class GameEngine {
           const kind=this.skillDrop.kind;this.skillDrop=null;this.collectCombatSkill(kind);
         }
       }
-      if(this.fireBurnTime>0) { this.fireBurnTime=Math.max(0,this.fireBurnTime-dt);this.fireBurnTick-=dt;
+      if(this.fireBurnTime>0 && this.boss) { this.fireBurnTime=Math.max(0,this.fireBurnTime-dt);this.fireBurnTick-=dt;
         if(this.fireBurnTick<=0) { this.fireBurnTick+=1; this.damageCombatTarget(this.boss.x,this.boss.y,5,70); }
       }
     }
@@ -1803,6 +1831,7 @@ export class GameEngine {
 
   private handleVictory() {
     if(this.screen!=='playing')return;
+    if(this.isTraining){this.goToLobby();return;}   // no rating, reward or progress
     this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
     this.lastRuneReward=this.campaign.lastRuneDrop;
     this.lastReward = this.campaign.award(this.currentLevel.id) ? this.currentLevel.id : null;
@@ -1877,7 +1906,7 @@ export class GameEngine {
         completed: [...this.campaign.completed],
         forged: this.campaign.forged,
         lastReward: this.lastReward,
-        lastRuneReward:this.lastRuneReward,echoRunes:{...this.campaign.echoRunes},activeEchoRunes:[...this.activeEchoRunes],pendingRuneChoices:[...this.campaign.pendingRuneChoices],enemiesRemaining:this.enemies.filter(e=>e.hp>0).length,
+        lastRuneReward:this.lastRuneReward,echoRunes:{...this.campaign.echoRunes},activeEchoRunes:[...this.activeEchoRunes],pendingRuneChoices:[...this.campaign.pendingRuneChoices],enemiesRemaining:this.enemies.filter(e=>e.hp>0&&e.kind!=='dummy').length,training:this.isTraining,
         health: this.health,
         bossHp: this.boss?.hp ?? 0,
         bossPhase: this.boss?.phase ?? 0,
@@ -1905,7 +1934,7 @@ export class GameEngine {
         lastRating: this.lastRating,
         skillCooldown: this.skillCooldown,
         mechanicalOwned: this.campaign.mechanicalOwned,
-        loadingLevel: this.pendingLevel ? LEVELS[this.pendingLevel.idx].id : null,
+        loadingLevel: this.pendingLevel ? levelAt(this.pendingLevel.idx).id : null,
         loadingFromMenu: this.loadingFromMenu,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,

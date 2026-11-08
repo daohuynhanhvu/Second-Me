@@ -1,14 +1,18 @@
 import { getActiveObstacles, resolveMovement } from './collision.ts';
 import { segmentWall } from './combatGeometry.ts';
 import type { LevelData } from './types.ts';
-export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur';
+import { DUMMY_RESET } from './training.ts';
+/** 'dummy': the dev training ground's target (logic/training.ts): never moves, attacks or dies. */
+export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur'|'dummy';
 export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;targetEcho?:{x:number;y:number;aggroTime?:number}}
-export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180},bear:{hp:48,speed:60,reach:47,notice:175},skull:{hp:30,speed:82,reach:39,notice:190},shaman:{hp:36,speed:52,reach:155,notice:200},minotaur:{hp:75,speed:58,reach:58,notice:195}};
+export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180},bear:{hp:48,speed:60,reach:47,notice:175},skull:{hp:30,speed:82,reach:39,notice:190},shaman:{hp:36,speed:52,reach:155,notice:200},minotaur:{hp:75,speed:58,reach:58,notice:195},dummy:{hp:500,speed:0,reach:0,notice:0}};
 const encounters:Record<number,[EnemyKind,number,number][]>= {
  2:[['goblin',440,110],['goblin',700,580]],
  3:[['goblin',430,130],['bear',700,110],['skull',870,560]],
  4:[['goblin',230,100],['bear',500,110],['shaman',860,425],['skull',1130,570]],
  5:[['goblin',150,95],['skull',345,580],['bear',520,440],['shaman',730,95],['minotaur',925,435]],
+ // Training ground (TRAINING_LEVEL_ID): a group of three for sweeping hits, one far for range.
+ 0:[['dummy',700,290],['dummy',770,360],['dummy',700,430],['dummy',1040,360]],
 };
 export function createEnemies(level:LevelData):Enemy[]{
  const obstacles=getActiveObstacles(level.walls,level.doors);
@@ -23,7 +27,10 @@ export function updateEnemies(enemies:Enemy[],level:LevelData,player:{x:number;y
  const obstacles=getActiveObstacles(level.walls,level.doors);
  const sight=(a:{x:number;y:number},b:{x:number;y:number})=>!obstacles.some(w=>segmentWall(a,b,w,0)!==null);
  for(const e of enemies){
-  e.hitFlash=Math.max(0,e.hitFlash-dt);if(e.hp<=0){e.deathAge+=dt;continue;}
+  e.hitFlash=Math.max(0,e.hitFlash-dt);
+  // A dummy only counts the time since its last hit (strike() zeroes it) and refills when left alone.
+  if(e.kind==='dummy'){e.timer+=dt;if(e.timer>DUMMY_RESET)e.hp=e.maxHp;continue;}
+  if(e.hp<=0){e.deathAge+=dt;continue;}
   const stat=ENEMY_STATS[e.kind];e.timer-=dt;
   if(e.mode==='warning'){
    if(e.timer<=0){

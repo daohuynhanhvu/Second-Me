@@ -254,7 +254,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   const [settings, setSettings] = useState(false);
   const boss = hud.bossHp > 0;
   return localize(<div className="adventure-hud overlay">
-    <div className="hud-top"><div className="level-card"><small>{hud.levelName} / 06</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="hearts" aria-label={`${hud.health} trên 5 máu`}>{'♥'.repeat(hud.health)}<em>{'♡'.repeat(5-hud.health)}</em></span></span>
+    <div className="hud-top"><div className="level-card"><small>{hud.levelName}{hud.training?' · DEV':' / 06'}</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="hearts" aria-label={`${hud.health} trên 5 máu`}>{'♥'.repeat(hud.health)}<em>{'♡'.repeat(5-hud.health)}</em></span></span>
       {(hud.enemiesRemaining??0)>0&&<small>{hud.language==='vi'?`QUÁI CANH ĐƯỜNG · ${hud.enemiesRemaining}`:`TRAIL ENEMIES · ${hud.enemiesRemaining}`}</small>}
       {hud.echoDurationMs>0 && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO · {hud.echoCharges} lượt · {Math.ceil(hud.echoStability)} ổn định</span><div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div></div>}
     </div>

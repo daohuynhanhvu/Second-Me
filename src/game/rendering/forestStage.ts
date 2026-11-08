@@ -37,6 +37,8 @@ interface LegacyScene {
 }
 
 const PERIMETER = 40;
+/** Levels whose cached ground and prop layers are kept (two cross-fading in the intro, plus one). */
+const LAYER_CACHE = 3;
 
 export function installForestStage(scene: LegacyScene, state: StageState) {
   preloadForest();
@@ -46,6 +48,9 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
     drawGates: scene.drawGates.bind(scene), drawWalls: scene.drawWalls.bind(scene),
   };
   let ground: HTMLCanvasElement | null = null, props: HTMLCanvasElement | null = null, cacheKey = '';
+  // The last few levels' layers, not just one: the cinematic intro cross-fades two levels and
+  // renders them on alternate frames, which would otherwise rebuild both layers every frame.
+  const layerCache = new Map<string, [HTMLCanvasElement | null, HTMLCanvasElement | null]>();
   let level: LevelData | null = null;
   const plateSince = new Map<string, { pressed: boolean; at: number }>();
   let exitOpenedAt: number | null = null, lastTime = 0;
@@ -57,7 +62,15 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
     if (state.levelTime < lastTime) { plateSince.clear(); exitOpenedAt = null; }
     lastTime = state.levelTime;
     const key = `${w}:${h}:${lvl.id}:${forestLoaded()}:${biomeLoaded()}:${livingReady()}:${understoryReady()}:${JSON.stringify(lvl.walls)}:${JSON.stringify(lvl.traps ?? [])}`;
-    if (key !== cacheKey) { cacheKey = key; [ground, props] = buildLayers(w, h, lvl); }
+    if (key !== cacheKey) {
+      cacheKey = key;
+      let layers = layerCache.get(key);
+      if (layers) layerCache.delete(key);                     // re-inserted below as most recent
+      else layers = buildLayers(w, h, lvl);
+      layerCache.set(key, layers);
+      if (layerCache.size > LAYER_CACHE) layerCache.delete(layerCache.keys().next().value!);
+      [ground, props] = layers;
+    }
     if (ground) ctx.drawImage(ground, 0, 0);
     drawUnderstoryMotion(ctx,lvl.id,state.reducedMotion?0:state.levelTime);
     drawBiomeWeather(ctx, lvl, state.reducedMotion ? 0 : state.levelTime, w, h);

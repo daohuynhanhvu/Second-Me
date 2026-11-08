@@ -49,3 +49,21 @@ export const LEVELS:LevelData[]=[first,second,third,fourth,fifth];
 for(const level of LEVELS)level.exitRequiredPlates=level.plates.map(p=>p.id);
 fifth.exitRequiredPlates=['ember_b','ember_c','ember_d','ember_e'];
 LEVELS.push({id:6,name:'LEVEL 06',subtitle:'FROST GUARDIAN',difficulty:6,description:'Use Echoes as decoys, replay attacks, and hold the central rune for empowered strikes. Break four pillars before attacking the Guardian.',playerSpawn:{x:320,y:360,direction:'right'},walls:perimeter.map(w=>({...w})),plates:[{...plate('boss_rune',600,340),width:64,height:64}],doors:[],exit:{x:1150,y:330,width:60,height:60,radius:36}});
+
+/**
+ * Dev-only training ground (logic/training.ts): an open arena of dummies, never part of LEVELS,
+ * so the journey map, the campaign and its rewards never see it. Id 0 draws it as the first
+ * forest; its exit returns to the camp. Entered through GameEngine.enterTraining (dev mode).
+ */
+export const TRAINING_LEVEL_ID = 0;
+/** currentLevelIdx while in the training ground. */
+export const TRAINING_IDX = -1;
+export const TRAINING_LEVEL: LevelData = {
+  ...base(TRAINING_LEVEL_ID, 'TRAINING DUMMY', 260, 360),
+  name: 'TRAINING',
+  description: 'Dev training ground: dummies never die and never fight back.',
+  exit: { x: 1150, y: 600, width: 60, height: 60, radius: 36 },
+  exitRequiredPlates: [],
+};
+/** The level at a campaign index, or the training ground at TRAINING_IDX. */
+export const levelAt = (idx: number): LevelData => (idx === TRAINING_IDX ? TRAINING_LEVEL : LEVELS[idx]);

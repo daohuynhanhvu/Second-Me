@@ -1,24 +1,43 @@
 import type { LevelData } from '../logic/types.ts';
 import { livingImage } from './livingAssets.ts';
 
-let layer: HTMLCanvasElement | null = null, key = '';
+/**
+ * Built boundary layers by level, the most recent last. More than one: the cinematic intro
+ * cross-fades two levels and renders them on alternate frames, which would otherwise rebuild a
+ * layer (hundreds of sprites) every frame.
+ */
+const layers = new Map<string, HTMLCanvasElement>();
+const MAX_LAYERS = 3;
+/** Level 3's recoloured sheet: its colour filter applied once to the whole sheet, not per sprite. */
+const LEVEL3_FILTER = 'hue-rotate(100deg) saturate(.65) brightness(.8)';
+let tinted: { source: HTMLImageElement; sheet: HTMLCanvasElement } | null = null;
+function level3Sheet(image: HTMLImageElement): CanvasImageSource {
+  if (tinted?.source !== image) {
+    const sheet = document.createElement('canvas'); sheet.width = image.width; sheet.height = image.height;
+    const g = sheet.getContext('2d')!; g.filter = LEVEL3_FILTER; g.drawImage(image, 0, 0);
+    tinted = { source: image, sheet };
+  }
+  return tinted.sheet;
+}
 export const forestBoundaryReady = () => !!livingImage('forest-edge-pixel.png');
 
 /** Collision rectangles stay fixed; their visible material becomes roots, rock and canopy. */
 export function drawForestBoundary(ctx: CanvasRenderingContext2D, level: LevelData, w = 1280, h = 720) {
   const image = livingImage('forest-edge-pixel.png');
   if (!image || typeof document === 'undefined') return false;
-  const next = `${w}:${h}:${level.id}:${JSON.stringify(level.walls)}`;
-  if (key !== next) {
-    key = next;layer = document.createElement('canvas');layer.width=w;layer.height=h;
+  const key = `${w}:${h}:${level.id}:${JSON.stringify(level.walls)}`;
+  let layer = layers.get(key);
+  if (layer) layers.delete(key);                         // re-inserted below as most recent
+  else {
+    layer = document.createElement('canvas');layer.width=w;layer.height=h;
     const g=layer.getContext('2d')!;g.imageSmoothingEnabled=false;
     const row=level.id>=5?2:level.id===4?1:0;
     const sw=image.width/4,sh=image.height/3;
+    const sheet=level.id===3?level3Sheet(image):image;
     const noise=(n:number)=>{const a=Math.sin(n*127.1+level.id*91.7)*43758.5453;return a-Math.floor(a);};
     const sprite=(col:number,x:number,y:number,size:number,angle=0,flip=false)=>{
       g.save();g.translate(Math.round(x),Math.round(y));g.rotate(angle);if(flip)g.scale(-1,1);
-      if(level.id===3)g.filter='hue-rotate(100deg) saturate(.65) brightness(.8)';
-      g.drawImage(image,col*sw,row*sh,sw,sh,-size/2,-size/2,size,size);g.restore();
+      g.drawImage(sheet,col*sw,row*sh,sw,sh,-size/2,-size/2,size,size);g.restore();
     };
     // Fill only impassable space with forest shadow, then break every edge with silhouettes.
     for(const wall of level.walls) {
@@ -29,7 +48,7 @@ export function drawForestBoundary(ctx: CanvasRenderingContext2D, level: LevelDa
         continue;
       }
       if(width>=height*1.5&&Math.max(width,height)<=160) {
-        g.drawImage(image,3*sw,row*sh,sw,sh,x-12,y-14,width+24,height+28);
+        g.drawImage(image,3*sw,row*sh,sw,sh,x-12,y-14,width+24,height+28);   // never recoloured
         continue;
       }
       g.save();g.beginPath();g.rect(x-10,y,width+20,height);g.clip();
@@ -54,6 +73,8 @@ export function drawForestBoundary(ctx: CanvasRenderingContext2D, level: LevelDa
       sprite(i%3===0?1:0,w+size/2-57-noise(i+160)*18,y+14,size,0,i%2===0);
     }
   }
-  if(layer)ctx.drawImage(layer,0,0);
+  layers.set(key, layer);
+  if (layers.size > MAX_LAYERS) layers.delete(layers.keys().next().value!);
+  ctx.drawImage(layer,0,0);
   return true;
 }

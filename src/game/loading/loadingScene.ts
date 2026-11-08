@@ -10,8 +10,11 @@ import { getWizardSheet } from '../rendering/wizardSprite.ts';
  */
 import layout from '../data/loadingLayout.json';
 import wizard from '../data/wizardRun.json';
+import anim from '../data/portalAnim.json';
 import type { Preload } from './preloader.ts';
 import { PortalTwist, type TwistParams } from './portalTwist.ts';
+import { sounds } from '../logic/sound.ts';
+import { loadSfxIndex } from '../logic/sfx.ts';
 
 const ART_W = layout.width, ART_H = layout.height;
 const ASSET = `${import.meta.env?.BASE_URL ?? '/'}assets/loading/`;
@@ -47,6 +50,12 @@ const STRIPE = 26;                        // spacing of the light bands in the b
  *   dive      the camera zooms in on the centre while the twist winds tighter and faster and
  *             the stone is drawn into the eye; the tunnel opens behind it, turquoise floods
  *             the screen, a white flash hands over to the next screen (AdventureApp fades it).
+ *
+ * Sound (public/assets/sfx, matched by file name in sfx.ts; silent without the files):
+ *   portalMove  stone grinding from the start of `move` through `rotate`, cut off the moment
+ *               the arch faces the camera (end of `rotate`);
+ *   portalOpen  from the start of `activate` (its burst lands on the rumble) through the dive;
+ *               its decaying tail runs on past the flash and fades over the next screen.
  */
 const FADE_S = 0.9;                       // the plain fade into a level (CSS .loading-v2 transition matches)
 const MOVE_S = 1.5;
@@ -63,9 +72,21 @@ const TUNNEL_LAYERS = 7;
 const RINGS = 4;
 const DIM_MAX = 0.62;                     // forest darkness around the active portal
 const FLASH = '#effffa';
+// Hand-drawn portal animation (tools/assets/prepare_portal_anim.py): the vortex frames play in
+// the painted arch; the streak frames play slowly forward and back (1→15→1, a seamless loop),
+// each cross-fading into the next, so the band of light rises and falls without a jump.
+const VORTEX_FPS = 10;
+const FLOW_FPS = 4;
+const STONE_FADE_IN = 0.15;               // s: portalMove fades in at the start of `move`
+const STONE_FADE_OUT = 0.03;              // s: …and cut the moment the arch faces the camera (no click)
+const OPEN_TAIL = 1.6;                    // s: portalOpen fades out after the flash
+// Cue levels: both files are mastered very hot (rock-sliding stays loud for seconds, the
+// portal opens with a burst), so they play well under the other effects (~-9 / -10.5 dB).
+const STONE_LEVEL = 0.35;
+const OPEN_LEVEL = 0.3;
 
-type Art = 'bg' | 'bgEmpty' | 'wizard' | 'swirl' | 'streaks' | 'arch' | 'barFrame' | 'title' | 'front';
-const images: Record<Art, HTMLImageElement | null> = { bg: null, bgEmpty: null, wizard: null, swirl: null, streaks: null, arch: null, barFrame: null, title: null, front: null };
+type Art = 'bg' | 'bgEmpty' | 'wizard' | 'swirl' | 'vortex' | 'flow' | 'arch' | 'barFrame' | 'title' | 'front';
+const images: Record<Art, HTMLImageElement | null> = { bg: null, bgEmpty: null, wizard: null, swirl: null, vortex: null, flow: null, arch: null, barFrame: null, title: null, front: null };
 /** Starts loading the screen's own art; called at import so it is ready before the screen opens. */
 export function preloadLoadingArt() {
   if (typeof Image === 'undefined' || images.bg) return;
@@ -73,7 +94,8 @@ export function preloadLoadingArt() {
   images.bg = load('background.jpg');
   images.wizard = load(wizard.file);
   images.swirl = load('portal-swirl.png');
-  images.streaks = load('portal-streaks.png');
+  images.vortex = load('portal-vortex.png');
+  images.flow = load('portal-flow.png');
   // Portal transition (tools/assets/prepare_portal_transition.py).
   images.bgEmpty = load('background-empty.jpg');
   images.arch = load('portal-arch.png');
@@ -180,8 +202,6 @@ export class LoadingScene {
   private bar: HTMLCanvasElement; private barCtx: CanvasRenderingContext2D;
   private barBase: CanvasImageSource;
   private barStripes: CanvasImageSource;
-  private flow: HTMLCanvasElement; private flowCtx: CanvasRenderingContext2D;
-  private flowMask: CanvasImageSource;
   private portalClip: Path2D;
   private rimPath: Path2D;
 
@@ -196,6 +216,9 @@ export class LoadingScene {
   /** Dev: every transition frame (interval, work, stage) for transitionReport(). */
   private tFrame = new Float32Array(1200); private tWork = new Float32Array(1200);
   private tStage = new Uint8Array(1200); private tN = 0;
+  /** Fade-out handles of the transition's sound cues (no-ops without the files). */
+  private stoneCue: ((fadeS?: number) => void) | null = null;
+  private openCue: ((fadeS?: number) => void) | null = null;
 
   constructor(private canvas: HTMLCanvasElement, private load: Preload, private ui: SceneUI, private opts: SceneOptions) {
     preloadLoadingArt();
@@ -212,8 +235,6 @@ export class LoadingScene {
     this.bar = canvasOf(layout.bar.w, layout.bar.h); this.barCtx = this.bar.getContext('2d')!;
     this.barBase = barGradient(layout.bar.w, layout.bar.h);
     this.barStripes = stripes(layout.bar.w + STRIPE, layout.bar.h);
-    this.flow = canvasOf(layout.streaks.w, layout.streaks.h); this.flowCtx = this.flow.getContext('2d')!;
-    this.flowMask = flowMask(layout.streaks.w * 2, layout.streaks.h);
     this.vignette = vignette(layout.center.x / 4, layout.center.y / 4);
     this.portalX = layout.portal.cx; this.portalY = layout.portal.cy;
     const p = layout.portal;
@@ -224,6 +245,7 @@ export class LoadingScene {
       // The spiral twist's shader compiles in the background while loading runs.
       this.twistFx = PortalTwist.create();
       this.layer = canvasOf(LAYER, LAYER); this.layerCtx = this.layer.getContext('2d')!;
+      void loadSfxIndex();   // so the transition's cues know their files when it starts
     }
     for (const f of this.flies) this.spawnFly(f, true);
     for (const l of this.leaves) this.spawnLeaf(l, true);
@@ -231,7 +253,7 @@ export class LoadingScene {
 
   private toBitmaps() {
     if (typeof createImageBitmap !== 'function') return;
-    const keys = ['glowTeal', 'glowGold', 'barBase', 'barStripes', 'flowMask', 'vignette'] as const;
+    const keys = ['glowTeal', 'glowGold', 'barBase', 'barStripes', 'vignette'] as const;
     for (const k of keys) {
       const src = this[k] as HTMLCanvasElement;
       createImageBitmap(src).then(b => { (this as unknown as Record<string, CanvasImageSource>)[k] = b; }, () => {});
@@ -245,6 +267,10 @@ export class LoadingScene {
   }
   stop() {
     cancelAnimationFrame(this.raf); this.raf = 0;
+    // Torn down mid-transition (screen unmounted): cut the cues short. At the flash ('done')
+    // the portal's tail is left to fade over the next screen.
+    if (this.phase !== 'done') { this.openCue?.(0.2); this.openCue = null; }
+    this.stoneCue?.(0.2); this.stoneCue = null;
     this.twistFx?.dispose(); this.twistFx = null;
   }
 
@@ -314,6 +340,7 @@ export class LoadingScene {
     else if (this.phase === 'activate' && this.phaseTime >= ACTIVATE_S) this.setPhase('dive');
     else if ((this.phase === 'dive' && this.phaseTime >= DIVE_S) || (this.phase === 'fade' && this.phaseTime > FADE_S)) {
       const flash = this.phase === 'dive';
+      this.openCue?.(OPEN_TAIL); this.openCue = null;
       this.setPhase('done'); this.stop();
       this.opts.onReveal?.(); this.opts.onFinished(flash);
       return;
@@ -333,7 +360,14 @@ export class LoadingScene {
     this.updateUI();
   }
 
-  private setPhase(p: Phase) { this.phase = p; this.phaseTime = 0; this.ui.root.dataset.phase = p; }
+  private setPhase(p: Phase) {
+    this.phase = p; this.phaseTime = 0; this.ui.root.dataset.phase = p;
+    if (p === 'move') this.stoneCue = sounds.playCue('portalMove', STONE_FADE_IN, STONE_LEVEL);
+    else if (p === 'activate') {
+      this.openCue = sounds.playCue('portalOpen', 0, OPEN_LEVEL);
+      this.stoneCue?.(STONE_FADE_OUT); this.stoneCue = null;
+    }
+  }
 
   /** 0..1 progress of each transition stage (1 once it is over). */
   private get moveK() { return this.phase === 'move' ? clamp01(this.phaseTime / MOVE_S) : TRANSITION.includes(this.phase) ? 1 : 0; }
@@ -542,7 +576,7 @@ export class LoadingScene {
     // (LoadingScreen.tsx): they only change opacity / position, which the compositor
     // animates without repainting this canvas.
     if (!skip?.has('portal')) this.drawPortal(t, surge);
-    if (!skip?.has('streaks')) this.drawStreakFlow(t, surge);
+    if (!skip?.has('streaks')) this.drawFlow(t);
 
     if (!skip?.has('flies')) this.drawFlies(t);
     this.drawLeaves();
@@ -614,14 +648,9 @@ export class LoadingScene {
       ctx.setTransform(kx, 0, 0, ky, 0, 0);
     }
 
-    // The painted streaks were removed from the background: fade their sprite out as the portal leaves.
+    // The streaks fade out as the portal leaves.
     const streakA = 1 - smooth(0, 0.35, mv);
-    if (streakA > 0 && ready(images.streaks)) {
-      ctx.globalAlpha = streakA;
-      ctx.drawImage(images.streaks, layout.streaks.x, layout.streaks.y);
-      ctx.globalAlpha = 1;
-      this.drawStreakFlow(t, 0, streakA);
-    }
+    if (streakA > 0) this.drawFlow(t, streakA);
     this.drawLeaves();
     if (a === 0) this.drawFlies(t);
     // The painted title sinks and fades before the portal crosses its place.
@@ -810,6 +839,10 @@ export class LoadingScene {
       ctx.globalAlpha = 1;
     }
     this.drawSwirl(swirl, ex, ey, sx, this.spin * 0.6, 1);
+    // The hand-drawn vortex is painted in the three-quarter view: it carries the portal while it
+    // travels and hands over to the turning swirl (eye centred) as the arch faces the camera.
+    const drawn = 1 - smooth(0.15, 0.85, turn);
+    if (drawn > 0) { ctx.globalAlpha = drawn; this.drawVortex(t, this.portalX, this.portalY, rx / p.rx); ctx.globalAlpha = 1; }
     ctx.globalCompositeOperation = 'lighter';
     const scales = [0.82, 0.6, 0.38], speeds = [1, 1.6, 2.4];
     for (let i = 0; i < 3; i++) {
@@ -900,13 +933,18 @@ export class LoadingScene {
   private drawPortal(t: number, surge: number) {
     const ctx = this.ctx, p = layout.portal;
     const swirl = images.swirl;
-    if (!ready(swirl)) return;
+    if (ready(images.vortex)) {
+      // The hand-drawn vortex (its own oval and rim) over the painted one.
+      ctx.save(); this.drawVortex(t, p.cx, p.cy, 1); ctx.restore();
+    }
     ctx.save();
     ctx.clip(this.portalClip);
     ctx.imageSmoothingEnabled = true;
-    const speed = 1 + 2.5 * surge;
-    ctx.save(); this.swirlLayer(swirl, -t * 0.55 * speed); ctx.restore();
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.2 * surge; this.swirlLayer(swirl, t * 0.9 * speed + 1.3); ctx.restore();
+    if (!ready(images.vortex) && ready(swirl)) {
+      const speed = 1 + 2.5 * surge;
+      ctx.save(); this.swirlLayer(swirl, -t * 0.55 * speed); ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.22 + 0.2 * surge; this.swirlLayer(swirl, t * 0.9 * speed + 1.3); ctx.restore();
+    }
     // Bright eye.
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.28 + 0.12 * Math.sin(t * 2.3) + 0.4 * surge;
@@ -929,22 +967,31 @@ export class LoadingScene {
     ctx.drawImage(swirl, layout.swirl.x, layout.swirl.y);
   }
 
-  /** Light runs outward along the painted energy streaks. */
-  private drawStreakFlow(t: number, surge: number, alpha = 1) {
-    const streaks = images.streaks;
-    if (!ready(streaks)) return;
-    const s = layout.streaks, f = this.flowCtx;
-    f.globalCompositeOperation = 'source-over';
-    f.clearRect(0, 0, s.w, s.h);
-    f.drawImage(streaks, 0, 0);
-    f.globalCompositeOperation = 'destination-in';
-    const period = s.w;                 // the mask holds two bands per period
-    const off = ((t * 150 * (1 + surge)) % period);
-    f.drawImage(this.flowMask, off - period, 0);
+  /** Current frame of the hand-drawn vortex, its oval centred on (cx, cy), `sx` wide of the painted oval. */
+  private drawVortex(t: number, cx: number, cy: number, sx: number) {
+    const img = images.vortex;
+    if (!ready(img)) return;
+    const v = anim.vortex, p = layout.portal;
+    const f = Math.floor(t * VORTEX_FPS) % v.frames;
     const ctx = this.ctx;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, f * v.w, 0, v.w, v.h, cx + (v.x - p.cx) * sx, cy + (v.y - p.cy), v.w * sx, v.h);
+  }
+
+  /** Energy streaks flying out of the portal: hand-drawn frames played forward and back, cross-faded. */
+  private drawFlow(t: number, alpha = 1) {
+    const img = images.flow;
+    if (!ready(img)) return;
+    const fl = anim.flow, ctx = this.ctx;
+    const last = fl.frames - 1, k = (t * FLOW_FPS) % (2 * last);
+    const pos = k <= last ? k : 2 * last - k;            // 0 → last → 0
+    const i = Math.min(Math.floor(pos), last - 1), j = i + 1, mix = pos - i;
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.75 * alpha;
-    ctx.drawImage(this.flow, s.x, s.y);
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = alpha * (1 - mix);
+    ctx.drawImage(img, i * fl.w, 0, fl.w, fl.h, fl.x, fl.y, fl.w, fl.h);
+    ctx.globalAlpha = alpha * mix;
+    ctx.drawImage(img, j * fl.w, 0, fl.w, fl.h, fl.x, fl.y, fl.w, fl.h);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -1215,16 +1262,3 @@ function stripes(w: number, h: number) {
   return c;
 }
 
-/** Two soft vertical bands per streak-width, used to make light run along the streaks. */
-function flowMask(w: number, h: number) {
-  const c = canvasOf(w, h), x = c.getContext('2d')!;
-  const g = x.createLinearGradient(0, 0, w, 0);
-  for (const base of [0, 0.5]) {
-    g.addColorStop(base + 0.0, 'rgba(0,0,0,0)');
-    g.addColorStop(base + 0.12, 'rgba(0,0,0,1)');
-    g.addColorStop(base + 0.2, 'rgba(0,0,0,0)');
-  }
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  x.fillStyle = g; x.fillRect(0, 0, w, h);
-  return c;
-}

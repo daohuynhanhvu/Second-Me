@@ -3,7 +3,8 @@
 | File | Made by | From |
 |---|---|---|
 | `background.jpg` | `tools/assets/prepare_loading_screen.py` | `tools/assets/source/loading-mockup.png` (painted mockup; the live UI is erased from it) |
-| `portal-swirl.png`, `portal-streaks.png` | same script | the mockup's portal vortex and its energy streaks, cut out for animation |
+| `portal-swirl.png` | same script | the mockup's portal vortex, cut out (turned in the portal transition). The painted energy streaks right of the arch are removed from `background.jpg` |
+| `portal-vortex.png`, `portal-flow.png` | `tools/assets/prepare_portal_anim.py` | `tools/assets/source/portal-anim-sheet.png`: 10 hand-drawn vortex frames fitted to the painted arch's oval; `tools/assets/source/portal-flow-sheet.png`: 15 energy-streak frames (checkerboard keyed out, drawn additively, played 1→15→1 so the band rises and falls in a seamless loop); placement in `src/game/data/portalAnim.json` |
 | `wizard-run.png` | `tools/assets/prepare_wizard_run.py` | `tools/assets/source/wizard-run-sheet.png` (8-frame run cycle) |
 | `portal-arch.png`, `portal-front.png`, `bar-frame.png`, `title.png`, `background-empty.jpg` | `tools/assets/prepare_portal_transition.py` | `background.jpg`: the arch, the bar's stone channel and the title cut out as sprites, and the painting without them, for the portal transition |
 
@@ -20,6 +21,7 @@ Rebuild after changing a source image:
 python -I -X utf8 tools/assets/prepare_wizard_run.py
 python -I -X utf8 tools/assets/prepare_loading_screen.py
 python -I -X utf8 tools/assets/prepare_portal_transition.py   # after prepare_loading_screen.py
+python -I -X utf8 tools/assets/prepare_portal_anim.py         # after prepare_loading_screen.py
 ```
 
 ## Portal transition

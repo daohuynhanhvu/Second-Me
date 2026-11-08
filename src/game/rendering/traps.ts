@@ -11,6 +11,9 @@ import { livingImage, drawLivingCell } from './livingAssets.ts';
  */
 export type TrapLayer = 'all' | 'floor' | 'overhead';
 
+const ICE_TINT = 'saturate(.45) hue-rotate(110deg) brightness(1.22)';
+const BIOME3_TINT = 'hue-rotate(40deg) saturate(.7)';
+
 export const trapSpritesReady = () => !!livingImage('traps-pixel.png') || forestReady('crusher', 'rocks', 'vines', 'spikes');
 
 export function drawTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, layer: TrapLayer = 'all', biome = 1) {
@@ -30,16 +33,16 @@ function drawLivingTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number,
   const phase = trapPhase(trap, time), { warn, sinceImpact } = cycle(trap, time);
   const column = { vines: 0, crusher: 1, spikes: 2, rocks: 3 }[kind];
   const ice = biome >= 5, cx = x + w / 2, cy = y + h / 2;
+  // Ice levels and biome 3 recolour the trap art (a pre-tinted sheet, not a per-draw filter).
+  const tint = ice ? ICE_TINT : biome === 3 ? BIOME3_TINT : undefined;
   ctx.save();
   if (layer !== 'overhead') {
     // A soft contact shadow seats every mechanism in the landscape.
     ctx.fillStyle = '#12201b44'; ctx.beginPath(); ctx.ellipse(cx, cy + h * .17, w * .49, h * .34, 0, 0, Math.PI * 2); ctx.fill();
     ctx.save();
-    if (ice) ctx.filter = 'saturate(.45) hue-rotate(110deg) brightness(1.22)';
-    else if (biome === 3) ctx.filter = 'hue-rotate(40deg) saturate(.7)';
     const sway = kind === 'vines' ? Math.sin(time * 1.6 + x) * 1.5 : 0;
     const shake = kind === 'crusher' && phase === 'warning' ? Math.sin(time * 40) * warn : 0;
-    const draw = (row: number) => drawLivingCell(ctx, 'traps-pixel.png', column, row, x - w * .12 + sway + shake, y - h * .17, w * 1.24, h * 1.3);
+    const draw = (row: number) => drawLivingCell(ctx, 'traps-pixel.png', column, row, x - w * .12 + sway + shake, y - h * .17, w * 1.24, h * 1.3, tint);
     if (kind === 'rocks') { ctx.globalAlpha = phase === 'impact' ? 1 : .55; draw(phase === 'impact' ? 2 : 0); }
     else {
       const row = kind === 'vines' ? 0 : phase === 'impact' ? 2 : phase === 'warning' ? 1 : 0;
@@ -79,8 +82,7 @@ function drawLivingTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number,
     if (drop !== null) {
       const size = Math.min(w, h) * 1.12;
       ctx.globalAlpha = Math.min(1, drop * 3);
-      if (ice) ctx.filter = 'saturate(.45) hue-rotate(110deg) brightness(1.22)';
-      drawLivingCell(ctx, 'traps-pixel.png', 3, 1, cx - size / 2, cy - (1 - drop * drop) * 260 - size / 2, size, size);
+      drawLivingCell(ctx, 'traps-pixel.png', 3, 1, cx - size / 2, cy - (1 - drop * drop) * 260 - size / 2, size, size, ice ? ICE_TINT : undefined);
     }
   }
   ctx.restore();

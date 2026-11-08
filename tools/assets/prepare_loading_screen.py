@@ -8,9 +8,11 @@ forest, portal and the vine-wrapped bar frame. Everything that must be live is r
 the standing wizard and its dust, the status lines, the painted 75% fill, the text and thin
 bar under the frame. The bar's channel is repainted empty from its own unfilled end.
 
+The painted energy streaks in the forest right of the arch are removed too: the game draws
+animated ones there (prepare_portal_anim.py).
+
 Also cut out, for animation:
-  portal-swirl.png    the vortex inside the arch (rotated in-game),
-  portal-streaks.png  the bright energy streaks leaving the portal (light runs along them).
+  portal-swirl.png    the vortex inside the arch (turned in-game during the portal transition).
 Geometry the game needs goes to src/game/data/loadingLayout.json.
 """
 import json
@@ -46,7 +48,8 @@ FILLED_TO = 906                   # the painted fill (and its head sparks) ends 
 EMPTY_COLS = (932, 952)           # clean unfilled channel, used as the empty look
 PORTAL = dict(cx=186, cy=360, rx=69, ry=175, eyeX=165, eyeY=366)
 SWIRL_BOX = (110, 180, 262, 544)
-STREAK_BOX = (236, 286, 556, 506)
+STREAK_BOX = (300, 286, 560, 506)   # painted streaks and sparks right of the arch (removed)
+KEEP = [(430, 318, 474, 362), (324, 474, 354, 512)]   # glowing mushrooms, the little spirit
 RUNES = [(729, 299), (728, 442)]
 GRAIN = (1040, 470, 1120, 540)   # clean dark forest
 HEAD = (872, 572)                # where the painted fill head glowed
@@ -64,17 +67,18 @@ def main() -> None:
     a = np.clip((1.0 - d) / 0.12, 0, 1)            # soft edge at the arch
     Image.fromarray(np.dstack([swirl, a * 255]).astype(np.uint8), 'RGBA').save(OUT / 'portal-swirl.png', optimize=True)
 
+    # --- remove painted UI, and the painted streaks (animated in-game) ---
+    hole = np.zeros(im.shape[:2], bool)
     sx0, sy0, sx1, sy1 = STREAK_BOX
     region = im[sy0:sy1, sx0:sx1]
     base = np.asarray(Image.fromarray(region.astype(np.uint8)).filter(ImageFilter.MedianFilter(15))).astype(np.float32)
-    lift = (region - base).max(2)
-    bright = region.max(2)
-    streak_a = np.clip((lift - 28) / 50, 0, 1) * (bright > 120)
-    streak_a = np.asarray(Image.fromarray((streak_a * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))).astype(np.float32) / 255
-    Image.fromarray(np.dstack([region, streak_a * 255]).astype(np.uint8), 'RGBA').save(OUT / 'portal-streaks.png', optimize=True)
-
-    # --- remove painted UI ---
-    hole = np.zeros(im.shape[:2], bool)
+    streak = ((region - base).max(2) > 12) & (region.max(2) > 80)
+    streak = np.asarray(Image.fromarray(streak.astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(9))) > 0
+    # Keep the glowing mushrooms and the little spirit that sit among the streaks.
+    keep = np.zeros_like(streak)
+    for kx0, ky0, kx1, ky1 in KEEP:
+        keep[ky0 - sy0:ky1 - sy0, kx0 - sx0:kx1 - sx0] = True
+    hole[sy0:sy1, sx0:sx1] = streak & ~keep
     cream = (im[..., 0] > 140) & (im[..., 1] > 125) & (im[..., 2] > 80)
     for ex0, ey0, ex1, ey1 in TEXT:
         letters = np.zeros_like(hole); letters[ey0:ey1, ex0:ex1] = cream[ey0:ey1, ex0:ex1]
@@ -110,7 +114,6 @@ def main() -> None:
         bar=dict(x=cx0, y=cy0, w=cx1 - cx0, h=cy1 - cy0),
         portal=PORTAL,
         swirl=dict(x=x0, y=y0, w=x1 - x0, h=y1 - y0),
-        streaks=dict(x=sx0, y=sy0, w=sx1 - sx0, h=sy1 - sy0),
         runes=[dict(x=x, y=y) for x, y in RUNES],
         status=dict(x=548, y=474, w=238, h=94),
         footer=dict(y=650),

@@ -64,7 +64,7 @@ function assetIndex(): Promise<FileEntry[]> {
 }
 
 function stageOf(path: string): LoadStage {
-  if (/\/(music|voice)\//.test(path)) return 'audio';
+  if (/\/(music|voice|sfx)\//.test(path)) return 'audio';
   if (/\/(blue-wizard|soldier|frost-guardian|mechanical|magic-effects)\//.test(path)) return 'characters';
   if (/\/(loading|menu)\//.test(path)) return 'core';
   return 'environment';
@@ -139,6 +139,7 @@ export function levelUses(path: string, spec: LevelLoadSpec): boolean {
   if (folder === HERO_FOLDER[spec.character]) return true;
   if(folder==='enemies')return spec.levelId>=2&&spec.levelId<=5;
   if (folder === 'frost-guardian') return boss;
+  if (folder === 'sfx') return true;   // sound effects: every level
   if (folder === 'music') return sceneOf(rest.split('/').pop() ?? '') === (boss ? 'boss' : 'level');
   if (folder === 'voice') {
     const roles = boss ? [HERO_VOICE[spec.character], 'guardian'] : [HERO_VOICE[spec.character]];

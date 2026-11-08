@@ -147,5 +147,37 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();
   }
   drawCombatHits(ctx, game.combatHits, game.reducedMotion);
+  if (game.isTraining) drawTrainingBoard(ctx, game);
+  ctx.restore();
+}
+
+/** The training ground's damage readout: a wooden board behind the dummies (logic/training.ts). */
+function drawTrainingBoard(ctx: CanvasRenderingContext2D, game: GameEngine) {
+  const st = game.training, now = game.levelClock, vi = game.language === 'vi';
+  const live = st.active(now), x = 850, y = 66, w = 330, rowH = 24, h = 40 + rowH * 4 + 8;
+  const font = (size: number) => `bold ${size}px "Segoe UI", Arial, sans-serif`;
+  ctx.save();
+  ctx.fillStyle = '#06110d99'; ctx.fillRect(x + 4, y + 5, w, h);                 // shadow
+  ctx.fillStyle = '#2e2116'; ctx.fillRect(x, y, w, h);                           // frame
+  ctx.fillStyle = '#4a3523'; ctx.fillRect(x + 3, y + 3, w - 6, 32);              // title plank
+  for (let r = 0; r < 4; r++) { ctx.fillStyle = r % 2 ? '#3f2d1e' : '#46331f'; ctx.fillRect(x + 3, y + 38 + r * rowH, w - 6, rowH); }
+  ctx.strokeStyle = '#140e08'; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h);
+  ctx.textBaseline = 'middle';
+  ctx.font = font(15); ctx.textAlign = 'left'; ctx.fillStyle = '#f0cf7a';
+  ctx.fillText(vi ? 'BÃI TẬP · HÌNH NỘM' : 'TRAINING · DUMMIES', x + 14, y + 20);
+  ctx.font = font(13); ctx.textAlign = 'right'; ctx.fillStyle = live ? '#a6f0b9' : '#b8a888';
+  ctx.fillText(live ? (vi ? '● ĐANG ĐO' : '● LIVE') : (vi ? 'CHỜ ĐÒN' : 'WAITING'), x + w - 14, y + 20);
+  const rows: [string, string][] = [
+    [vi ? 'Tổng sát thương' : 'Total damage', st.total.toFixed(0)],
+    ['DPS', st.dps(now).toFixed(1)],
+    [vi ? 'Số đòn · đòn cuối' : 'Hits · last hit', `${st.hits} · ${st.last.toFixed(0)}`],
+    [vi ? 'Đòn mạnh nhất' : 'Biggest hit', st.biggest.toFixed(0)],
+  ];
+  ctx.font = font(14);
+  rows.forEach(([k, v], i) => {
+    const ry = y + 38 + i * rowH + rowH / 2;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#e6d6b2'; ctx.fillText(k, x + 14, ry);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#fff6dc'; ctx.fillText(v, x + w - 14, ry);
+  });
   ctx.restore();
 }

@@ -4,6 +4,7 @@
  */
 
 import type { INTRO } from './introTimeline.ts';
+import { loadSfxIndex, sfxFiles, sfxUrl, type SfxId } from './sfx.ts';
 type IntroCues = typeof INTRO.cue;
 
 class SoundEngine {
@@ -63,8 +64,104 @@ class SoundEngine {
     return this.isMuted;
   }
 
+  /** Bus for file effects (public/assets/sfx), under the master volume; created on first use. */
+  private sfxGain: GainNode | null = null;
+  /** Decoded buffers by URL, so a file effect can start in the same frame it is asked for. */
+  private ready = new Map<string, AudioBuffer>();
+  /** Effects mastered at full scale sit at this level, under voice and near the music. */
+  private static readonly SFX_LEVEL = 0.7;
+
+  /**
+   * Plays a file from public/assets/sfx for this sound when there is one and it is decoded
+   * (a random one of several, pitched ±4% so repeats do not sound identical). False means
+   * "no file ready": the caller plays its synth version. A file not yet decoded starts loading
+   * now and plays from the next time on.
+   */
+  private sample(id: SfxId): boolean {
+    void loadSfxIndex();
+    const list = sfxFiles(id);
+    if (!list.length) return false;
+    this.initCtx();
+    if (!this.ctx || !this.masterGain) return false;
+    const url = sfxUrl(list[Math.floor(Math.random() * list.length)]);
+    const buf = this.ready.get(url);
+    if (!buf) { void this.loadBuffer(url); return false; }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf; src.playbackRate.value = 0.96 + Math.random() * 0.08;
+    src.connect(this.sfxBus(this.ctx, this.masterGain)); src.start();
+    return true;
+  }
+
+  private sfxBus(ctx: AudioContext, master: GainNode) {
+    if (!this.sfxGain) {
+      this.sfxGain = ctx.createGain(); this.sfxGain.gain.value = SoundEngine.SFX_LEVEL;
+      this.sfxGain.connect(master);
+    }
+    return this.sfxGain;
+  }
+
+  /**
+   * Limiter for the long cues: hot files (mastered near 0 dBFS, sustained for seconds) are held
+   * under about -12 dBFS on the sfx bus, to spare players' ears and small speakers.
+   */
+  private cueLimiter: DynamicsCompressorNode | null = null;
+  private cueBus(ctx: AudioContext, master: GainNode) {
+    if (!this.cueLimiter) {
+      const l = ctx.createDynamicsCompressor();
+      l.threshold.value = -12; l.knee.value = 3; l.ratio.value = 20; l.attack.value = 0.003; l.release.value = 0.25;
+      l.connect(this.sfxBus(ctx, master));
+      this.cueLimiter = l;
+    }
+    return this.cueLimiter;
+  }
+
+  /**
+   * A long, scripted effect file (the loading screen's portal transition): played once at its
+   * own pitch and at `level` (0..1, under the sfx bus and its limiter), faded in over `fadeIn` s.
+   * Returns a function that fades it out over `fadeS` s and stops it. Silent (a no-op handle)
+   * when there is no file or it is not decoded yet; the loading screen decodes every sfx file
+   * before the transition can start.
+   */
+  public playCue(id: SfxId, fadeIn = 0, level = 1): (fadeS?: number) => void {
+    const none = () => {};
+    void loadSfxIndex();
+    const list = sfxFiles(id);
+    if (this.isMuted || !list.length) return none;
+    this.initCtx();
+    const ctx = this.ctx, master = this.masterGain;
+    if (!ctx || !master) return none;
+    const url = sfxUrl(list[Math.floor(Math.random() * list.length)]);
+    const buf = this.ready.get(url);
+    if (!buf) { void this.loadBuffer(url); return none; }
+    const src = ctx.createBufferSource(), env = ctx.createGain(), t = ctx.currentTime;
+    src.buffer = buf;
+    if (fadeIn > 0) { env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(level, t + fadeIn); }
+    else env.gain.value = level;
+    src.connect(env); env.connect(this.cueBus(ctx, master)); src.start(t);
+    let stopped = false;
+    src.onended = () => { stopped = true; src.disconnect(); env.disconnect(); };
+    return (fadeS = 0.3) => {
+      if (stopped) return;
+      stopped = true;
+      const now = ctx.currentTime;
+      env.gain.cancelScheduledValues(now);
+      env.gain.setValueAtTime(env.gain.value, now);
+      env.gain.linearRampToValueAtTime(0, now + Math.max(0.02, fadeS));
+      src.stop(now + Math.max(0.02, fadeS) + 0.05);
+    };
+  }
+
+  /** Kael's combo swing (new: silent without a file). */
+  public playSlash() { if (!this.isMuted) this.sample('slash'); }
+  /** Aeris's combo cast (new: silent without a file). */
+  public playSpell() { if (!this.isMuted) this.sample('spell'); }
+  /** The fourth combo hit landing; without a file it keeps the old heavy thud. */
+  public playFinisher() { if (!this.isMuted && !this.sample('finisher')) this.playPlateActivate(); }
+  /** Dodge roll (new: silent without a file). */
+  public playDodge() { if (!this.isMuted) this.sample('dodge'); }
+
   public playFootstep() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('footstep')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -87,7 +184,7 @@ class SoundEngine {
   }
 
   public playIceHit(broken: boolean) {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample(broken ? 'break' : 'hit')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
     const t = this.ctx.currentTime;
@@ -102,7 +199,7 @@ class SoundEngine {
   }
 
   public playRecordStart() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('recordStart')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -135,7 +232,7 @@ class SoundEngine {
   }
 
   public playRecordStop() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('recordStop')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -158,7 +255,7 @@ class SoundEngine {
   }
 
   public playEchoSpawn() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('echoSpawn')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -184,7 +281,7 @@ class SoundEngine {
   }
 
   public playEchoDismiss() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('echoDismiss')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -207,7 +304,7 @@ class SoundEngine {
   }
 
   public playPlateActivate() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('plateOn')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -230,7 +327,7 @@ class SoundEngine {
   }
 
   public playPlateDeactivate() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('plateOff')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -253,7 +350,7 @@ class SoundEngine {
   }
 
   public playDoorOpen() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('doorOpen')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -277,7 +374,7 @@ class SoundEngine {
   }
 
   public playDoorClose() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('doorClose')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -300,7 +397,7 @@ class SoundEngine {
   }
 
   public playVictory() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.sample('victory')) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
 
@@ -345,6 +442,7 @@ class SoundEngine {
       p = !g ? Promise.resolve(null) : fetch(url)
         .then(r => (r.ok ? readBody(r, onProgress) : Promise.reject(new Error(String(r.status)))))
         .then(b => g.ctx.decodeAudioData(b))
+        .then(buf => { this.ready.set(url, buf); return buf; })
         .catch(() => null);
       this.bufferCache.set(url, p);
     }

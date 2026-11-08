@@ -9,8 +9,9 @@ Output public/assets/menu/stone-button.png             5 slab shapes (columns) x
 Each slab is a hand-cut stone plate standing out of the panel: a chipped, slightly irregular
 face lit from the top left, its thickness showing below it, an ink outline and a soft drop
 shadow, a couple of cracks and moss. Every colour comes from the frame's own stone (median-cut
-from the painting: PALETTE / MOSS below), mapped by brightness with ordered dithering, so the
-slabs are pixel art at 1 painting px per sprite px. Hover lifts the face 3 px, lights it a
+from the painting: PALETTE / MOSS below), mapped by brightness onto flat bands with no dithering,
+like the frame's own cel-shaded stones, so the slabs are pixel art at 1 painting px per sprite px.
+The face is a lit block of the frame's top band, outlined 2 px in the frame's ink. Hover lifts the face 3 px, lights it a
 step and rims it in the painting's gold (the face is its own layer so the game can slide it);
 a locked item is darkened by the game's CSS.
 
@@ -26,11 +27,12 @@ ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / 'public/assets/menu/second-me-forest-clean.png'
 OUT = ROOT / 'public/assets/menu/stone-button.png'
 
-# The frame's stone, dark to light (median-cut of the painting's frame), plus one step of
-# highlight for the lit bevel. INK is the painting's outline colour.
-PALETTE = np.array([[19, 35, 34], [29, 39, 35], [35, 51, 41], [39, 57, 42], [48, 66, 48], [77, 90, 62], [104, 117, 84]], np.float32)
-MOSS = np.array([[33, 63, 35], [47, 73, 45], [55, 83, 56]], np.float32)
-INK = np.array([3, 13, 13], np.float32)
+# The frame's stone, dark to light, measured on its blocks: shadowed edge #112020, pillar face
+# #1f3226, lit block of the top band #374838, plus one step of highlight for the lit bevel. MOSS is
+# the frame's moss (#1f371d) and two lighter steps; INK its outline colour.
+PALETTE = np.array([[17, 32, 30], [24, 40, 34], [31, 50, 38], [40, 59, 45], [49, 67, 51], [57, 74, 58], [72, 90, 70]], np.float32)
+MOSS = np.array([[31, 55, 29], [40, 68, 36], [52, 82, 44]], np.float32)
+INK = np.array([8, 16, 13], np.float32)
 GOLD = np.array([229, 211, 141], np.float32)
 
 SLAB_W, SLAB_H = 304, 78          # sprite cell
@@ -82,11 +84,12 @@ def shift(m, dy, dx):
     return out
 
 
-def to_palette(v, pal):
-    """Brightness 0..1 → palette rows, ordered-dithered."""
+def to_palette(v, pal, dither=0.0):
+    """Brightness 0..1 → palette rows: flat bands like the frame's cel shading (dither > 0 mixes
+    neighbouring rows with an ordered pattern instead)."""
     h, w = v.shape
     d = np.tile(BAYER, (h // 4 + 1, w // 4 + 1))[:h, :w]
-    idx = np.clip(np.round(v * (len(pal) - 1) + d * 0.9), 0, len(pal) - 1).astype(int)
+    idx = np.clip(np.round(v * (len(pal) - 1) + d * dither), 0, len(pal) - 1).astype(int)
     return pal[idx]
 
 
@@ -128,7 +131,7 @@ def slab_layers(seed: int):
     body = f.copy()
     for k in range(1, DEPTH + 1):
         body |= shift(f, k, 0)
-    outline = ring(body)
+    outline = ring(body); outline |= ring(body | outline)       # 2 px, like the frame's stones
     shadow = (shift(body | outline, 3, 2) | shift(body | outline, 2, 3)) & ~(body | outline)
     sv = np.zeros((SLAB_H, SLAB_W), np.float32)
     bottom = fy + FACE_H - LIFT                       # the side shows from here once the face is up
@@ -142,7 +145,7 @@ def slab_layers(seed: int):
 
     # Face: light from the top left, mottled stone, bevelled edges, cracks, moss.
     v = np.zeros((SLAB_H, SLAB_W), np.float32)
-    fv = 0.52 + (smooth_noise((SLAB_H, SLAB_W), 11, rng) - 0.5) * 0.26 + (smooth_noise((SLAB_H, SLAB_W), 4, rng) - 0.5) * 0.12
+    fv = 0.64 + (smooth_noise((SLAB_H, SLAB_W), 11, rng) - 0.5) * 0.16 + (smooth_noise((SLAB_H, SLAB_W), 4, rng) - 0.5) * 0.06
     fv -= (rows - fy) / FACE_H * 0.16
     v[f] = fv[f]
     tl1 = f & ~(shift(f, 1, 0) & shift(f, 0, 1))
@@ -162,7 +165,7 @@ def slab_layers(seed: int):
         blob = ((xx - cx) ** 2 / (rr * 1.8) ** 2 + (yy - cy) ** 2 / rr ** 2 < 1) & f & (smooth_noise((SLAB_H, SLAB_W), 2, rng) > 0.35)
         mv = np.clip(0.6 - (yy - cy) / (rr * 2) + (smooth_noise((SLAB_H, SLAB_W), 2, rng) - 0.5) * 0.5, 0, 1)
         moss.append((blob, to_palette(mv, MOSS)))
-    edge = ring(f)
+    edge = ring(f); edge |= ring(f | edge)                         # 2 px ink, like the frame
 
     def face_layer(step: float, gold: bool):
         out = np.zeros((SLAB_H, SLAB_W, 4), np.float32)
