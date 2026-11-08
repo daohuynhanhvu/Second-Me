@@ -113,11 +113,12 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Trượng phép và cầu sét mới', description: 'Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.' };
+const latestNews = { title: 'Giao diện chọn nhân vật mới', description: 'Màn chọn nhân vật có diện mạo rừng cổ mới. Xem trước Aeris hoặc Kael và nhấn Xác nhận để bắt đầu hành trình.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
     <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article>
+    <article><time>08.11.2026</time><div><h3>Trượng phép và cầu sét mới</h3><p>Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Diện mạo mới cho Aeris</h3><p>Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Diện mạo mới cho Kael</h3><p>Kỵ sĩ Kael có diện mạo pixel chibi mới với tóc vàng, giáp bạc và áo choàng đỏ. Các hướng di chuyển và động tác chém cũng được làm mới.</p></div></article>
     <article><span>LÒ RÈN 1.5</span><div><h3>Thử thách từng chặng</h3><p>Năm màn đầu có 10 giây mỗi chặng. Mỗi 3 giây, mảnh thời gian rơi gần bạn; nhặt được cộng 4 giây. Bẫy dập và đá rơi giữ chân 0,25 giây; dây leo làm chậm cả một dải.</p></div></article>
@@ -165,23 +166,43 @@ export function Inventory({ hud, close }: { hud: HUDState; close: () => void }) 
   return <div className="inventory-content"><div className="panel-top"><span className="eyebrow gold">{vi?'TÚI ĐỒ':'INVENTORY'}</span><button className="icon-close" aria-label={vi?'Đóng túi đồ':'Close inventory'} onClick={close}><X size={18}/></button></div><h2>{vi?'Vật phẩm của bạn':'Your items'}</h2><div className="inventory-currency"><span>✦</span><strong>{vi?'Xu':'Coins'}</strong><b>{hud.coins}</b></div><div className="inventory-currency"><span>✧</span><strong>{vi?'Bình thời gian +2 giây':'Time potion +2 seconds'}</strong><b>× {hud.timeItems}</b></div><span className="eyebrow gold">{vi?'DI VẬT':'RELICS'}</span>{MATERIALS.map((m,i)=><div className={'inventory-item '+(hud.completed.includes(i+1)?'found':'')} key={m.id}><span style={{color:m.color}}>{m.icon}</span><strong>{translate(m.name,hud.language)}</strong><small>{hud.completed.includes(i+1)?'× 1':'—'}</small></div>)}{hud.forged&&<div className="equipped">{hud.weapon==='staff'?'✦':'⚔'} {vi?'ĐÃ TRANG BỊ':'EQUIPPED'} · {hud.weapon==='staff'?(vi?'Trượng Echo':'Echo staff'):(vi?'Kiếm Echo':'Echo sword')}</div>}</div>;
 }
 
-const classOptions = [
-  {name:'Aeris',id:'mage', icon:'✦', en:'Mage', vi:'Pháp sư', weaponEn:'Magic staff', weaponVi:'Trượng phép', ready:true},
-  {name:'Sylva',id:'ranger', icon:'⌁', en:'Ranger', vi:'Xạ thủ', ready:false},
-  {name:'Kael',id:'swordsman', icon:'⚔', en:'Swordsman', vi:'Kiếm sĩ', weaponEn:'Sword', weaponVi:'Kiếm', ready:true},
-  {name:'Bastion',id:'tank', icon:'⬡', en:'Tank', vi:'Đỡ đòn', ready:false},
-  {name:'Nyx',id:'assassin', icon:'◇', en:'Assassin', vi:'Sát thủ', ready:false},
-  {name:'Rivet-07',id:'mechanical', icon:'⚙', en:'Mechanic', vi:'Cơ giới', weaponEn:'Chainblade',weaponVi:'Cưa máy',ready:true},
-  {name:'Fenrir',id:'beast', icon:'◆', en:'Beast', vi:'Dã thú', ready:false},
-] as const;
+type SelectableCharacter = 'mage' | 'swordsman' | 'mechanical';
 
-function SwordsmanPortrait() { return <span className="soldier-profile"><KaelPortrait/></span>; }
-
-export function Characters({engine,hud}:{engine:GameEngine|null;hud:HUDState}) {
-  const vi=hud.language==='vi';
-  const [selected,setSelected]=useState<string>(hud.characterClass);
-  const choice=classOptions.find(c=>c.id===selected)!;
-  return <div className="characters-screen overlay"><div className="characters-shell"><header><span className="eyebrow gold">{vi?'NHÂN VẬT':'CHARACTERS'}</span><button className="secondary" onClick={()=>engine?.goToLobby()}>{vi?'VỀ SẢNH':'BACK TO LOBBY'}</button></header><div className="characters-layout"><aside className="class-sidebar"><h2>{vi?'Chọn class':'Choose a class'}</h2>{classOptions.filter(c=>MECHANICAL_ENABLED || c.id!=='mechanical').map(c=><button key={c.id} className={selected===c.id?'selected':''} onClick={()=>{setSelected(c.id);if(c.ready)engine?.selectClass(c.id);}}><span>{c.icon}</span><strong>{c.name} · {vi?c.vi:c.en}</strong><small>{c.id==='mechanical'&&!hud.mechanicalOwned?(vi?'SHOP · 100 XU':'SHOP · 100 COINS'):c.ready?(vi?'SẴN SÀNG':'READY'):(vi?'ĐANG THI CÔNG':'IN DEVELOPMENT')}</small></button>)}</aside><section className="character-detail"><div className="character-portrait">{choice.id==='mechanical'?<MechanicalPortrait/>:choice.id==='mage'?<span className="aeris-profile"><AerisPortrait/></span>:choice.id==='swordsman'?<SwordsmanPortrait/>:<span className="future-character">{choice.icon}</span>}</div><div className="character-description"><span className="eyebrow gold">{choice.id==='mechanical'&&!hud.mechanicalOwned?(vi?'MỞ KHÓA TRONG SHOP':'UNLOCK IN SHOP'):choice.ready?(vi?'NHÂN VẬT ĐÃ MỞ':'AVAILABLE CHARACTER'):(vi?'ĐANG TRONG TIẾN TRÌNH THI CÔNG':'UNDER CONSTRUCTION')}</span><h1>{choice.name}</h1><p>{vi?choice.vi:choice.en}</p>{choice.ready?<><p className="personal-skill-description">{choice.id==='mage'?(vi?'Chuột phải · Cầu sét: tối đa 3 cầu nhỏ, mỗi cầu tồn tại 6 giây.':'Right click · Storm Orbs: up to 3 small orbs, each lasts 6 seconds.'):choice.id==='swordsman'?(vi?'Chuột phải · Pháp trận ánh sáng: 5 giây, +20% sát thương và hồi 1 HP mỗi 2 giây khi đứng trong vòng.':'Right click · Light Sanctuary: 5 seconds, +20% damage and 1 HP every 2 seconds while inside.'):(vi?'Chuột phải · Quá tải: tăng gấp đôi tốc đánh trong 5 giây. Mở khóa trong shop với 100 xu.':'Right click · Overdrive: double attack speed for 5 seconds. Unlock in the shop for 100 coins.')}</p><p>{vi?'Vũ khí cố định':'Fixed weapon'}: <strong>{vi?choice.weaponVi:choice.weaponEn}</strong></p><p>{choice.id==='mechanical'?(vi?'Cận chiến bằng cưa máy.':'Melee attacks with a chainblade.'):choice.id==='mage'?(vi?'Tấn công bằng ma pháp từ trượng Echo.':'Casts magic through the Echo staff.'):(vi?'Cận chiến bằng kiếm Echo.':'Fights up close with the Echo sword.')}</p><span className="class-selected">{choice.id==='mechanical'&&!hud.mechanicalOwned?(vi?'CHƯA MỞ · SHOP 100 XU':'LOCKED · SHOP 100 COINS'):hud.characterClass===choice.id?(vi?'ĐANG ĐƯỢC CHỌN':'SELECTED'):(vi?'BẤM CLASS ĐỂ CHỌN':'CLICK CLASS TO SELECT')}</span></>:<div className="construction-notice"><strong>{vi?'Đang trong tiến trình thi công':'In development'}</strong><p>{vi?'Class này chưa thể vào trận. Hãy chọn Pháp sư hoặc Kiếm sĩ để chơi.':'This class is not playable yet. Choose Mage or Swordsman to play.'}</p></div>}</div></section></div></div></div>;
+export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDState}) {
+  const vi = hud.language === 'vi';
+  const [selected, setSelected] = useState<SelectableCharacter>(hud.characterClass);
+  const roster: {id: SelectableCharacter; name: string; roleVi: string; roleEn: string}[] = [
+    {id:'mage', name:'Aeris', roleVi:'Pháp sư', roleEn:'Mage'},
+    {id:'swordsman', name:'Kael', roleVi:'Kiếm sĩ', roleEn:'Swordsman'},
+    ...(MECHANICAL_ENABLED && hud.mechanicalOwned ? [{id:'mechanical' as const, name:'Rivet-07', roleVi:'Cơ giới', roleEn:'Mechanic'}] : []),
+  ];
+  const choice = roster.find(c => c.id === selected) ?? roster[0];
+  const portrait = (id: SelectableCharacter) => id === 'mage' ? <AerisPortrait/> : id === 'swordsman' ? <KaelPortrait/> : <MechanicalPortrait/>;
+  const detail = choice.id === 'mage'
+    ? (vi ? 'Pháp sư sử dụng trượng Echo và cầu sét. Kỹ năng triệu hồi tối đa 3 cầu sét trong 6 giây.' : 'A mage who channels the Echo staff and lightning. Summon up to three storm orbs for six seconds.')
+    : choice.id === 'swordsman'
+    ? (vi ? 'Kiếm sĩ cận chiến với Kiếm Echo. Pháp trận ánh sáng tăng sát thương và hồi máu trong 5 giây.' : 'A close-range fighter wielding the Echo sword. Light Sanctuary boosts damage and restores health for five seconds.')
+    : (vi ? 'Chiến binh cơ giới dùng cưa máy. Kỹ năng Quá tải tăng tốc đánh trong 5 giây.' : 'A mechanical fighter wielding a chainblade. Overdrive boosts attack speed for five seconds.');
+  const confirm = () => { if (!engine) return; engine.selectClass(choice.id); engine.goToLobby(); };
+  return <div className="characters-screen overlay hero-select-screen">
+    <div className="hero-select-scene" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
+      <h1 id="hero-select-title" className="hero-select-title">{vi ? 'CHỌN NHÂN VẬT' : 'CHOOSE YOUR HERO'}</h1>
+      <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>✕</button>
+      <div className="hero-select-grid" role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
+        {Array.from({length:8}, (_, i) => {
+          const c = roster[i];
+          return c ? <button key={c.id} type="button" className={'hero-slot' + (choice.id === c.id ? ' is-selected' : '')} onClick={() => setSelected(c.id)} aria-pressed={choice.id === c.id} aria-label={`${c.name} · ${vi ? c.roleVi : c.roleEn}`}>
+            <span className="hero-slot-label">{c.name} · {vi ? c.roleVi : c.roleEn}</span><span className="hero-slot-figure">{portrait(c.id)}</span>
+          </button> : <div key={`empty-${i}`} className="hero-slot hero-slot-empty" aria-hidden="true"><span>✧</span></div>;
+        })}
+      </div>
+      <section className="hero-select-info" aria-live="polite">
+        <div className="hero-info-portrait">{portrait(choice.id)}</div>
+        <div className="hero-info-copy"><h2>{choice.name} · {vi ? choice.roleVi : choice.roleEn}</h2><p>{detail}</p><small>{vi ? 'VŨ KHÍ' : 'WEAPON'} · {choice.id === 'mage' ? (vi ? 'Trượng phép' : 'Magic staff') : choice.id === 'swordsman' ? (vi ? 'Kiếm' : 'Sword') : (vi ? 'Cưa máy' : 'Chainblade')}</small></div>
+        <div className="hero-info-action"><span>{choice.id === hud.characterClass ? (vi ? 'ĐANG CHỌN' : 'CURRENT HERO') : (vi ? 'NHÂN VẬT SẴN SÀNG' : 'HERO READY')}</span><button type="button" onClick={confirm} disabled={!engine}>{vi ? 'XÁC NHẬN' : 'CONFIRM'}</button><button type="button" className="hero-info-cancel" onClick={() => engine?.goToLobby()}>{vi ? 'VỀ SẢNH' : 'BACK TO LOBBY'}</button></div>
+      </section>
+    </div>
+  </div>;
 }
 
 export function StaffArt({ large = false }: { large?: boolean }) {
