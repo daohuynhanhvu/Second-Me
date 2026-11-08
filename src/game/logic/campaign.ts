@@ -27,6 +27,7 @@ export class Campaign {
   pendingRuneChoices:EchoRuneId[]=[];
   coins = 0;
   timeItems = 0;
+  limitRings = 0;
   bestStars: Record<number, number> = {};
   load() {
     try {
@@ -40,18 +41,19 @@ export class Campaign {
       this.mechanicalOwned = value.mechanicalOwned === true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
+      this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
       this.echoRunes=cleanRuneStock(value.echoRunes);
       this.pendingRuneChoices=cleanRuneChoices(value.pendingRuneChoices);
       const migrateRunes=value.echoRunes===undefined&&this.completed.length>0;
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
       if(migrateRunes)this.save();
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.echoRunes={}; }
+    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.echoRunes={}; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
+      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -83,6 +85,8 @@ export class Campaign {
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
+  buyLimitRing() { if (this.coins < 30) return false; this.coins -= 30; this.limitRings++; this.save(); return true; }
+  useLimitRing() { if (this.limitRings < 1) return false; this.limitRings--; this.save(); return true; }
   get canForge() { return [1,2,3,4,5].every(id => this.completed.includes(id)); }
   forge(): boolean {
     if (!this.canForge || this.forged) return false;
@@ -91,7 +95,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.save(); }
+  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {

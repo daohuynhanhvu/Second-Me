@@ -11,7 +11,7 @@ import { drawComboHero, drawComboEffects, comboPose } from './comboSprites.ts';
 import { drawTimeRelic } from './timeRelic.ts';
 import { drawPillars, drawCombatHits } from './bossFeedback.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
-export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185'];
+export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9a8d4'];
 
 export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
   ctx.save();
@@ -25,7 +25,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       else if(echo.characterClass==='mechanical')drawMechanicalSprite(layer,48,70,echo.direction,echo.isMoving,true,time);
       else game.renderer.drawEcho(layer,48,70,echo.direction,echo.isMoving,time);
       const slot=echo.colorSlot??0;
-      ctx.save();ctx.filter=`hue-rotate(${[0,75,190,140][slot]}deg)`;ctx.drawImage(echoCanvas,echo.x-48,echo.y-70);ctx.restore();
+      ctx.save();ctx.filter=`hue-rotate(${[0,75,190,140,245,310][slot]}deg)`;ctx.drawImage(echoCanvas,echo.x-48,echo.y-70);ctx.restore();
       if (echo.characterClass === 'mage' && (echo.attackFlash ?? 0) > 0 && echo.attackTarget) {
         const t = 1 - (echo.attackFlash ?? 0) / .22;
         const dx = echo.attackTarget.x - echo.x, dy = echo.attackTarget.y - echo.y;

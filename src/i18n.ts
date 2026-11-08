@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Echo limit ring', 'Nhẫn tăng giới hạn'],
+  ['Buy a limit ring for 30 coins to raise the Echo limit to six for one level. The effect does not stack.', 'Mua nhẫn trong cửa hàng với giá 30 xu để tăng giới hạn lên 6 Echo trong một màn. Hiệu ứng không cộng dồn.'],
   ['Echo recall order', 'Thứ tự thu hồi Echo'],
   ['Press X to recall the Echo that has been on the field longest, in summon order.', 'Nhấn X để thu hồi Echo đã ở trên sân lâu nhất trước, theo thứ tự triệu hồi.'],
   ['Guardian ice spike attack', 'Chiêu gai băng của boss'],

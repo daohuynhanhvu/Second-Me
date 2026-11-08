@@ -117,6 +117,9 @@ export interface HUDState {
   weapon: 'staff' | 'sword';
   coins: number;
   timeItems: number;
+  limitRings: number;
+  echoLimit: number;
+  limitRingActive: boolean;
   bestStars: Record<number, number>;
   lastRating: { stars: number; coins: number } | null;
   skillCooldown: number;
@@ -196,6 +199,8 @@ export class GameEngine {
   // Recording
   public recorder = new RecordingManager();
   public echoCharges = 3;
+  public limitRingActive = false;
+  public get echoLimit() { return this.limitRingActive ? 6 : 4; }
   private echoFreeSummon = true;
   public dissonanceSeconds = 0;
   private swapCooldown = 0;
@@ -449,6 +454,13 @@ export class GameEngine {
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
   public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
+  public buyLimitRing() { if (this.screen !== 'shop') return; if (this.campaign.buyLimitRing()) this.showBanner(this.language==='vi'?'Đã mua nhẫn tăng giới hạn.':'Limit ring purchased.'); else this.showBanner(this.language==='vi'?'Không đủ xu.':'Not enough coins.'); this.notifyHUD(); }
+  public useLimitRing() {
+    if (this.screen !== 'playing' || this.guides.blocking || this.exitTravelRemaining>0 || this.bossDeathPending || (this.boss && this.boss.hp<=0) || !this.campaign.useLimitRing()) return false;
+    if (!this.limitRingActive) { this.limitRingActive=true; this.echoCharges+=2; }
+    this.showBanner(this.language==='vi'?'Nhẫn đã dùng · Giới hạn 6 Echo trong màn này.':'Ring used · Echo limit is 6 for this level.');
+    this.notifyHUD(); return true;
+  }
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || this.timeItemUsedThisLeg || !this.campaign.useTimeItem()) return false; this.timeItemUsedThisLeg = true; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
@@ -512,6 +524,7 @@ export class GameEngine {
     this.echoes = [];
     this.selectedEcho=0;
     this.echoCharges = 3;
+    this.limitRingActive = false;
     this.echoFreeSummon = true;
     this.dissonanceSeconds = 0;
     this.swapCooldown = 0;
@@ -682,7 +695,7 @@ export class GameEngine {
       if(this.insideLightCircle)amount*=1.2;const dealt=Math.min(enemy.hp,amount);enemy.hp=Math.max(0,enemy.hp-amount);enemy.hitFlash=.18;
       this.combatHits.push({x:enemy.x,y:enemy.y-30,damage:Math.round(dealt*10)/10,life:.7,broken:enemy.hp===0});this.combatHits=this.combatHits.slice(-24);
       this.renderer.emitMagic('sparkle',enemy.x,enemy.y,heavy?48:24);sounds.playIceHit(false);
-      if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(4,this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
+      if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
       this.notifyHUD();return true;
     }
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
@@ -705,7 +718,7 @@ export class GameEngine {
           this.boss.burstCooldown = Math.max(2, this.boss.burstCooldown);
           this.boss.burstRemaining = 0; this.boss.burstAreas = []; this.boss.projectiles = [];
         }
-        this.echoCharges=Math.min(4,this.echoCharges+1);
+        this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
         voice.say(this.voiceRole, 'kill');
         if(this.boss.armor===0) voice.say('guardian', 'event', { id: 'armor', delay: 1.2 });
       }
@@ -1114,7 +1127,7 @@ export class GameEngine {
 
   public spawnEcho() {
     if (this.screen !== 'playing') return;
-    if(this.echoes.length>=4){this.showBanner('Tối đa 4 Echo. Thu hồi một Echo trước khi gọi thêm.');return;}
+    if(this.echoes.length>=this.echoLimit){this.showBanner(this.language==='vi'?`Tối đa ${this.echoLimit} Echo. Thu hồi một Echo trước khi gọi thêm.`:`Maximum ${this.echoLimit} Echoes. Recall one before summoning another.`);return;}
 
     // Summoning commits the endpoint before any subsequent player movement.
     if (this.recorder.stopRecording(
@@ -1145,7 +1158,7 @@ export class GameEngine {
 
     this.selectedEcho=this.echoes.length;
     this.echo = {
-      colorSlot:[0,1,2,3].find(slot=>!this.echoes.some(e=>e.colorSlot===slot))??0,
+      colorSlot:[0,1,2,3,4,5].find(slot=>!this.echoes.some(e=>e.colorSlot===slot))??0,
       x: safeEchoSpawn.x,
       y: safeEchoSpawn.y,
       direction: first.direction,
@@ -1197,13 +1210,13 @@ export class GameEngine {
   }
   public canUseEchoRune(id:EchoRuneId):boolean {
     if(this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
-    if(id==='call')return this.echoCharges+(this.echoFreeSummon?1:0)<4;
+    if(id==='call')return this.echoCharges+(this.echoFreeSummon?1:0)<this.echoLimit;
     if(id==='restore')return this.echoes.some(e=>(e.stability??100)<100);
     return !this.activeEchoRunes.has(id);
   }
   public useEchoRune(id:EchoRuneId):boolean {
     if(!ECHO_RUNES.some(r=>r.id===id)||!this.canUseEchoRune(id)||!this.campaign.spendRune(id))return false;
-    if(id==='call')this.echoCharges=Math.min(4-(this.echoFreeSummon?1:0),this.echoCharges+1);
+    if(id==='call')this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
     else if(id==='restore')for(const echo of this.echoes)echo.stability=Math.min(100,(echo.stability??100)+50);
     else {this.activeEchoRunes.add(id);if(id==='lure')for(const echo of this.echoes)echo.aggroTime=Math.max(echo.aggroTime??0,6);}
     const rune=ECHO_RUNES.find(r=>r.id===id)!;
@@ -1389,7 +1402,7 @@ export class GameEngine {
 
     // In playing state
     if (this.screen === 'playing') {
-      if (/^(Digit|Numpad)[1-4]$/.test(code)) { this.selectEcho(Number(code.slice(-1)) - 1); return; }
+      if (/^(Digit|Numpad)[1-6]$/.test(code)) { this.selectEcho(Number(code.slice(-1)) - 1); return; }
       if (key === 'c') { this.pauseEcho(); return; }
       if (code === 'Space') { this.useSkill(); return; }
       if (code === 'ShiftLeft' || code === 'ShiftRight') { this.dodge(); return; }
@@ -1777,7 +1790,7 @@ export class GameEngine {
     if (this.currentLevel.id <= 5 && (this.legTimeRemaining !== null || this.devUnlocked) && targetPlate &&
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
-      this.echoCharges=Math.min(4,this.echoCharges+1);
+      this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
       this.legTimeRemaining = this.devUnlocked ? null : puzzleBalance(this.currentLevel.id).legSeconds;
       this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false; this.timePickup = null;
       this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
@@ -1968,6 +1981,9 @@ export class GameEngine {
         weapon: this.weapon,
         coins: this.campaign.coins,
         timeItems: this.campaign.timeItems,
+        limitRings: this.campaign.limitRings,
+        echoLimit: this.echoLimit,
+        limitRingActive: this.limitRingActive,
         bestStars: { ...this.campaign.bestStars },
         lastRating: this.lastRating,
         skillCooldown: this.skillCooldown,

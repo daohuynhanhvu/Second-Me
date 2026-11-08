@@ -192,3 +192,4 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 /* Loading art, canvas actors and progress labels share the authored 1376x768 frame. */
 .lv-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,calc(100dvh * 1376 / 768));aspect-ratio:1376/768;container-type:inline-size}
 .lv-frame .lv-bg{object-fit:contain}
+.limit-ring-art{width:76px;height:76px;object-fit:contain;image-rendering:pixelated;flex:none}.limit-ring-icon{width:36px;height:36px;object-fit:contain;image-rendering:pixelated}.limit-ring-stock strong small{display:block;margin-top:4px;color:#a9baa5;font-size:10px;font-weight:400}.limit-ring-stock button{padding:8px;font-size:10px}
