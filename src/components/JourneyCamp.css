@@ -62,3 +62,45 @@
  .journey-stop{width:40px;height:40px}.stop-medallion{width:36px;height:36px;font-size:14px}
  .world-caption{display:none}
 }
+
+/* Trails follow the native artwork; the map itself always keeps its 3:2 ratio. */
+.journey-path{z-index:1;opacity:1}
+.journey-path path{stroke:#f0d59c;stroke-width:3;stroke-dasharray:3 12;stroke-linecap:round;filter:drop-shadow(0 1px 1px #142816)}
+.journey-path .trail-open{opacity:.8}.journey-path .trail-locked{opacity:.23}
+.journey-ambience{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;contain:paint}
+.journey-ambience i{position:absolute;display:block;pointer-events:none}
+.map-lantern{width:20px;height:20px;margin:-10px;background:radial-gradient(#ffcb6d66,transparent 70%);animation:map-lamp-flicker 3s ease-in-out infinite}
+.map-firefly{width:2px;height:2px;background:#e7f4a5;box-shadow:0 0 5px #c8e67c;animation:map-fly-drift 6s ease-in-out infinite;opacity:0}
+.map-firefly.fly-1{background:#a5eddf;box-shadow:0 0 4px #6ce6c8}.map-firefly.fly-2{width:1px;height:1px}
+.map-water{width:10px;height:1px;background:#b9ebee;animation:map-water-flow 4s linear infinite;opacity:0}
+.map-snow{width:2px;height:2px;background:#e2f5ff;animation:map-snow-fall 6s linear infinite;opacity:0}
+.map-ember{width:2px;height:3px;background:#ffce75;animation:map-ember-rise 3s ease-out infinite;opacity:0}
+.map-leaf{width:3px;height:2px;background:#d49c48;animation:map-leaf-fall 8s ease-in-out infinite;opacity:0}
+.map-portal-breath{width:26px;height:26px;margin:-13px;background:radial-gradient(#8fe8ff55,transparent 70%);animation:map-lamp-flicker 4s ease-in-out infinite}
+.map-mist{width:28%;height:8%;background:radial-gradient(ellipse,#accbb817,transparent 70%);animation:map-mist-drift 16s ease-in-out infinite alternate}
+.map-mist-one{left:28%;top:63%}.map-mist-two{left:57%;top:27%;animation-delay:-8s}
+@keyframes map-lamp-flicker{0%,100%{opacity:.35;transform:scale(.8)}35%{opacity:.7;transform:scale(1.1)}65%{opacity:.5;transform:scale(.95)}}
+@keyframes map-fly-drift{0%,100%{opacity:0;transform:translate(0,0)}25%{opacity:.75;transform:translate(6px,-5px)}60%{opacity:.35;transform:translate(-4px,-11px)}85%{opacity:.6;transform:translate(-8px,-4px)}}
+@keyframes map-water-flow{0%{opacity:0;transform:translate(0,0) rotate(-25deg)}30%{opacity:.45}80%{opacity:.22}100%{opacity:0;transform:translate(-13px,7px) rotate(-25deg)}}
+@keyframes map-snow-fall{0%{opacity:0;transform:translate(0,-5px)}20%{opacity:.65}80%{opacity:.35}100%{opacity:0;transform:translate(-7px,17px)}}
+@keyframes map-ember-rise{0%{opacity:0;transform:translate(0,0)}20%{opacity:.85}100%{opacity:0;transform:translate(4px,-25px) scale(.5)}}
+@keyframes map-leaf-fall{0%{opacity:0;transform:translate(0,0) rotate(0)}25%{opacity:.7}100%{opacity:0;transform:translate(12px,25px) rotate(160deg)}}
+@keyframes map-mist-drift{to{transform:translateX(15px);opacity:.5}}
+.map-still .journey-ambience i{animation:none!important}
+.map-still .journey-ambience :is(.map-firefly,.map-snow,.map-ember,.map-leaf,.map-water,.map-mist){display:none}
+@media(prefers-reduced-motion:reduce){.journey-ambience i{animation:none!important}.journey-ambience :is(.map-firefly,.map-snow,.map-ember,.map-leaf,.map-water,.map-mist){display:none}}
+
+/* Flow is painted only inside narrow stream masks; the bridge and banks stay still. */
+.map-river-svg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none}
+.river-flow{fill:none;stroke:#a1deeb;stroke-linecap:butt;stroke-dasharray:10 31 5 47;stroke-width:2;opacity:.55;animation:river-current 2.9s linear infinite}
+.river-flow-wide{stroke:#63bbd5;stroke-width:8;stroke-dasharray:18 42 9 59;opacity:.23;animation-duration:4.2s}
+.river-flow-fine{animation-delay:-1.2s}.river-flow-shadow{stroke:#174c69;opacity:.32;animation-delay:-2.1s}
+.river-cascade{fill:none;stroke:#c3eaf3;stroke-width:2;stroke-dasharray:9 12;opacity:.62;animation:river-fall .8s linear infinite}
+.river-ripple{fill:none;stroke:#c4ebee;stroke-width:1.5;opacity:0;animation:river-rings 2.5s ease-out infinite;transform-box:view-box}
+.river-spray rect{fill:#ccecf2;opacity:0;animation:river-splash 1.2s ease-out infinite}
+@keyframes river-current{to{stroke-dashoffset:-186}}
+@keyframes river-fall{to{stroke-dashoffset:-21}}
+@keyframes river-rings{0%{opacity:0;transform:scale(.4)}25%{opacity:.55}100%{opacity:0;transform:scale(1.9)}}
+@keyframes river-splash{0%{opacity:0;transform:translateY(0)}25%{opacity:.65}100%{opacity:0;transform:translateY(-9px)}}
+.map-still .map-river-svg{display:none}
+@media(prefers-reduced-motion:reduce){.map-river-svg{display:none}}

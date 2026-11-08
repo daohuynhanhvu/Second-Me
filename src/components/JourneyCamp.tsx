@@ -4,7 +4,16 @@ import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
 import { MATERIALS } from '../game/logic/campaign.ts';
 import './JourneyCamp.css';
+import { JourneyAmbience } from './JourneyAmbience.tsx';
 
+// Traced in the painting's native 1536x1024 coordinates, including each bend.
+const trailSegments = [
+ 'M215 737 C213 670 246 624 278 604 C310 580 365 580 382 548 C402 514 392 487 412 462 C428 436 439 425 434 410 L430 369',
+ 'M430 369 L434 420 C482 426 500 474 509 520 C517 569 523 586 575 599 C624 611 668 639 707 645',
+ 'M707 645 C744 620 749 584 757 552 C766 522 791 516 782 488 C776 465 760 454 765 424 C772 385 797 360 840 353 C877 350 908 339 937 328',
+ 'M937 328 C977 339 1006 352 1004 390 C999 429 1011 449 1050 464 C1101 483 1149 508 1198 522',
+ 'M1198 522 C1240 491 1271 448 1278 405 C1284 379 1327 362 1355 346 C1382 331 1377 303 1364 278 C1355 248 1351 210 1352 174',
+];
 const positions = [[14,72],[28,36],[46,63],[61,32],[78,51],[88,17]];
 export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number}) {
   const vi=hud.language==='vi';
@@ -27,8 +36,12 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
     </aside>
     <section className="journey-chart" aria-label={vi?'Bản đồ hành trình':'Journey map'}>
       <header className="chart-heading"><div><span><Compass size={13}/>{vi?'BẢN ĐỒ HÀNH TRÌNH':'THE WILDERNESS'}</span><h2>{vi?'Khu rừng của những ký ức':'A forest of forgotten memories'}</h2></div><span className="chart-chapter">{vi?'CHƯƠNG I':'CHAPTER I'}<b>THE EMBERFORGE</b></span></header>
-      <div className="journey-world">
-        <svg className="journey-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M14 72 C12 54 20 40 28 36 S37 70 46 63 S49 31 61 32 S66 56 78 51 S88 36 88 17"/></svg>
+      <div className={`journey-world${hud.reducedMotion?' map-still':''}`}>
+        <svg className="journey-path" viewBox="0 0 1536 1024" aria-hidden="true">
+          {trailSegments.map((d,i)=><path key={i} d={d} className={unlocked(i+1)?'trail-open':'trail-locked'}/>)}
+        </svg>
+        <JourneyAmbience/>
+
         <div className="chart-north" aria-hidden="true">N<span>↑</span></div>
         {LEVELS.map((item,i)=>{
           const ready=unlocked(i),done=i<5?hud.completed.includes(i+1):complete,current=i===next&&!complete;
