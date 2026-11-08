@@ -71,9 +71,12 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
+const latestNews = { title: 'Diện mạo mới cho Kael', description: 'Kỵ sĩ Kael có diện mạo pixel chibi mới với tóc vàng, giáp bạc và áo choàng đỏ. Các hướng di chuyển và động tác chém cũng được làm mới.' };
+
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
-    <article className="news-feature"><span>MỚI · LÒ RÈN 1.5</span><h3>Thử thách từng chặng</h3><p>Năm màn đầu có 10 giây mỗi chặng. Mỗi 3 giây, mảnh thời gian rơi gần bạn; nhặt được cộng 4 giây. Bẫy dập và đá rơi giữ chân 0,25 giây; dây leo làm chậm cả một dải.</p></article>
+    <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article>
+    <article><span>LÒ RÈN 1.5</span><div><h3>Thử thách từng chặng</h3><p>Năm màn đầu có 10 giây mỗi chặng. Mỗi 3 giây, mảnh thời gian rơi gần bạn; nhặt được cộng 4 giây. Bẫy dập và đá rơi giữ chân 0,25 giây; dây leo làm chậm cả một dải.</p></div></article>
     <article><time>06.11.2026</time><div><h3>Sảnh hành trình đã mở</h3><p>Chọn màn, xem tiến độ, điều chỉnh cài đặt và chơi lại bất kỳ màn nào sau khi hoàn thành chiến dịch.</p></div></article>
   </div></div>);
 }
@@ -103,7 +106,7 @@ export function Lobby({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       const cleared = index < 5 ? hud.completed.includes(index+1) : complete;
       return <button key={level.id} disabled={!unlocked} className={`map-node node-${index+1} ${cleared?'cleared':''}`} onClick={()=>engine?.selectLevel(index)}><span className="node-number">0{level.id}</span><div><small>{index===5?'BOSS':`CHẶNG ${index+1}`}</small><strong>{level.subtitle}</strong><em>{cleared?'ĐÃ HOÀN THÀNH':unlocked?'SẴN SÀNG':'CHƯA MỞ'}</em><span className="level-stars">{'★'.repeat(hud.bestStars[level.id]??0)}{'☆'.repeat(3-(hud.bestStars[level.id]??0))}</span></div>{unlocked?<ArrowRight size={17}/>:<Lock size={16}/>}</button>;
     })}</div></section>
-    <aside className="lobby-side"><button className="lobby-card shop-card" onClick={()=>engine?.openShop()}><ShoppingBasket className="shop-icon" size={24}/><span><small>CỬA HÀNG</small><b>{hud.coins} {hud.language==='vi'?'xu':'coins'}</b><em>{hud.language==='vi'?'Mua vật phẩm thời gian':'Buy time items'}</em></span><ArrowRight size={16}/></button><button className="lobby-card news-card" onClick={()=>setPanel('news')}><Bell size={21}/><span><small>THÔNG BÁO MỚI</small><b>Thử thách 10 giây</b><em>Xem thay đổi trò chơi</em></span><ArrowRight size={16}/></button><div className="relic-card"><Backpack size={20}/><span><small>DI VẬT ĐÃ THU HỒI</small><b>{hud.completed.length} / 5</b></span><div>{MATERIALS.map((m,i)=><i key={m.id} className={hud.completed.includes(i+1)?'found':''}>{m.icon}</i>)}</div></div></aside></div>
+    <aside className="lobby-side"><button className="lobby-card shop-card" onClick={()=>engine?.openShop()}><ShoppingBasket className="shop-icon" size={24}/><span><small>CỬA HÀNG</small><b>{hud.coins} {hud.language==='vi'?'xu':'coins'}</b><em>{hud.language==='vi'?'Mua vật phẩm thời gian':'Buy time items'}</em></span><ArrowRight size={16}/></button><button className="lobby-card news-card" onClick={()=>setPanel('news')}><Bell size={21}/><span><small>THÔNG BÁO MỚI</small><b>{latestNews.title}</b><em>Xem thay đổi trò chơi</em></span><ArrowRight size={16}/></button><div className="relic-card"><Backpack size={20}/><span><small>DI VẬT ĐÃ THU HỒI</small><b>{hud.completed.length} / 5</b></span><div>{MATERIALS.map((m,i)=><i key={m.id} className={hud.completed.includes(i+1)?'found':''}>{m.icon}</i>)}</div></div></aside></div>
     {bag&&<div className="modal-backdrop" onClick={()=>setBag(false)}><div className="panel inventory-modal" onClick={e=>e.stopPropagation()}><Inventory hud={hud} close={()=>setBag(false)}/></div></div>}
     {panel==='news'&&<Notifications close={()=>setPanel('none')}/>} {panel==='settings'&&<SettingsPanel engine={engine} hud={hud} close={()=>setPanel('none')}/>}</div>);
 }
