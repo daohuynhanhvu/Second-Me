@@ -23,9 +23,9 @@ export function EchoRuneStock({hud,engine,compact=false}:{hud:HUDState;engine?:G
 
 export function RuneLoadoutEditor({hud,engine,close}:{hud:HUDState;engine:GameEngine|null;close:()=>void}){
  const vi=hud.language==='vi',[slot,setSlot]=useState(0),selected=hud.runeLoadout??[],owned=ECHO_RUNES.filter(r=>(hud.echoRunes?.[r.id]??0)>0);
- useEffect(()=>{engine?.setRuneEditing(true);const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();close();}};window.addEventListener('keydown',key);return()=>{engine?.setRuneEditing(false);window.removeEventListener('keydown',key);};},[engine,close]);
+ useEffect(()=>{engine?.setRuneEditing(true);const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}};window.addEventListener('keydown',key,true);return()=>{engine?.setRuneEditing(false);window.removeEventListener('keydown',key,true);};},[engine,close]);
  const focused=ECHO_RUNES.find(r=>r.id===selected[slot]);
- return createPortal(<div className="modal-backdrop rune-loadout-backdrop" onClick={close}><section className="panel rune-loadout-editor" role="dialog" aria-modal="true" aria-label={vi?'Đổi rune':'Change runes'} onClick={e=>e.stopPropagation()}>
+ return createPortal(<div className="modal-backdrop rune-loadout-backdrop" onClick={close}><section className="panel rune-loadout-editor" data-lobby-dialog role="dialog" aria-modal="true" aria-label={vi?'Đổi rune':'Change runes'} onClick={e=>e.stopPropagation()}>
   <div className="loadout-scenery" aria-hidden="true"><i/><i/><i/><i/></div>
   <button className="loadout-close" onClick={close} aria-label={vi?'Đóng':'Close'}>×</button>
   <div className="loadout-equipped">

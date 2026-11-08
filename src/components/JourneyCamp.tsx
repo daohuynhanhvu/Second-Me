@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { ArrowRight, Check, Compass, Flame, Lock, Play, RotateCcw, Snowflake, Sword, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Check, Flame, Lock, Play, RotateCcw, Snowflake, Users, Backpack, X, Bell } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
 import { RuneLoadoutEditor, RuneStone } from './EchoRunes.tsx';
-import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
 import './JourneyCamp.css';
+import './JourneyCampV2.css';
 import { JourneyAmbience } from './JourneyAmbience.tsx';
 
 // Traced in the painting's native 1536x1024 coordinates, including each bend.
@@ -16,28 +16,34 @@ const trailSegments = [
  'M1198 522 C1240 491 1271 448 1278 405 C1284 379 1327 362 1355 346 C1382 331 1377 303 1364 278 C1355 248 1351 210 1352 174',
 ];
 const positions = [[14,72],[28,36],[46,63],[61,32],[78,51],[88,17]];
-export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number}) {
+export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number;traveler?:React.ReactNode;onNews?:()=>void}) {
   const vi=hud.language==='vi';
   const [runeEditor,setRuneEditor]=useState(false);
+  const [preparing,setPreparing]=useState(false);
+  useEffect(()=>{if(!preparing)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();setPreparing(false);}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);},[preparing]);
   const [inspect,setInspect]=useState<number|null>(null);
   const [touchInspect,setTouchInspect]=useState<number|null>(null);
-  const active=inspect??next,level=LEVELS[active];
+
   const count=hud.completed.length+(complete?1:0);
   const unlocked=(i:number)=>hud.devUnlocked||complete||(i<=hud.completed.length&&(i<5||hud.forged));
   return <div className="journey-layout">{runeEditor&&<RuneLoadoutEditor hud={hud} engine={engine} close={()=>setRuneEditor(false)}/>}
+    {preparing&&<div className="modal-backdrop camp-prepare-backdrop" onClick={()=>setPreparing(false)}><section className="panel camp-preparation" data-lobby-dialog role="dialog" aria-modal="true" aria-label={vi?'Chuẩn bị hành trình':'Prepare for the trail'} onClick={e=>e.stopPropagation()}>
+      <button className="camp-prepare-close" aria-label={vi?'Đóng':'Close'} onClick={()=>setPreparing(false)}><X size={19}/></button><span className="eyebrow gold">{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</span><h2>{vi?'Chuẩn bị cho lối mòn':'Ready for the trail'}</h2>
+      <button className="camp-prepare-option" onClick={()=>{setPreparing(false);engine?.openCharacters();}}><span className="prepare-avatar">{traveler??<Users size={30}/>}</span><div><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><p>{vi?'Chọn nhân vật và xem kỹ năng':'Choose a hero and explore their skills'}</p></div><ArrowRight size={18}/></button>
+      <button className="camp-prepare-option" onClick={()=>{setPreparing(false);setRuneEditor(true);}}><span className="prepare-rune"><RuneStone id={hud.runeLoadout?.[0]??'call'}/></span><div><small>{vi?'5 Ô RUNE':'FIVE RUNE SLOTS'}</small><strong>{vi?'Ấn nâng Echo':'Echo runes'}</strong><p>{hud.runeLoadout?.length??0} / 5 {vi?'ô đã chọn · Thay đổi bộ rune':'slots filled · Change your rune set'}</p></div><ArrowRight size={18}/></button>
+      <div className="camp-prepare-tools"><button onClick={()=>{setPreparing(false);onNews?.();}}><Bell size={14}/>{vi?'Tin mới':'News'}</button><button onClick={()=>{setPreparing(false);engine?.goToMainMenu();}}>{vi?'Menu chính':'Main menu'}</button><button onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
+    </section></div>}
     <aside className="journey-camp">
-      <div className="camp-overline"><Flame size={14}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}<span>{vi?'ĐÃ LƯU':'SAVED'}</span></div>
-      <h1>{complete?(vi?'Khu rừng đã thức giấc.':'The forest awakens.'):(vi?'Lần theo tiếng vọng.':'Follow the echoes.')}</h1>
-      <p className="camp-intro">{vi?'Giữa những tán cây, một ký ức vẫn đang chờ bạn tìm lại.':'Beyond the canopy, a forgotten memory is waiting to be found.'}</p>
-      <div className="camp-progress"><span>{vi?'HÀNH TRÌNH CỦA BẠN':'YOUR JOURNEY'}<b>{String(count).padStart(2,'0')} <small>/ 06</small></b></span><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}><i style={{width:`${count/6*100}%`}}/></div></div>
-      <div className="camp-relics"><span>{vi?'5 Ô RUNE ĐÃ CHỌN':'5 CHOSEN RUNE SLOTS'}<button className="rune-edit-link" onClick={()=>setRuneEditor(true)}>{vi?'ĐỔI RUNE':'CHANGE'}</button></span><div>{Array.from({length:5},(_,i)=>{const r=ECHO_RUNES.find(r=>r.id===hud.runeLoadout?.[i]);return <button key={i} className={`camp-rune-slot ${r?'found':''}`} title={r?(vi?r.vi:r.en):(vi?'Chọn rune':'Choose rune')} onClick={()=>setRuneEditor(true)}>{r?<span className="camp-stone-art" style={{color:r.color}}><RuneStone id={r.id}/></span>:<b>+</b>}{r&&<small>{hud.echoRunes?.[r.id]??0}</small>}</button>;})}</div></div>
-      <button className="camp-hero" onClick={()=>engine?.openCharacters()}><span className="camp-hero-mark"><Users size={20}/></span><span><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}<em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):(vi?'Pháp sư':'Mage')}</em></b></span><ArrowRight size={16}/></button>
-      <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={17} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}<small>{complete?'ECHO GROVE':LEVELS[next].subtitle}</small></span><ArrowRight size={18}/></button>
-      <div className="camp-tools"><button className="camp-new" onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
-      <p className="camp-footnote"><span/>{vi?'Tiến độ được lưu trên thiết bị này.':'Your journey is saved on this device.'}</p>
+      <div className="camp-overline"><Flame size={15}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</div>
+      <h1>{complete?(vi?'Khu rừng thức giấc.':'The forest awakens.'):(vi?'Khu rừng vẫn nhớ.':'The forest remembers.')}</h1>
+      <p className="camp-intro">{vi?'Một ký ức mới đang chờ bạn.':'Your next memory awaits.'}</p>
+      <div className="camp-next-trail"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><span>{LEVELS[complete?0:next].subtitle}</span></div>
+      <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={21} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}</span><ArrowRight size={18}/></button>
+      <div className="camp-ready-row"><button className="camp-traveler" onClick={()=>engine?.openCharacters()} aria-label={vi?'Đổi nhân vật':'Change character'}><span className="camp-traveler-art">{traveler??<Users size={30}/>}</span><span><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</b><em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):hud.characterClass==='mechanical'?(vi?'Kỹ sư':'Engineer'):(vi?'Pháp sư':'Mage')}</em></span></button><button className="camp-prepare-button" onClick={()=>setPreparing(true)}><Backpack size={17}/>{vi?'CHUẨN BỊ':'PREPARE'}</button></div>
+      <div className="camp-campsite" aria-hidden="true"><i/><i/><i/></div>
+      <div className="camp-bottom"><div className="camp-journey-count"><span>{count} / 6 {vi?'lối mòn đã khám phá':'trails explored'}</span><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}>{Array.from({length:6},(_,i)=><i key={i} className={i<count?'explored':i===next?'next':''}/>)}</div></div><p className="camp-footnote"><span/>{vi?'Tiến độ lưu trên thiết bị này.':'Saved on this device.'}</p></div>
     </aside>
     <section className="journey-chart" aria-label={vi?'Bản đồ hành trình':'Journey map'}>
-      <header className="chart-heading"><div><span><Compass size={13}/>{vi?'BẢN ĐỒ HÀNH TRÌNH':'THE WILDERNESS'}</span><h2>{vi?'Khu rừng của những ký ức':'A forest of forgotten memories'}</h2></div><span className="chart-chapter">{vi?'CHƯƠNG I':'CHAPTER I'}<b>THE EMBERFORGE</b></span></header>
       <div className={`journey-world${hud.reducedMotion?' map-still':''}`}>
         <svg className="journey-path" viewBox="0 0 1536 1024" aria-hidden="true">
           {trailSegments.map((d,i)=><path key={i} d={d} className={unlocked(i+1)?'trail-open':'trail-locked'}/>)}
@@ -52,12 +58,12 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
               if(ready)engine?.selectLevel(i);
             }} aria-label={`${String(i+1).padStart(2,'0')} · ${item.subtitle} · ${done?(vi?'Đã hoàn thành':'Cleared'):ready?(vi?'Sẵn sàng':'Ready'):(vi?'Chưa mở':'Locked')}`}>
             <span className="stop-medallion">{!ready?<Lock size={18}/>:i===5?<Snowflake size={23}/>:done?<Check size={21}/>:<span>{String(i+1).padStart(2,'0')}</span>}</span>
-            <span className="stop-caption" role="tooltip" hidden={inspect!==i}><small>{i===5?(vi?'THỦ VỆ BĂNG':'FROST GUARDIAN'):`0${i+1}`}</small><strong>{item.subtitle}</strong>{done?<em>{'★'.repeat(hud.bestStars[item.id]??0)}{'☆'.repeat(3-(hud.bestStars[item.id]??0))}</em>:<em>{current&&ready?(vi?'ĐIỂM ĐẾN TIẾP THEO':'YOUR NEXT DESTINATION'):!ready?(vi?'CHƯA MỞ':'LOCKED'):(vi?'SẴN SÀNG':'READY')}</em>}</span>
+            <span className="stop-caption" data-idle={inspect===null} role="tooltip" hidden={inspect!==i&&!(inspect===null&&current&&ready)}><small>{i===5?(vi?'THỦ VỆ BĂNG':'FROST GUARDIAN'):`0${i+1}`}</small><strong>{item.subtitle}</strong>{done?<em>{'★'.repeat(hud.bestStars[item.id]??0)}{'☆'.repeat(3-(hud.bestStars[item.id]??0))}</em>:<em>{current&&ready?(vi?'Bắt đầu hành trình':'Begin your journey'):!ready?(vi?'CHƯA MỞ':'LOCKED'):(vi?'SẴN SÀNG':'READY')}</em>}</span>
           </button>;
         })}
         <span className="world-caption">{vi?'Mỗi lối mòn lưu giữ một tiếng vọng.':'Every trail holds an echo.'}</span>
       </div>
-      <footer className="chart-detail"><span className={`detail-symbol ${inspect===5?'ice':''}`}>{inspect===5?<Snowflake size={23}/>:<Compass size={23}/>}</span><div>{inspect===null?<><small>{vi?'KHÁM PHÁ KHU RỪNG':'EXPLORE THE FOREST'}</small><strong>{vi?'Chọn lối mòn của bạn':'Choose your next trail'}</strong><p>{vi?'Rê chuột lên dấu mốc để xem thông tin. Chạm để xem trên điện thoại.':'Hover over a waypoint to reveal its story. On mobile, tap to preview.'}</p></>:<><small>{vi?'LỐI MÒN':'TRAIL'} 0{active+1}</small><strong>{level.subtitle}</strong><p>{active===5&&!hud.forged?(vi?'Hoàn thành 5 màn và chuẩn bị vũ khí để mở đấu trường.':'Complete five trails and prepare your weapon to enter.'):unlocked(active)?(vi?'Chọn dấu mốc để vào màn. Trên điện thoại, chạm lần nữa để vào.':'Select to enter. On mobile, tap again to enter.'):(vi?'Hoàn thành lối mòn trước để mở khóa.':'Complete the previous trail to unlock.')}</p></>}</div><span className="chart-legend"><i/>{vi?'ĐÃ KHÁM PHÁ':'EXPLORED'}<i/>{vi?'CHƯA MỞ':'UNDISCOVERED'}</span></footer>
+
     </section>
   </div>;
 }
