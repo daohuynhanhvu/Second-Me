@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Echoes fight on their own', 'Echo tự chiến đấu'],
+  ['Echoes draw enemies, fight nearby and withstand three hits before being recalled.', 'Echo thu hút kẻ địch, tự chiến đấu trong phạm vi gần và chịu được 3 đòn trước khi bị thu hồi.'],
   ['Guardian frost burst', 'Hiệu ứng nổ băng của boss'],
   ['The Frost Guardian’s spinning ring bursts into blue ice fragments when the attack lands.', 'Vòng băng xoay rồi nổ thành những mảnh xanh khi Thủ Vệ Băng tung chiêu.'],
   ['Shop in the top menu', 'Cửa hàng trên thanh menu'],

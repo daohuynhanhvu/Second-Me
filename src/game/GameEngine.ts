@@ -48,6 +48,10 @@ export interface ComboFx { kind: 'arc' | 'spin' | 'impact' | 'nova' | 'charge'; 
 export interface DamageText { x: number; y: number; text: string; life: number; max: number; heavy: boolean; blocked?: boolean }
 /** Hit circles of the combat targets (game px), for sword arcs and spells. */
 const PILLAR_R = 26, BOSS_R = 44, ENEMY_R = 26;
+// The game has no physical metre scale; 40 world units approximate one metre.
+const ECHO_COMBAT_RADIUS = 3 * 40;
+const ECHO_COMBAT_SPEED = 110;
+const ECHO_MAX_HITS = 3;
 type CombatTarget = BossState | BossState['pillars'][number] | Enemy;
 /** Kael's swings: reach of the arc's centre in front of him, its radius, how many it can hit. */
 const KAEL_SWINGS = [
@@ -73,6 +77,7 @@ export interface HUDState {
   echoCount: number; // 0 or 1
   echoCharges: number;
   echoStability: number;
+  echoHitsRemaining?: number;
   echoElapsedMs: number;
   echoDurationMs: number;
   echoEvents: EchoEvent[];
@@ -171,6 +176,11 @@ export class GameEngine {
     combatLife?: number;
     aggroTime?: number;
     attackTimer?: number;
+    hitsTaken?: number;
+    attackFlash?: number;
+    attackTarget?: { x: number; y: number };
+    combatAnchor?: { x: number; y: number };
+    returnBlockedFor?: number;
     characterClass?: CharacterClass;
   } | null = null;
   public echoes: NonNullable<GameEngine['echoShape']>[] = [];
@@ -1148,6 +1158,7 @@ export class GameEngine {
       stability: 100,
       aggroTime: this.currentLevel.id>=2 ? (this.activeEchoRunes.has('lure')?6:3) : undefined,
       attackTimer: 0,
+      hitsTaken: 0,
       characterClass: this.characterClass,
     };
 
@@ -1198,6 +1209,65 @@ export class GameEngine {
     this.notifyHUD();return true;
   }
 
+  /** Each enemy attack counts as one hit, independently of the stability/swap meter. */
+  private hitEcho(echo: NonNullable<GameEngine['echoShape']>, stabilityLoss: number) {
+    if (!this.echoes.includes(echo)) return;
+    echo.hitsTaken = (echo.hitsTaken ?? 0) + 1;
+    echo.stability = Math.max(0, (echo.stability ?? 100) - stabilityLoss * (this.activeEchoRunes.has('guard') ? .65 : 1));
+    if (echo.hitsTaken >= ECHO_MAX_HITS) {
+      const selected = this.echo;
+      this.echoes = this.echoes.filter(e => e !== echo);
+      this.selectedEcho = Math.max(0, selected === echo ? Math.min(this.selectedEcho, this.echoes.length - 1) : this.echoes.indexOf(selected!));
+      this.echoGrace = 2;
+    }
+  }
+
+  /** Interrupt the recording while enemies are inside a fixed, invisible 3m combat leash. */
+  private updateEchoCombat(echo: NonNullable<GameEngine['echoShape']>, dt: number): boolean {
+    echo.attackFlash = Math.max(0, (echo.attackFlash ?? 0) - dt);
+    echo.attackTimer = Math.max(0, (echo.attackTimer ?? 0) - dt);
+    const anchor = echo.combatAnchor ?? {x: echo.x, y: echo.y};
+    const walls = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
+    const targets: (Enemy | BossState)[] = this.enemies.filter(e => e.hp > 0);
+    if (this.boss && this.boss.hp > 0 && !this.bossDeathPending) targets.push(this.boss);
+    const target = targets.filter(t => Math.hypot(t.x-anchor.x, t.y-anchor.y) <= ECHO_COMBAT_RADIUS && !walls.some(w => segmentWall(echo, t, w, 0) !== null))
+      .sort((a,b) => Math.hypot(a.x-echo.x, a.y-echo.y) - Math.hypot(b.x-echo.x, b.y-echo.y))[0];
+    if (!target && !echo.combatAnchor) return false;
+    if (target && !echo.combatAnchor) echo.combatAnchor = anchor;
+    const destination = target ?? anchor;
+    const dx = destination.x-echo.x, dy = destination.y-echo.y, distance = Math.hypot(dx,dy);
+    // Aeris can cast from range, which also helps her defend a rune without abandoning it.
+    const reach = target ? (echo.characterClass === 'mage' ? 100 : target === this.boss ? 70 : 42) : 2;
+    if (!target && distance <= reach) {
+      echo.x = anchor.x; echo.y = anchor.y; echo.combatAnchor = undefined; echo.returnBlockedFor = 0;
+      echo.isMoving = false;
+      return false;
+    }
+    if (distance > reach) {
+      const amount = Math.min(distance-reach, ECHO_COMBAT_SPEED * (this.activeEchoRunes.has('lure') ? 1.25 : 1) * dt);
+      const x = echo.x + dx / distance * amount, y = echo.y + dy / distance * amount;
+      const resolved = resolveMovement(echo.x, echo.y, x, y, 24, 24, walls);
+      // Reject corner-assist nudges outside the original 3m circle.
+      const inBounds = Math.hypot(resolved.x-anchor.x, resolved.y-anchor.y) <= ECHO_COMBAT_RADIUS + .001;
+      const moved = inBounds && Math.hypot(resolved.x-echo.x, resolved.y-echo.y) > .01;
+      if (moved) { echo.x=resolved.x; echo.y=resolved.y; echo.direction=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down'); }
+      echo.isMoving = moved;
+      echo.returnBlockedFor = !target && !moved ? (echo.returnBlockedFor ?? 0) + dt : 0;
+      // A closing door can make the old anchor unreachable. Resume instead of freezing forever.
+      if ((echo.returnBlockedFor ?? 0) >= 1) { echo.combatAnchor=undefined; echo.returnBlockedFor=0; }
+    } else {
+      echo.isMoving = false;
+      if (target && echo.attackTimer <= 0) {
+        echo.direction = Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
+        echo.attackFlash = .22; echo.attackTarget = {x: target.x, y: target.y};
+        this.strike(target, 15 * (this.activeEchoRunes.has('power') ? 1.3 : 1));
+        this.renderer.emitMagic('sparkle', target.x, target.y, 40);
+        echo.attackTimer = .65;
+      }
+    }
+    return true;
+  }
+
   private replayEchoEvent(event: EchoEvent) {
     if (!this.echo || (!this.boss&&!this.enemies.some(e=>e.hp>0))) return;
     const originX=this.echo.x, originY=this.echo.y;
@@ -1227,6 +1297,7 @@ export class GameEngine {
     this.player.x=this.echo.x;this.player.y=this.echo.y;
     this.echo.x=x;this.echo.y=y;
     this.echo.samples=this.echo.samples.map(sample=>({...sample,x:sample.x-dx,y:sample.y-dy}));
+    this.echo.combatAnchor=undefined; this.echo.returnBlockedFor=0;
     this.echo.stability=(this.echo.stability??100)-30;
     this.swapCooldown=7;this.invulnerability=Math.max(.2,this.invulnerability);
     this.notifyHUD();
@@ -1541,7 +1612,7 @@ export class GameEngine {
     const enemyEchoes=[...this.echoes];
     updateEnemies(this.enemies,this.currentLevel,this.player,enemyEchoes,dt,target=>{
       if(target.echoIndex===null)this.takeDamage();
-      else {const echo=enemyEchoes[target.echoIndex];if(!echo)return;echo.stability=(echo.stability??100)-25*(this.activeEchoRunes.has('guard')?.65:1);if(echo.stability<=0)this.echoes=this.echoes.filter(e=>e!==echo);}
+      else {const echo=enemyEchoes[target.echoIndex];if(echo)this.hitEcho(echo,25);}
     });
     if(this.screen!=='playing')return;
     this.attackFlash = Math.max(0, this.attackFlash - dt);
@@ -1639,7 +1710,8 @@ export class GameEngine {
     const selected=this.echo;
     for(const active of [...this.echoes]) {
     this.selectedEcho=this.echoes.indexOf(active);
-    if (this.echo && this.echo.status === 'replaying') {
+    const fighting = this.echo ? this.updateEchoCombat(this.echo, dt) : false;
+    if (this.echo && !fighting && this.echo.status === 'replaying') {
       this.echo.elapsedMs += dt * 1000;
       while(this.echo && (this.echo.events?.[this.echo.nextEvent??0]?.time??Infinity)<=this.echo.elapsedMs) {
         const event=this.echo.events![this.echo.nextEvent??0];
@@ -1689,8 +1761,7 @@ export class GameEngine {
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
     }
     if(this.echo?.status==='paused' || this.echo?.status==='finished') {
-      this.echo.stability=(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0)*(this.activeEchoRunes.has('guard')?.65:1);
-      if(this.echo.stability<=0){this.echo=null;this.echoGrace=2;}
+      this.echo.stability=Math.max(0,(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0)*(this.activeEchoRunes.has('guard')?.65:1));
     }
 
     }
@@ -1768,15 +1839,13 @@ export class GameEngine {
     if (this.screen !== 'playing') return;
     if (this.boss) {
       const previousPhase=this.boss.phase;
-      const echoTarget=this.echoes.filter(e=>(e.aggroTime??0)>0).sort((a,b)=>(b.aggroTime??0)-(a.aggroTime??0))[0]??null;
-      const modeBefore=this.boss.mode;
-      const burstBefore = this.boss.burstRemaining;
-      const bossHit = updateBoss(this.boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player);
-      if(echoTarget&&modeBefore==='warning'&&this.boss.mode==='strike'&&Math.hypot(echoTarget.x-this.boss.targetX,echoTarget.y-this.boss.targetY)<82) {
-        echoTarget.stability=(echoTarget.stability??100)-30*(this.activeEchoRunes.has('guard')?.65:1);
-        if(echoTarget.stability<=0){this.echoes=this.echoes.filter(e=>e!==echoTarget);this.echoGrace=2;}
-        this.showBanner(this.language==='vi'?'Echo đã đỡ cú đập băng.':'Echo absorbed the ice slam.');
-      }
+      const boss = this.boss;
+      const bossEchoes = [...this.echoes];
+      const echoTarget = bossEchoes.slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0]??null;
+      const burstBefore = boss.burstRemaining;
+      const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, index => {
+        const echo=bossEchoes[index]; if(echo)this.hitEcho(echo,30);
+      });
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
       this.lastBossPhase = this.boss.phase;
       // Slam wind-up: the shout is timed to end exactly as the blow lands.
@@ -1862,6 +1931,7 @@ export class GameEngine {
         echoCount: this.echoes.length,
         echoCharges: this.echoCharges + (this.echoFreeSummon?1:0),
         echoStability: this.echo?.stability??0,
+        echoHitsRemaining: this.echo ? Math.max(0, ECHO_MAX_HITS - (this.echo.hitsTaken ?? 0)) : 0,
         echoElapsedMs: this.echo?.elapsedMs??0,
         echoDurationMs: this.echo?.samples.at(-1)?.time??this.recorder.getDuration(),
         echoEvents: this.echo?.events??this.recorder.getEvents(),

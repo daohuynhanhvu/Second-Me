@@ -121,7 +121,7 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean, defender: {x:number;y:number} = player): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number) => void): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
@@ -151,7 +151,11 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   let burstHit=false;
   for(const area of boss.burstAreas) {
     area.timer-=dt;
-    if(area.timer<=0 && !area.struck) { area.struck=true; if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12)burstHit=true; }
+    if(area.timer<=0 && !area.struck) {
+      area.struck=true;
+      if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12)burstHit=true;
+      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-area.x,echo.y-area.y)<area.radius+12)onEchoHit?.(index);});
+    }
   }
   boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
   boss.timer -= dt;
@@ -170,6 +174,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
     boss.mode = 'strike'; boss.timer = 0.3;
     hit = Math.hypot(defender.x - boss.targetX, defender.y - boss.targetY) < 82;
+    echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index);});
     if (boss.phase >= 2) {
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
@@ -184,7 +189,9 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   }
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
-    if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; }
+    const echoIndex = echoDefenders.findIndex(echo => Math.hypot(shot.x - echo.x, shot.y - echo.y) < 19);
+    if (echoIndex >= 0) { shot.life = 0; onEchoHit?.(echoIndex); }
+    else if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; }
   }
   boss.projectiles = boss.projectiles.filter(s => s.life > 0 && s.x > 40 && s.x < 1240 && s.y > 40 && s.y < 680);
   return hit || burstHit;

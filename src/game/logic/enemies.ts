@@ -1,3 +1,4 @@
+import { enemyWaypoint } from './enemyNavigation.ts';
 import { getActiveObstacles, resolveMovement } from './collision.ts';
 import { segmentWall } from './combatGeometry.ts';
 import type { LevelData } from './types.ts';
@@ -34,11 +35,14 @@ export function updateEnemies(enemies:Enemy[],level:LevelData,player:{x:number;y
    }continue;
   }
   if(e.mode==='recover'){if(e.timer<=0)e.mode='idle';continue;}
-  const decoy=echoes.map((echo,i)=>({...echo,echoIndex:i})).filter(a=>(a.aggroTime??0)>0&&Math.hypot(a.x-e.x,a.y-e.y)<stat.notice+50&&sight(e,a)).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
+  // Any active Echo draws every living enemy; choose the nearest one deterministically.
+  const decoy=echoes.map((echo,i)=>({...echo,echoIndex:i})).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
   const target:EnemyTarget=decoy??{...player,echoIndex:null};const distance=Math.hypot(target.x-e.x,target.y-e.y);
-  const engaged=distance<stat.notice&&Math.hypot(e.x-e.homeX,e.y-e.homeY)<235&&sight(e,target);
-  if(engaged&&distance<stat.reach&&e.timer<=0){e.mode='warning';e.timer=e.kind==='minotaur'?.9:.7;e.targetX=target.x;e.targetY=target.y;e.targetId=target.echoIndex;e.targetEcho=target.echoIndex===null?undefined:echoes[target.echoIndex];continue;}
-  const destination=engaged?target:{x:e.homeX,y:e.homeY},dx=destination.x-e.x,dy=destination.y-e.y,length=Math.hypot(dx,dy);
+  const engaged=!!decoy||(distance<stat.notice&&Math.hypot(e.x-e.homeX,e.y-e.homeY)<235&&sight(e,target));
+  // Even ranged enemies close in on an Echo, allowing it to defend itself inside 3m.
+  const attackReach=decoy?Math.min(stat.reach,90):stat.reach;
+  if(engaged&&distance<attackReach&&e.timer<=0&&sight(e,target)){e.mode='warning';e.timer=e.kind==='minotaur'?.9:.7;e.targetX=target.x;e.targetY=target.y;e.targetId=target.echoIndex;e.targetEcho=target.echoIndex===null?undefined:echoes[target.echoIndex];continue;}
+  const destination=engaged?(decoy?enemyWaypoint(e,target,obstacles,dt):target):{x:e.homeX,y:e.homeY},dx=destination.x-e.x,dy=destination.y-e.y,length=Math.hypot(dx,dy);
   e.mode=length>5?'chase':'idle';e.facingLeft=dx<0;
   if(length>5){const amount=Math.min(length,stat.speed*dt);const pos=resolveMovement(e.x,e.y,e.x+dx/length*amount,e.y+dy/length*amount,30,30,obstacles);e.x=pos.x;e.y=pos.y;}
  }

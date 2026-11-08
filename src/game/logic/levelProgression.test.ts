@@ -69,8 +69,12 @@ for(let index=0;index<5;index++)test(`trail ${index+1}: real movement, timed tra
    assert.ok(obsolete>=0,'the final relay needs one reusable Echo');game.selectedEcho=obsolete;game.dismissEcho();
   }
   game.toggleRecording();move(plate.x+25,plate.y+25);game.toggleRecording();
-  const recording=game.recorder.getDuration();game.spawnEcho();
+  const recording=game.recorder.getDuration();game.spawnEcho();const summoned=game.echo!;
   for(let time=0;time<recording/1000+.35;time+=.02)tick(.02);
+  // Echo may pause its recording to fight; wait until it actually reaches the rune
+  // instead of mistaking the player standing on it for an Echo holding it.
+  for(let time=0;time<10 && game.echoes.includes(summoned) && !rectIntersects(getCharacterBoundingBox(summoned.x,summoned.y,24,24),plate);time+=.02)tick(.02);
+  assert.ok(game.echoes.includes(summoned) && rectIntersects(getCharacterBoundingBox(summoned.x,summoned.y,24,24),plate), 'Echo reaches its rune after combat');
   assert.ok(game.currentLevel.plates.find(p=>p.id===plate.id)!.isPressed);
  }
  assert.equal(game.echoes.length,game.currentLevel.exitRequiredPlates!.length);

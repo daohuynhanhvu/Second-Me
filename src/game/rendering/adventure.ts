@@ -21,11 +21,16 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     const layer=echoCanvas.getContext('2d')!;
     for(const echo of game.echoes){
       layer.clearRect(0,0,96,112);
-      if(echo.characterClass==='swordsman')drawSoldierSprite(layer,48,70,echo.direction,echo.isMoving,true,time);
+      if(echo.characterClass==='swordsman')drawSoldierSprite(layer,48,70,echo.direction,echo.isMoving,true,time,(echo.attackFlash??0)>0,1-(echo.attackFlash??0)/.22);
       else if(echo.characterClass==='mechanical')drawMechanicalSprite(layer,48,70,echo.direction,echo.isMoving,true,time);
       else game.renderer.drawEcho(layer,48,70,echo.direction,echo.isMoving,time);
       const slot=echo.colorSlot??0;
       ctx.save();ctx.filter=`hue-rotate(${[0,75,190,140][slot]}deg)`;ctx.drawImage(echoCanvas,echo.x-48,echo.y-70);ctx.restore();
+      if (echo.characterClass === 'mage' && (echo.attackFlash ?? 0) > 0 && echo.attackTarget) {
+        const t = 1 - (echo.attackFlash ?? 0) / .22;
+        const dx = echo.attackTarget.x - echo.x, dy = echo.attackTarget.y - echo.y;
+        drawLightningOrb(ctx, echo.x + dx * t, echo.y - 12 + dy * t, Math.atan2(dy, dx), 5, time);
+      }
       ctx.strokeStyle=ECHO_COLORS[slot];ctx.lineWidth=game.echo===echo?3:1.5;ctx.beginPath();ctx.ellipse(echo.x,echo.y+12,17,7,0,0,Math.PI*2);ctx.stroke();
       ctx.fillStyle=ECHO_COLORS[slot];ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(`E${slot+1}`,echo.x,echo.y-48);
     }
@@ -90,8 +95,9 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.ellipse(boss.x, boss.y + 47, 65, 16, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
-    const walking = boss.mode === 'stalking' && Math.hypot(game.player.x - boss.x, game.player.y - boss.y) > 85;
-    drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
+    const bossTarget = game.echoes.slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player;
+    const walking = boss.mode === 'stalking' && Math.hypot(bossTarget.x - boss.x, bossTarget.y - boss.y) > 85;
+    drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, bossTarget.x > boss.x, walking);
     if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
 
   }

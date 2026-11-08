@@ -193,7 +193,7 @@ test('boss burst has a readable windup and bounded phase-one projectile density'
   assert.equal(boss.burstRemaining,0);
 });
 
-test('combat Echo replays a recorded attack instead of auto attacking',t=>{
+test('combat Echo pursues and automatically damages an exposed boss',t=>{
   const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
@@ -201,8 +201,8 @@ test('combat Echo replays a recorded attack instead of auto attacking',t=>{
   game.screen='forge';game.forgeWeapon();game.enterBoss();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;game.boss!.timer=100;game.boss!.burstCooldown=100;
   game.echo={x:game.boss!.x-80,y:game.boss!.y,direction:'right',isMoving:false,elapsedMs:0,status:'replaying',samples:[{time:0,x:game.boss!.x-80,y:game.boss!.y,direction:'right'},{time:100,x:game.boss!.x-80,y:game.boss!.y,direction:'right'}],events:[{time:40,kind:'attack',x:game.boss!.x-80,y:game.boss!.y,targetX:game.boss!.x,targetY:game.boss!.y}],nextEvent:0,stability:100,aggroTime:3,characterClass:'mage'};
-  (game as unknown as {update(dt:number):void}).update(.05);
-  assert.equal(game.boss!.hp,230);
+  for (let i=0;i<5;i++) (game as unknown as {update(dt:number):void}).update(.05);
+  assert.equal(game.boss!.hp,225);
 });
 
 test('all six class pickups apply their distinct damage or defense',t=>{
