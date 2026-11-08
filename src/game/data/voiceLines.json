@@ -50,8 +50,8 @@
     "intro": [
       {
         "id": "intro",
-        "at": 11.3,
-        "until": 13.6,
+        "at": 10.2,
+        "until": 12.5,
         "en": "The path remembers. And so do I.",
         "vi": "Lối mòn ghi nhớ. Và ta cũng vậy."
       }
@@ -200,8 +200,8 @@
     "intro": [
       {
         "id": "intro",
-        "at": 14.3,
-        "until": 16.2,
+        "at": 12.6,
+        "until": 14.5,
         "en": "Stand behind me. The ember still burns.",
         "vi": "Đứng sau ta. Ngọn lửa vẫn còn cháy."
       }

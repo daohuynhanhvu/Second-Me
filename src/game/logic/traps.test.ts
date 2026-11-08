@@ -67,7 +67,7 @@ test('vine movement slowdown clears on leaving and trap impact cannot drain heal
   game.player.x=400;advance(.1);assert.ok(Math.abs(game.player.x-420)<.01);assert.equal(game.slowed,false);
   controls.heldKeys.clear();
   game.currentLevel.traps=[{kind:'crusher',x:390,y:310,width:80,height:100,period:4,offset:3.5}];
-  advance(.2);assert.equal(game.health,4);
+  advance(.2);assert.equal(game.health,80);
 });
 
 test('all five trials contain at least three distinct trap types in clear walkable space; boss has none',()=>{
@@ -107,7 +107,7 @@ test('each leg offers one safe time shard worth three seconds',t=>{
 test('a crusher hit roots the player for a quarter second',t=>{
   const {game,controls,advance}=setup(t);
   game.currentLevel.traps=[{kind:'crusher',x:180,y:320,width:80,height:80,period:4,offset:3.6}];
-  advance(.01); assert.equal(game.health,4); assert.ok(game.trappedTime>=.25);
+  advance(.01); assert.equal(game.health,80); assert.ok(game.trappedTime>=.25);
   game.currentLevel.traps=[]; controls.heldKeys.add('KeyD');
   const x=game.player.x;advance(.2);assert.equal(game.player.x,x);
   advance(.1);assert.ok(game.player.x>x);

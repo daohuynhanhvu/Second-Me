@@ -183,6 +183,16 @@ class SoundEngine {
     osc.stop(t + 0.06);
   }
 
+  /** Short low impact for damage, bright metallic tone when a shield absorbs it. */
+  public playImpact(blocked=false){
+    if(this.isMuted)return;this.initCtx();if(!this.ctx||!this.masterGain)return;
+    const t=this.ctx.currentTime,osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    osc.type=blocked?'triangle':'sawtooth';osc.frequency.setValueAtTime(blocked?660:145,t);
+    osc.frequency.exponentialRampToValueAtTime(blocked?220:42,t+.14);
+    gain.gain.setValueAtTime(.13,t);gain.gain.exponentialRampToValueAtTime(.001,t+.17);
+    osc.connect(gain);gain.connect(this.masterGain);osc.start(t);osc.stop(t+.18);
+  }
+
   public playIceHit(broken: boolean) {
     if (this.isMuted || this.sample(broken ? 'break' : 'hit')) return;
     this.initCtx();

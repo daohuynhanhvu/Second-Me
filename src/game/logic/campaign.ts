@@ -1,3 +1,4 @@
+import { DAMAGE, damagePoints } from './damage.ts';
 import { rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
@@ -27,6 +28,7 @@ export class Campaign {
   pendingRuneChoices:EchoRuneId[]=[];
   coins = 0;
   timeItems = 0;
+  limitRings = 0;
   bestStars: Record<number, number> = {};
   load() {
     try {
@@ -40,18 +42,19 @@ export class Campaign {
       this.mechanicalOwned = value.mechanicalOwned === true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
+      this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
       this.echoRunes=cleanRuneStock(value.echoRunes);
       this.pendingRuneChoices=cleanRuneChoices(value.pendingRuneChoices);
       const migrateRunes=value.echoRunes===undefined&&this.completed.length>0;
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
       if(migrateRunes)this.save();
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.echoRunes={}; }
+    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.echoRunes={}; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
+      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -83,6 +86,8 @@ export class Campaign {
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
+  buyLimitRing() { if (this.coins < 30) return false; this.coins -= 30; this.limitRings++; this.save(); return true; }
+  useLimitRing() { if (this.limitRings < 1) return false; this.limitRings--; this.save(); return true; }
   get canForge() { return [1,2,3,4,5].every(id => this.completed.includes(id)); }
   forge(): boolean {
     if (!this.canForge || this.forged) return false;
@@ -91,7 +96,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.save(); }
+  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {
@@ -121,7 +126,7 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean, defender: {x:number;y:number} = player): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
@@ -132,7 +137,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   }
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
-  if (activePillars) boss.hp = Math.min(boss.maxHp, boss.hp + activePillars * 2 * dt);
+  if (activePillars) boss.hp = Math.min(boss.maxHp, damagePoints(boss.hp + activePillars * 2 * dt));
   boss.burstCooldown -= dt;
   if (boss.burstCooldown <= 0) { boss.burstCooldown += 8-boss.phase; boss.burstRemaining = 1+boss.phase*.2; boss.burstPulse = 0; }
   if (boss.burstRemaining > 0) {
@@ -151,7 +156,11 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   let burstHit=false;
   for(const area of boss.burstAreas) {
     area.timer-=dt;
-    if(area.timer<=0 && !area.struck) { area.struck=true; if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12)burstHit=true; }
+    if(area.timer<=0 && !area.struck) {
+      area.struck=true;
+      if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12){burstHit=true;onPlayerHit?.(DAMAGE.bossArea);}
+      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-area.x,echo.y-area.y)<area.radius+12)onEchoHit?.(index,DAMAGE.bossArea);});
+    }
   }
   boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
   boss.timer -= dt;
@@ -170,6 +179,8 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
     boss.mode = 'strike'; boss.timer = 0.3;
     hit = Math.hypot(defender.x - boss.targetX, defender.y - boss.targetY) < 82;
+    if(hit)onPlayerHit?.(DAMAGE.bossSlam);
+    echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index,DAMAGE.bossSlam);});
     if (boss.phase >= 2) {
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
@@ -184,7 +195,9 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   }
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
-    if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; }
+    const echoIndex = echoDefenders.findIndex(echo => Math.hypot(shot.x - echo.x, shot.y - echo.y) < 19);
+    if (echoIndex >= 0) { shot.life = 0; onEchoHit?.(echoIndex,DAMAGE.bossProjectile); }
+    else if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; onPlayerHit?.(DAMAGE.bossProjectile); }
   }
   boss.projectiles = boss.projectiles.filter(s => s.life > 0 && s.x > 40 && s.x < 1240 && s.y > 40 && s.y < 680);
   return hit || burstHit;

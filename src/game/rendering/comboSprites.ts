@@ -32,15 +32,14 @@ export function preloadComboSprites() { image('swordsman'); image('mage'); }
 /** The combo frame to show for the hero now, or null (walk sprite instead). */
 export function comboPose(game: GameEngine): { hero: ComboHero; index: number } | null {
   const combo = game.combo;
-  if (!combo || (game.characterClass !== 'swordsman' && game.characterClass !== 'mage')) return null;
+  if (!combo || game.player.isMoving || (game.characterClass !== 'swordsman' && game.characterClass !== 'mage')) return null;
   const hero = game.characterClass;
   const anims = SHEETS[hero].anims;
   if (combo.active) {
     const hit = COMBO_HITS[hero][combo.step];
     return { hero, index: anims[hit.anim][combo.frame] };
   }
-  // Combat idle between hits and after the finisher, unless the hero walks off.
-  if (combo.idleLeft > 0 && !game.player.isMoving) return { hero, index: anims.idle[0] };
+  // Between attacks, the regular idle sprite keeps the last movement direction.
   return null;
 }
 

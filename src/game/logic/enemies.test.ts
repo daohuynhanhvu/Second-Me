@@ -22,3 +22,30 @@ test('enemies can target Echo decoys and never transfer a pending strike to a re
  updateEnemies(enemies,level,{x:900,y:600},[{...echo}],.8,()=>hits++);assert.equal(hits,0);
  e.mode='idle';e.timer=0;updateEnemies(enemies,level,{x:900,y:600},[echo],.01,()=>hits++);updateEnemies(enemies,level,{x:900,y:600},[echo],.8,target=>{assert.equal(target.echoIndex,0);hits++;});assert.equal(hits,1);
 });
+
+test('all enemies pursue the nearest Echo even after its original attraction timer expires',()=>{
+ const level=structuredClone(LEVELS[1]);level.walls=[];level.doors=[];const enemies=createEnemies(level);const e=enemies[0];
+ e.x=200;e.y=300;e.homeX=200;e.homeY=300;e.timer=0;
+ const distant={x:700,y:300,aggroTime:0}, nearby={x:500,y:300,aggroTime:0};
+ updateEnemies([e],level,{x:210,y:300},[distant,nearby],.1,()=>{});
+ assert.ok(e.x>200,'enemy moves toward the distant Echo rather than the nearby player');
+ assert.equal(e.facingLeft,false);
+});
+
+test('an enemy can route around a wall to reach an Echo',()=>{
+ const level=structuredClone(LEVELS[1]);level.walls=[{x:500,y:100,width:30,height:300}];level.doors=[];
+ const e=createEnemies(level)[0];e.x=440;e.y=240;e.homeX=e.x;e.homeY=e.y;e.timer=0;
+ const echo={x:590,y:240,aggroTime:0};let hits=0;
+ for(let i=0;i<350;i++)updateEnemies([e],level,{x:100,y:600},[echo],.05,()=>hits++);
+ assert.ok(hits>0,`enemy should route around wall and attack, ended at ${e.x.toFixed(0)},${e.y.toFixed(0)}`);
+});
+
+test('ranged enemies close to within Echo combat range before attacking',()=>{
+ const level=structuredClone(LEVELS[3]);level.walls=[];level.doors=[];
+ const e=createEnemies(level).find(e=>e.kind==='shaman')!;e.x=300;e.y=300;e.homeX=300;e.homeY=300;e.timer=0;
+ const echo={x:480,y:300,aggroTime:0};let attackedAt=Infinity;
+ for(let i=0;i<200&&attackedAt===Infinity;i++){
+  updateEnemies([e],level,{x:100,y:100},[echo],.05,()=>{attackedAt=Math.hypot(e.x-echo.x,e.y-echo.y);});
+ }
+ assert.ok(attackedAt<120,`ranged enemy should enter the Echo's 3m area before attacking, got ${attackedAt}`);
+});

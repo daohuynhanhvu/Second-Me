@@ -37,11 +37,11 @@ test('orbs cap at three, orbit and deal nearby damage, then expire',t=>{
   tick(6.1);assert.equal(g.orbitOrbs.length,0);
 });
 test('sanctuary heals and boosts damage only inside its fixed radius, and expires',t=>{
-  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.characterClass='swordsman';g.health=2;g.player.x=500;g.player.y=300;
-  g.useSkill();const tick=(g as any).updatePersonalSkill.bind(g);tick(2);assert.equal(g.health,3);
+  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.characterClass='swordsman';g.health=40;g.player.x=500;g.player.y=300;
+  g.useSkill();const tick=(g as any).updatePersonalSkill.bind(g);tick(2);assert.equal(g.health,60);
   const combo=(g as any).updateCombo.bind(g);
   g.boss!.x=540;g.boss!.y=300;g.attack();combo(.1);assert.equal(g.boss!.hp,240-12*1.2);   // Quick Slash, +20% in the circle
-  g.player.x=650;tick(2);assert.equal(g.health,3);g.attack({x:540,y:300});combo(.3);combo(.3);
+  g.player.x=650;tick(2);assert.equal(g.health,60);g.attack({x:540,y:300});combo(.3);combo(.3);
   assert.ok(Math.abs(g.boss!.hp-(240-12*1.2-14))<1e-9);                                     // Reverse Slash outside it
   tick(1.1);assert.equal(g.lightCircle,null);
 });

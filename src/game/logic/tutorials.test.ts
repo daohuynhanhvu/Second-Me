@@ -25,7 +25,7 @@ test('a mechanic guide freezes the world, traps and timer and releases movement 
  const internals=game as unknown as {update(dt:number):void;heldKeys:Set<string>;elapsedLevelTime:number};
  game.guides.offer('links');internals.heldKeys.add('KeyD');const x=game.player.x;
  for(let i=0;i<40;i++)internals.update(.1);
- assert.equal(game.legTimeRemaining,10);assert.equal(internals.elapsedLevelTime,0);assert.equal(game.player.x,x);assert.equal(game.health,5);assert.equal(internals.heldKeys.size,0);
+ assert.equal(game.legTimeRemaining,10);assert.equal(internals.elapsedLevelTime,0);assert.equal(game.player.x,x);assert.equal(game.health,100);assert.equal(internals.heldKeys.size,0);
  game.dismissGuide();internals.update(.1);assert.ok(game.legTimeRemaining!<10);
  game.openGuide();const remaining=game.legTimeRemaining;internals.update(2);assert.equal(game.legTimeRemaining,remaining);
  game.closeGuide();internals.update(.1);assert.ok(game.legTimeRemaining!<remaining!);

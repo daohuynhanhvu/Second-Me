@@ -13,12 +13,15 @@ export function drawEnemies(ctx:CanvasRenderingContext2D,enemies:Enemy[],time:nu
   if(e.kind==='dummy'){drawDummy(ctx,e);continue;}
   if(e.hp<=0&&e.deathAge>.55)continue;const moving=e.mode==='chase',image=sheet(e.kind,moving),cell=cells[e.kind];
   if(!image)continue;const size=e.kind==='minotaur'?180:e.kind==='bear'?154:e.kind==='goblin'?150:e.kind==='shaman'?126:110;
-  ctx.save();ctx.globalAlpha=e.hp>0?1:Math.max(0,1-e.deathAge/.55);ctx.translate(Math.round(e.x),Math.round(e.y));
+  ctx.save();ctx.globalAlpha=e.hp>0?1:Math.max(0,1-e.deathAge/.55);const impact=1-Math.max(0,e.attackFx??0)/.32;
+  const dx=e.targetX-e.x,dy=e.targetY-e.y,len=Math.hypot(dx,dy)||1;
+  const lunge=(e.attackFx??0)>0?Math.sin(impact*Math.PI)*12:e.mode==='warning'?-Math.sin(Math.min(1,e.timer)*Math.PI)*5:0;
+  ctx.translate(Math.round(e.x+dx/len*lunge),Math.round(e.y+dy/len*lunge));
   ctx.fillStyle='#06171180';ctx.beginPath();ctx.ellipse(0,4,size*.18,7,0,0,Math.PI*2);ctx.fill();
   ctx.save();if(e.facingLeft)ctx.scale(-1,1);ctx.imageSmoothingEnabled=false;if(e.hitFlash>0)ctx.filter='brightness(1.8)';
   const frame=e.mode==='warning'?0:Math.floor(time*(moving?10:6))%(image.width/cell);
   ctx.drawImage(image,frame*cell,0,cell,cell,-size/2,-size*.67,size,size);ctx.restore();
-  if(e.hp>0){ctx.fillStyle='#121e18';ctx.fillRect(-18,-size*.36,36,4);ctx.fillStyle=e.mode==='warning'?'#ffd18b':'#e19378';ctx.fillRect(-18,-size*.36,36*e.hp/e.maxHp,4);}
+  if(e.hp>0){ctx.fillStyle='#121e18';ctx.fillRect(-18,-size*.36,36,4);ctx.fillStyle=e.mode==='warning'?'#ffd18b':'#e19378';ctx.fillRect(-18,-size*.36,36*e.hp/e.maxHp,4);if(e.hp<e.maxHp){ctx.font='bold 9px ui-monospace,monospace';ctx.textAlign='center';ctx.fillStyle='#ffe2b6';ctx.fillText(`${Math.round(e.hp*10)/10}/${e.maxHp}`,0,-size*.36-5);}}
   ctx.restore();
   if(e.mode==='warning'&&e.hp>0){ctx.save();ctx.strokeStyle='#f7b872';ctx.fillStyle='#e969413b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.targetX,e.targetY,e.kind==='shaman'?34:44,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#ffe2ac';ctx.textAlign='center';ctx.font='bold 19px monospace';ctx.fillText('!',e.x,e.y-size*.50);ctx.restore();}
  }
@@ -51,4 +54,23 @@ function drawDummy(ctx:CanvasRenderingContext2D,e:Enemy){
  // Bar: how much of the dummy's pool is left before it refills.
  ctx.fillStyle='#121e18';ctx.fillRect(-20,-92,40,4);ctx.fillStyle='#e9c46a';ctx.fillRect(-20,-92,40*Math.max(0,e.hp)/e.maxHp,4);
  ctx.restore();
+}
+/** Attack effects persist through recovery, including attacks the player dodges. */
+export function drawEnemyAttacks(ctx:CanvasRenderingContext2D,enemies:Enemy[],reduced=false){
+ for(const e of enemies){
+  if(e.hp<=0||(e.attackFx??0)<=0)continue;
+  const progress=1-e.attackFx!/.32,angle=Math.atan2(e.targetY-e.y,e.targetX-e.x);
+  ctx.save();ctx.globalAlpha=Math.min(1,e.attackFx!/.08);ctx.lineCap='round';
+  if(e.kind==='shaman'){
+   ctx.strokeStyle='#c898ef';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(e.x,e.y-20);ctx.lineTo((e.x+e.targetX)/2+8,e.targetY-15);ctx.lineTo(e.targetX,e.targetY);ctx.stroke();
+   ctx.strokeStyle='#e7c5ff';ctx.beginPath();ctx.arc(e.targetX,e.targetY,12+progress*23,0,Math.PI*2);ctx.stroke();
+  }else{
+   ctx.strokeStyle=e.kind==='minotaur'?'#ffc183':'#fff0cf';ctx.lineWidth=e.kind==='minotaur'?6:4;
+   ctx.beginPath();ctx.arc(e.x,e.y,28+progress*18,angle-1.1+progress*.4,angle+1.1);ctx.stroke();
+   if(e.kind==='bear')for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(e.targetX-12+i*8,e.targetY-16);ctx.lineTo(e.targetX+5+i*8,e.targetY+12);ctx.stroke();}
+  }
+  ctx.translate(e.targetX,e.targetY);ctx.strokeStyle='#e7a77d';ctx.lineWidth=2;
+  for(let i=0;i<6;i++){const a=i*Math.PI/3,r=6+(reduced?6:progress*24);ctx.beginPath();ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);ctx.lineTo(Math.cos(a)*(r+8),Math.sin(a)*(r+8));ctx.stroke();}
+  ctx.restore();
+ }
 }
