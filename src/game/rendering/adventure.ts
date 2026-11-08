@@ -73,10 +73,10 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   if (boss) {
     drawPillars(ctx, boss, time, game.reducedMotion);
     for (const area of boss.burstAreas) {
-      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion, area.timer);
+      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion);
     }
-    if (boss.hp > 0 && (boss.mode === 'warning' || boss.mode === 'strike')) {
-      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, boss.mode === 'strike', time, game.reducedMotion);
+    if (boss.hp > 0 && boss.mode === 'warning') {
+      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, false, time, game.reducedMotion);
       ctx.save(); ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
       ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
     }

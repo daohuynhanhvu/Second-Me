@@ -119,7 +119,7 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Hiệu ứng băng mới của boss', description: 'Vùng nguy hiểm của Thủ Vệ Băng có hiệu ứng vòng băng xanh mới, hiển thị rõ trước khi chiêu gây sát thương.' };
+const latestNews = { title: 'Hiệu ứng băng mới của boss', description: 'Vòng băng xanh của Thủ Vệ Băng xoay trước khi gây sát thương rồi biến mất.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
