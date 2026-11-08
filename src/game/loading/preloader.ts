@@ -137,6 +137,7 @@ export function levelUses(path: string, spec: LevelLoadSpec): boolean {
   const [, folder, rest] = m;
   if (folder === 'forest' || folder === 'nature' || folder === 'magic-effects') return true;
   if (folder === HERO_FOLDER[spec.character]) return true;
+  if(folder==='enemies')return spec.levelId>=2&&spec.levelId<=5;
   if (folder === 'frost-guardian') return boss;
   if (folder === 'music') return sceneOf(rest.split('/').pop() ?? '') === (boss ? 'boss' : 'level');
   if (folder === 'voice') {

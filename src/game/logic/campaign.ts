@@ -1,3 +1,4 @@
+import { rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
 export const MECHANICAL_ENABLED = false;
@@ -21,6 +22,9 @@ export class Campaign {
   forged = false;
   bossDefeated = false;
   mechanicalOwned = false;
+  echoRunes:EchoRuneStock = {};
+  lastRuneDrop:EchoRuneId|null = null;
+  pendingRuneChoices:EchoRuneId[]=[];
   coins = 0;
   timeItems = 0;
   bestStars: Record<number, number> = {};
@@ -36,13 +40,18 @@ export class Campaign {
       this.mechanicalOwned = value.mechanicalOwned === true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
+      this.echoRunes=cleanRuneStock(value.echoRunes);
+      this.pendingRuneChoices=cleanRuneChoices(value.pendingRuneChoices);
+      const migrateRunes=value.echoRunes===undefined&&this.completed.length>0;
+      if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; }
+      if(migrateRunes)this.save();
+    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.echoRunes={}; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
+      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -51,7 +60,20 @@ export class Campaign {
     this.save();
     return true;
   }
+  grantRune(random:()=>number=Math.random):EchoRuneId {
+    const id=rollEchoRune(random);this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);return id;
+  }
+  chooseRune(id:EchoRuneId):boolean {
+    if(!this.pendingRuneChoices.includes(id))return false;
+    this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);this.lastRuneDrop=id;this.pendingRuneChoices=[];this.save();return true;
+  }
+  spendRune(id:EchoRuneId):boolean {
+    if(!((this.echoRunes[id]??0)>0))return false;
+    this.echoRunes[id]=(this.echoRunes[id]??0)-1;this.save();return true;
+  }
   completeLevel(levelId: number, seconds: number) {
+    this.lastRuneDrop=null;
+    if(levelId>=1&&levelId<=5&&this.pendingRuneChoices.length===0)this.pendingRuneChoices=rollRuneChoices();
     const reward = levelRating(seconds,levelId);
     this.coins += reward.coins;
     this.bestStars[levelId] = Math.max(this.bestStars[levelId] ?? 0, reward.stars);
@@ -61,7 +83,7 @@ export class Campaign {
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
-  get canForge() { return MATERIALS.every((_, i) => this.completed.includes(i + 1)); }
+  get canForge() { return [1,2,3,4,5].every(id => this.completed.includes(id)); }
   forge(): boolean {
     if (!this.canForge || this.forged) return false;
     this.forged = true;
@@ -69,7 +91,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.save(); }
+  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {

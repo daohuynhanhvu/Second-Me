@@ -6,7 +6,7 @@ import { LEVELS } from './levels.ts';
 import { sounds } from './sound.ts';
 sounds.setMuted(true);
 
-test('each of five trails grants a unique material; replay cannot duplicate it', () => {
+test('each trail advances progress once and five clears unlock preparation', () => {
   const campaign = new Campaign();
   assert.equal(campaign.forge(), false);
   for (let i=1;i<=5;i++) {
@@ -82,6 +82,8 @@ test('all five wins unlock the forge, forging gates the boss, and the boss gates
     controls.handleVictory();
     assert.equal(game.screen, 'victory');
     assert.equal(game.lastReward, i+1);
+    assert.equal(game.campaign.pendingRuneChoices.length,3);
+    game.chooseRune(game.campaign.pendingRuneChoices[0]);
     game.nextLevel();
   }
   assert.equal(game.screen, 'forge');

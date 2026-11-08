@@ -1,9 +1,9 @@
 export const PUZZLE_BALANCE = [
   { legSeconds:16, shardInterval:5, threeStars:16 },
-  { legSeconds:18, shardInterval:6, threeStars:26 },
-  { legSeconds:24, shardInterval:7, threeStars:40 },
-  { legSeconds:24, shardInterval:8, threeStars:45 },
-  { legSeconds:20, shardInterval:8, threeStars:55 },
+  { legSeconds:24, shardInterval:6, threeStars:38 },
+  { legSeconds:30, shardInterval:7, threeStars:55 },
+  { legSeconds:32, shardInterval:8, threeStars:65 },
+  { legSeconds:30, shardInterval:8, threeStars:80 },
 ] as const;
 export const SHARD_BONUS = 3;
 export const PUZZLE_HINTS = [

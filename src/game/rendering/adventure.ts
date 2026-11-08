@@ -1,3 +1,4 @@
+import { drawEnemies } from './enemies.ts';
 import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
 import { drawMechanicalSprite } from './mechanicalSprite.ts';
 import type { GameEngine } from '../GameEngine.ts';
@@ -12,6 +13,7 @@ export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185'];
 
 export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
   ctx.save();
+  drawEnemies(ctx,game.enemies,time);
   if(game.echoes.length){
     echoCanvas??=document.createElement('canvas');echoCanvas.width=96;echoCanvas.height=112;
     const layer=echoCanvas.getContext('2d')!;
@@ -90,12 +92,13 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     const walking = boss.mode === 'stalking' && Math.hypot(game.player.x - boss.x, game.player.y - boss.y) > 85;
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
     if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
+
+  }
     if (game.characterClass === 'swordsman' && game.attackFlash > 0) {
       ctx.save(); ctx.translate(game.player.x, game.player.y); ctx.rotate(game.attackAngle);
       ctx.beginPath(); ctx.arc(0, 0, 90, -1.05, 1.05); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
-  }
   if(game.lightCircle) {
     const c=game.lightCircle;ctx.save();ctx.globalAlpha=Math.min(1,c.life);
     ctx.fillStyle='rgba(255,221,132,.12)';ctx.strokeStyle='#f6df9e';ctx.lineWidth=2;
