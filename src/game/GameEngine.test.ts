@@ -237,6 +237,33 @@ test('intro opens loading lobby without resetting saved progress', t => {
   assert.deepEqual(engine.campaign.completed,[1,2]);
 });
 
+test('with the loading screen on, picking a level and the next level go through loading', t => {
+  const document = mockDocument(t);
+  const engine = new GameEngine();
+  engine.levelLoading = true;
+  engine.campaign.completed = [1];
+  engine.goToLobby();
+  engine.selectLevel(1);
+  assert.equal(engine.screen,'loading');
+  assert.equal(document.body.dataset.state,'loading');
+  assert.equal(engine.currentLevelIdx,0, 'the level is only set up once loading ends');
+  engine.selectLevel(0);   // a second click while loading is ignored
+  engine.revealLoadedLevel();
+  assert.equal(engine.currentLevelIdx,1);
+  assert.equal(engine.screen,'loading', 'built behind the screen, but not playing yet');
+  engine.finishLoading();
+  assert.equal(engine.screen,'playing');
+  assert.equal(engine.currentLevel.id,2);
+  engine.screen = 'victory';
+  engine.nextLevel();
+  assert.equal(engine.screen,'loading');
+  engine.finishLoading();   // also works without the reveal step
+  assert.equal(engine.screen,'playing');
+  assert.equal(engine.currentLevel.id,3);
+  engine.restartLevel();   // a restart stays instant
+  assert.equal(engine.screen,'playing');
+});
+
 test('pressing Y four times unlocks every trail for the current dev session', t => {
   mockDocument(t);
   const engine = new GameEngine();
@@ -271,6 +298,19 @@ test('completed campaign can replay any level from lobby',t=>{
   assert.equal(engine.currentLevelIdx,1);assert.equal(engine.screen,'playing');
   engine.goToLobby();engine.selectLevel(5);
   assert.equal(engine.currentLevelIdx,5);assert.ok(engine.boss);
+});
+
+test('the lobby and its sub-screens can return to the main menu, but a level in play cannot', t => {
+  const document = mockDocument(t);
+  const engine = new GameEngine();
+  for (const open of [() => {}, () => engine.openShop(), () => engine.openCharacters()]) {
+    engine.goToLobby(); open();
+    engine.goToMainMenu();
+    assert.equal(engine.screen, 'intro'); assert.equal(document.body.dataset.state, 'intro');
+  }
+  engine.goToLobby(); engine.selectLevel(0);
+  engine.goToMainMenu();
+  assert.equal(engine.screen, 'playing');
 });
 
 test('yyyy removes the active deadline and keeps all subsequent trials untimed',t=>{

@@ -84,9 +84,54 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 
 .selected-soldier-avatar{display:inline-flex;position:relative;flex:none;width:35px;height:39px;overflow:hidden}.selected-soldier-avatar img{position:absolute;width:600px;height:100px;max-width:none;left:-32px;top:-30px;image-rendering:pixelated}.lobby-header nav .selected-soldier-avatar{width:22px;height:23px}.lobby-header nav .selected-soldier-avatar img{width:390px;height:65px;left:-21px;top:-20px}
 
+
 .level-card .echo-timeline{width:100%;margin:7px 0 0;padding:0;border:0;border-radius:0;background:transparent;font-size:8px;line-height:1.4;letter-spacing:.03em}
 .level-card .echo-timeline-track{height:10px;margin-top:4px}
 .level-card .echo-timeline-track b{font-size:9px}
 .setting-controls{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:5px;color:var(--muted);font-size:11px;line-height:1.7}
 .setting-controls summary{color:var(--gold);cursor:pointer;font-weight:600}
 .setting-controls p{margin:10px 0 0}
+
+.cinematic-intro{position:absolute;inset:0;z-index:40;background:#000;overflow:hidden}.cinematic-intro canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.cinematic-skip{position:absolute;right:clamp(14px,2.4vw,34px);bottom:clamp(14px,2.6vh,28px);z-index:2;padding:9px 16px;background:#0a120ecc;color:#d6dfc6;border:1px solid #9bb48a66;border-radius:3px;font:10px ui-monospace,Consolas,monospace;letter-spacing:2.5px;animation:cin-fade .6s ease both}.cinematic-skip:hover{background:#1a281f;border-color:#d8c38a;color:#f1e4b4}.cinematic-sound{position:absolute;left:clamp(14px,2.4vw,34px);bottom:clamp(14px,2.6vh,28px);z-index:2;color:#9bb48ab0;font:10px ui-monospace,Consolas,monospace;letter-spacing:1.5px;animation:cin-pulse 2.4s ease-in-out infinite}.intro-replay{display:block;margin:6px auto 0}@keyframes cin-fade{from{opacity:0}}@keyframes cin-pulse{50%{opacity:.35}}
+/* Loading screen (src/components/LoadingScreen.tsx). Positions are fractions of the 1376x768 painting. */
+.loading-v2{z-index:35;container-type:inline-size;overflow:hidden;background:#071510;font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;transition:opacity .45s ease}
+.lv-world{position:absolute;inset:0;transform-origin:12% 47%;transition:transform 1s cubic-bezier(.5,0,.75,0),filter 1s}
+.lv-bg,.lv-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lv-bg{object-fit:fill;user-select:none;-webkit-user-drag:none}
+.lv-canvas{image-rendering:pixelated}
+/* Hard 1px-step outline, no blur: reads as pixel lettering on the painting. */
+.loading-v2 :is(.lv-lines li,.lv-footer strong,.lv-footer p){color:#f4e6bf;text-shadow:.13cqw 0 0 #0b1610,-.13cqw 0 0 #0b1610,0 .13cqw 0 #0b1610,0 -.13cqw 0 #0b1610,.13cqw .13cqw 0 #0b1610,.2cqw .26cqw 0 #050b08}
+.lv-lines{position:absolute;left:39.8%;top:61.6%;width:17.4%;margin:0;padding:0;list-style:none;display:flex;flex-direction:column;align-items:center;gap:.25cqw}
+.lv-lines li{position:relative;font-size:1.45cqw;line-height:1.35;white-space:nowrap;transition:opacity .5s ease,color .5s ease,transform .5s ease}
+.lv-lines li[data-state=pending]{opacity:.42;transform:translateY(.15cqw)}
+.lv-lines li[data-state=active]{opacity:1}
+.lv-lines li[data-state=done]{opacity:.8;color:#b9f0c4}
+.lv-lines li i{position:absolute;left:-1.3cqw;top:50%;width:.55cqw;height:.55cqw;margin-top:-.28cqw;background:#e9c86a;box-shadow:0 0 0 .13cqw #0b1610;opacity:0;transition:opacity .4s}
+.lv-lines li[data-state=active] i{opacity:1;animation:lv-blink 1.6s ease-in-out infinite}
+.lv-lines li[data-state=done] i{opacity:1;background:#7fe39b;animation:none}
+@keyframes lv-blink{50%{opacity:.35}}
+.lv-footer{position:absolute;left:30.1%;width:39.8%;top:85.2%;display:flex;flex-direction:column;align-items:center;gap:1.2cqw;transition:opacity .45s ease}
+.lv-footer strong{font-size:1.6cqw;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.lv-footer p{margin:0;font-size:1.45cqw}
+.lv-perf{position:absolute;left:8px;top:8px;margin:0;padding:6px 8px;background:#000b;color:#9effc6;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre;pointer-events:none;z-index:2}
+.loading-v2[data-phase=surge] .lv-world,.loading-v2[data-phase=fade] .lv-world{transform:scale(1.06);filter:brightness(1.15)}
+.loading-v2[data-phase=surge] :is(.lv-lines,.lv-footer),.loading-v2[data-phase=fade] :is(.lv-lines,.lv-footer){opacity:0}
+.loading-v2[data-phase=fade],.loading-v2[data-phase=done]{opacity:0}
+.loading-v2.still .lv-world{transition:none;transform:none!important}
+.loading-v2.still .lv-lines li i{animation:none}
+.lobby-screen{animation:lv-enter .45s ease-out}
+@keyframes lv-enter{from{opacity:0}}
+/* Ambient layers of the loading screen: only opacity / transform animate (no repaint). */
+.lv-reflect{position:absolute;width:34cqw;height:44cqw;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,#78ffdc40,#3ce0b51c 55%,transparent);opacity:.75;animation:lv-pulse 5.7s ease-in-out infinite;pointer-events:none}
+.lv-ray{position:absolute;top:0;height:60%;background:linear-gradient(180deg,#d6ffd626,#c8ffd014 60%,transparent);opacity:.6;pointer-events:none;animation:lv-pulse 9s ease-in-out infinite}
+.lv-ray-0{left:59.6%;width:20%;clip-path:polygon(18% 0,40% 0,22% 100%,0 100%);animation-duration:11s}
+.lv-ray-1{left:66.4%;width:22%;clip-path:polygon(36% 0,54% 0,20% 100%,4% 100%);animation-duration:8.3s;animation-delay:-3s}
+.lv-ray-2{left:73.5%;width:24%;clip-path:polygon(52% 0,72% 0,30% 100%,10% 100%);animation-duration:13s;animation-delay:-6s}
+.lv-rune{position:absolute;width:3.6cqw;height:3.6cqw;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,#8dffe2aa,#4fe0c033 55%,transparent);animation:lv-pulse 5s ease-in-out infinite;pointer-events:none}
+@keyframes lv-pulse{50%{opacity:.25}}
+.lv-fog{position:absolute;left:0;width:200%;background-repeat:repeat-x;background-size:33.3333cqw 100%;image-rendering:pixelated;pointer-events:none;will-change:transform}
+.lv-fog-a{top:67.7%;height:12.5%;opacity:.32;animation:lv-drift 74s linear infinite}
+.lv-fog-b{top:82.3%;height:15.6%;opacity:.28;background-size:50cqw 100%;animation:lv-drift 58s linear infinite reverse}
+@keyframes lv-drift{to{transform:translateX(-50%)}}
+.loading-v2[data-phase=surge] .lv-reflect,.loading-v2[data-phase=fade] .lv-reflect{opacity:1;animation:none;transform:translate(-50%,-50%) scale(1.25);transition:transform .9s,opacity .9s}
+.loading-v2.still :is(.lv-reflect,.lv-ray,.lv-rune,.lv-fog){animation:none}

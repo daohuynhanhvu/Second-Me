@@ -83,7 +83,7 @@ export interface LevelData {
 }
 
 export interface Trap extends Rect {
-  kind: 'crusher' | 'vines' | 'rocks';
+  kind: 'crusher' | 'vines' | 'rocks' | 'spikes';
   period: number;
   offset: number;
 }

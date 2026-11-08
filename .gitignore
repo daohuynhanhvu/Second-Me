@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local tool state and scratch output
+.claude/
+__pycache__/
+tools/voice/audition/

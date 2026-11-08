@@ -31,6 +31,8 @@ const pairs: [string, string][] = [
   ['FORGE ECHO STAFF', 'RÈN TRƯỢNG ECHO'], ['FORGE ECHO SWORD', 'RÈN KIẾM ECHO'],
   ['ECHO STAFF · AWAKENED', 'ECHO STAFF · ĐÃ THỨC TỈNH'],
   ['E record · Q summon Echo · X dismiss · Left click attack · Space skill · F +2s', 'E ghi · Q gọi Echo · X xóa · Chuột trái tấn công · Space kỹ năng · F +2s'],
+  ['REPLAY INTRO', 'XEM LẠI INTRO'],
+  ['Voice', 'Giọng nói'], ['Character and narrator voice-over', 'Lồng tiếng nhân vật và người kể chuyện'],
   ['Enter the forest', 'BƯỚC VÀO KHU RỪNG'], ['Awakening the forest', 'ĐANG ĐÁNH THỨC KHU RỪNG'],
   ['THE ANCIENT PATH REMEMBERS', 'LỐI XƯA CÒN GHI NHỚ'], ['CHAPTER II · THE EMBERFORGE', 'CHƯƠNG II · LÒ RÈN LỬA'],
   ['Echoes of the Wild', 'TIẾNG VỌNG NƠI HOANG DÃ'], ['ENTER / SPACE', 'ENTER / PHÍM CÁCH'],
@@ -117,7 +119,7 @@ const pairs: [string, string][] = [
   ['Echo crystal', 'Tinh thể Echo'], ['Holds the forest’s memories.', 'Lưu giữ ký ức của khu rừng.'],
   ['Sacred ember', 'Than lửa thiêng'], ['A flame that never fades.', 'Ngọn lửa không bao giờ tắt.'],
   ['Ancient rune', 'Ấn thạch cổ'], ['The final shard that awakens the blade.', 'Mảnh cuối để đánh thức thanh kiếm.'],
-  ['VINES', 'DÂY LEO'], ['WATCH OUT!', 'CẨN THẬN!'], ['CRUSHER', 'BẪY DẬP'], ['FALLING ROCKS', 'ĐÁ RƠI'], ['SLOW 45%', 'CHẬM 45%'], ['DODGE!', 'NÉ!'],
+  ['VINES', 'DÂY LEO'], ['WATCH OUT!', 'CẨN THẬN!'], ['CRUSHER', 'BẪY DẬP'], ['SPIKES', 'BẪY GAI'], ['FALLING ROCKS', 'ĐÁ RƠI'], ['SLOW 45%', 'CHẬM 45%'], ['DODGE!', 'NÉ!'],
   ['ECHO GROVE', 'RỪNG VỌNG ÂM'], ['ROOTBOUND PASSAGE', 'LỐI RỄ CHẰNG CHỊT'], ['WHISPERING RUINS', 'PHẾ TÍCH THÌ THẦM'], ['THORNBOUND LABYRINTH', 'MÊ CUNG GAI'], ['THE LAST EMBER', 'ĐỐM LỬA CUỐI'],
 ];
 

@@ -1,0 +1,44 @@
+{
+  "_doc": "Chosen voice per character. voiceId -> tools/voice/voices/<voiceId>.pt (an OmniVoice VoiceClonePrompt). To recast: edit voiceId/instruct/seed here (any key from tools/voice/audition/results.json), copy that candidate's prompt.pt to tools/voice/voices/<voiceId>.pt, then run generate_lines.py.",
+  "characters": {
+    "narrator": {
+      "voiceId": "sm.narrator.n1-s11",
+      "instruct": "male, elderly, low pitch, british accent",
+      "seed": 11,
+      "speed": 0.86,
+      "fx": null,
+      "gain": 1.0,
+      "profile": "Mature, deep and warm; calm, majestic, mysterious. Slow with deliberate pauses, like retelling an old legend. Must not sound like an advert or a newsreader.",
+      "measured": {
+        "score": 4.379,
+        "wer": 0.143,
+        "consistency": 0.958,
+        "f0": 86.8,
+        "spread_st": 2.95,
+        "rate": 2.91
+      },
+      "comparedWith": [
+        "N2-s11 (4.631)",
+        "N1-s29 (4.183)",
+        "N2-s29 (3.941)",
+        "N3-s11 (3.536)",
+        "N3-s29 (3.082)"
+      ],
+      "vi": {
+        "seed": 3011,
+        "instruct": "male, elderly, moderate pitch, british accent",
+        "cer": 0.0,
+        "continuityWithEnglish": 0.726,
+        "compared": [
+          "male, elderly, low pitch, british accent / seed 11",
+          "male, elderly, low pitch, british accent / seed 1011",
+          "male, elderly, low pitch, british accent / seed 2011",
+          "male, elderly, low pitch, british accent / seed 3011",
+          "male, elderly, moderate pitch, british accent / seed 11",
+          "male, elderly, moderate pitch, british accent / seed 1011",
+          "male, elderly, moderate pitch, british accent / seed 2011"
+        ]
+      }
+    }
+  }
+}

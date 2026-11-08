@@ -1,6 +1,6 @@
 import { drawMechanicalSprite } from './mechanicalSprite.ts';
 import type { GameEngine } from '../GameEngine.ts';
-import { drawTrap } from './traps.ts';
+import { drawTrap, trapSpritesReady } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawFrostGuardian } from './frostGuardian.ts';
 import { drawSoldierSprite } from './soldierSprite.ts';
@@ -23,7 +23,10 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       ctx.fillStyle=ECHO_COLORS[slot];ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(`E${slot+1}`,echo.x,echo.y-48);
     }
   }
-  for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, game.showHints);
+  // With the hand-drawn art the trap floors were drawn under the characters by the renderer;
+  // only falling boulders and labels go on top here.
+  const trapLayer = trapSpritesReady() ? 'overhead' : 'all';
+  for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, game.showHints, trapLayer);
   if (game.legTimeRemaining !== null) {
     if (game.timePickup) {
       const { x, y } = game.timePickup;
