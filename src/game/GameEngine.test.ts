@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { GameEngine } from './GameEngine.ts';
 import { sounds } from './logic/sound.ts';
 import { LEVELS } from './logic/levels.ts';
+import { comboPose } from './rendering/comboSprites.ts';
 
 sounds.setMuted(true);
 
@@ -349,4 +350,47 @@ test('yyyy removes the active deadline and keeps all subsequent trials untimed',
   const plate=engine.currentLevel.plates[0];engine.player.x=plate.x+plate.width/2;engine.player.y=plate.y+plate.height/2;
   controls.update(.05);assert.equal(engine.checkpointIndex,1);assert.equal(engine.legTimeRemaining,null);
   const normal=new GameEngine();normal.restartLevel();assert.equal(normal.legTimeRemaining,16);
+});
+
+
+test('heroes face their movement in every level, including the boss arena, and Echo records it', t => {
+  mockDocument(t);
+  for (let level = 0; level < LEVELS.length; level++) {
+    for (const character of ['mage', 'swordsman', 'mechanical'] as const) {
+      const {engine, controls, advance} = setup();
+      engine.currentLevelIdx = level;
+      engine.characterClass = character;
+      engine.restartLevel();
+      engine.enemies = [];
+      if (engine.boss) { engine.boss.x = engine.player.x + 300; engine.boss.y = engine.player.y; }
+      engine.recorder.startRecording(engine.player.x, engine.player.y, engine.player.direction);
+      for (const [key, direction] of [['KeyA','left'], ['KeyW','up'], ['KeyS','down'], ['KeyD','right']] as const) {
+        controls.heldKeys.add(key);
+        advance(.1);
+        controls.heldKeys.delete(key);
+        assert.equal(engine.player.direction, direction, `${character} level ${level + 1}: ${key}`);
+        assert.equal(engine.recorder.getSamples().at(-1)?.direction, direction, `Echo records ${direction}`);
+        advance(.05);
+        assert.equal(engine.player.direction, direction, 'standing still retains the last movement direction');
+      }
+      engine.spawnEcho();
+      advance(.1);
+      assert.equal(engine.echo?.direction, 'left', `Echo replays the first movement in level ${level + 1}`);
+    }
+  }
+});
+
+
+test('moving during combat keeps the movement-facing sprite while attacks remain active', t => {
+  mockDocument(t);
+  for (const character of ['mage', 'swordsman'] as const) {
+    const {engine, controls, advance} = setup();
+    engine.currentLevelIdx = 5; engine.characterClass = character; engine.restartLevel();
+    engine.attack({x: engine.player.x + 200, y: engine.player.y});
+    assert.ok(engine.combo?.active, `${character} starts an attack`);
+    controls.heldKeys.add('KeyW'); advance(.05);
+    assert.equal(engine.player.direction, 'up');
+    assert.equal(comboPose(engine), null, 'movement uses the directional sprite instead of the side-facing attack sprite');
+    assert.ok(engine.combo?.active, 'the attack continues while moving');
+  }
 });

@@ -1620,11 +1620,6 @@ export class GameEngine {
       this.player.x = resolved.x;
       this.player.y = resolved.y;
     }
-    if(this.boss?.hp && this.screen==='playing') {
-      const dx=this.boss.x-this.player.x,dy=this.boss.y-this.player.y;
-      this.player.direction=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
-    }
-
     // 2. Update Recording if active
     if (this.recorder.getStatus() === 'recording') {
       const recResult = this.recorder.updateRecording(

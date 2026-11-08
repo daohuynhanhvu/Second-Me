@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Character facing update', 'Điều chỉnh hướng nhìn nhân vật'],
+  ['Heroes and Echoes now face the direction they move, including in the boss arena.', 'Nhân vật và Echo giờ quay theo hướng di chuyển, kể cả trong đấu trường boss.'],
   ['A new character selection screen', 'Giao diện chọn nhân vật mới'],
   ['The character selection screen has a new ancient forest look. Preview Aeris or Kael and press Confirm to begin your journey.', 'Màn chọn nhân vật có diện mạo rừng cổ mới. Xem trước Aeris hoặc Kael và nhấn Xác nhận để bắt đầu hành trình.'],
   ['A new staff and lightning orbs', 'Trượng phép và cầu sét mới'],
