@@ -1171,11 +1171,12 @@ export class GameEngine {
 
   public dismissEcho() {
     if (this.screen !== 'playing') return;
-
-    if (this.echo) {
+    const oldest = this.echoes[0];
+    if (oldest) {
+      const selected = this.echo;
       this.renderer.particles.emit(
-        this.echo.x,
-        this.echo.y,
+        oldest.x,
+        oldest.y,
         20,
         '#a855f7',
         60,
@@ -1183,7 +1184,8 @@ export class GameEngine {
         0.5
       );
       sounds.playEchoDismiss();
-      this.echo = null;
+      this.echoes.shift();
+      this.selectedEcho = selected && selected !== oldest ? this.echoes.indexOf(selected) : 0;
       this.showBanner('Đã xóa Echo.');
       this.notifyHUD();
     }

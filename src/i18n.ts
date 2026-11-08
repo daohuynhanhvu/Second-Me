@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Echo recall order', 'Thứ tự thu hồi Echo'],
+  ['Press X to recall the Echo that has been on the field longest, in summon order.', 'Nhấn X để thu hồi Echo đã ở trên sân lâu nhất trước, theo thứ tự triệu hồi.'],
   ['Guardian ice spike attack', 'Chiêu gai băng của boss'],
   ['A frost rune warns of the attack, then ice spikes erupt, deal damage and fade away.', 'Vòng phép băng xuất hiện cảnh báo, sau đó gai băng trồi lên gây sát thương rồi tan biến.'],
   ['Echoes fight on their own', 'Echo tự chiến đấu'],

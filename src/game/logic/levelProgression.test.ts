@@ -66,7 +66,7 @@ for(let index=0;index<5;index++)test(`trail ${index+1}: real movement, timed tra
  for(const plate of game.currentLevel.plates) {
   if(game.echoes.length===4) {
    const obsolete=game.echoes.findIndex(e=>game.currentLevel.plates.some(p=>!game.currentLevel.exitRequiredPlates!.includes(p.id)&&Math.hypot(p.x+25-e.x,p.y+25-e.y)<35));
-   assert.ok(obsolete>=0,'the final relay needs one reusable Echo');game.selectedEcho=obsolete;game.dismissEcho();
+   assert.equal(obsolete,0,'the oldest Echo is the reusable one in the final relay');game.dismissEcho();
   }
   game.toggleRecording();move(plate.x+25,plate.y+25);game.toggleRecording();
   const recording=game.recorder.getDuration();game.spawnEcho();const summoned=game.echo!;
