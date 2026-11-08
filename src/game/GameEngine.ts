@@ -1176,7 +1176,7 @@ export class GameEngine {
       events: this.recorder.getEvents().map(event=>({...event})),
       nextEvent: 0,
       stability: 100,
-      aggroTime: this.currentLevel.id>=2 ? (this.activeEchoRunes.has('lure')?6:3) : undefined,
+      aggroTime: this.currentLevel.id>=2 ? 3 : undefined,
       attackTimer: 0,
       characterClass: this.characterClass,
     };
@@ -1224,7 +1224,7 @@ export class GameEngine {
     if(!ECHO_RUNES.some(r=>r.id===id)||!this.canUseEchoRune(id)||!this.campaign.spendRune(id))return false;
     if(id==='call')this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
     else if(id==='restore')for(const echo of this.echoes)echo.stability=Math.min(100,(echo.stability??100)+50);
-    else {this.activeEchoRunes.add(id);if(id==='lure')for(const echo of this.echoes)echo.aggroTime=Math.max(echo.aggroTime??0,6);}
+    else this.activeEchoRunes.add(id);
     const rune=ECHO_RUNES.find(r=>r.id===id)!;
     this.showBanner(`${rune.glyph} ${this.language==='vi'?rune.vi:rune.en} · ${this.language==='vi'?'Đã dùng 1 ấn':'1 rune consumed'}`);
     this.notifyHUD();return true;
@@ -1241,6 +1241,21 @@ export class GameEngine {
       this.selectedEcho = Math.max(0, selected === echo ? Math.min(this.selectedEcho, this.echoes.length - 1) : this.echoes.indexOf(selected!));
       this.echoGrace = 2;
     }
+  }
+
+  /** One Echo hit: rune multipliers, bounded wall-aware splash, and on-hit sustain. */
+  private strikeWithEcho(echo:NonNullable<GameEngine['echoShape']>,target:CombatTarget,base:number){
+    let amount=base*(this.activeEchoRunes.has('power')?1.3:1);
+    if(this.activeEchoRunes.has('execute')&&target.hp<=target.maxHp*.3)amount*=1.25;
+    if(!this.strike(target,amount,false,echo))return false;
+    if(this.activeEchoRunes.has('vamp'))echo.stability=Math.min(100,(echo.stability??100)+4);
+    if(this.activeEchoRunes.has('cleave')){
+      const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
+      const nearby=this.combatTargets().filter(({t})=>t!==target&&Math.hypot(t.x-target.x,t.y-target.y)<=55&&!walls.some(w=>segmentWall(echo,t,w,0)!==null))
+        .sort((a,b)=>Math.hypot(a.t.x-target.x,a.t.y-target.y)-Math.hypot(b.t.x-target.x,b.t.y-target.y)).slice(0,2);
+      for(const {t} of nearby){const splash=base*.4*(this.activeEchoRunes.has('power')?1.3:1)*(this.activeEchoRunes.has('execute')&&t.hp<=t.maxHp*.3?1.25:1);this.strike(t,splash,false,echo);}
+    }
+    return true;
   }
 
   /** Interrupt the recording while enemies are inside a fixed, invisible 3m combat leash. */
@@ -1264,8 +1279,9 @@ export class GameEngine {
       echo.isMoving = false;
       return false;
     }
+    if(target&&distance>reach&&this.activeEchoRunes.has('anchor')&&this.currentLevel.plates.some(p=>rectIntersects(getCharacterBoundingBox(echo.x,echo.y,24,24),p))){echo.isMoving=false;return true;}
     if (distance > reach) {
-      const amount = Math.min(distance-reach, ECHO_COMBAT_SPEED * (this.activeEchoRunes.has('lure') ? 1.25 : 1) * dt);
+      const amount = Math.min(distance-reach, ECHO_COMBAT_SPEED * (target && this.activeEchoRunes.has('lure') ? 1.25 : 1) * dt);
       const x = echo.x + dx / distance * amount, y = echo.y + dy / distance * amount;
       const resolved = resolveMovement(echo.x, echo.y, x, y, 24, 24, walls);
       // Reject corner-assist nudges outside the original 3m circle.
@@ -1281,9 +1297,9 @@ export class GameEngine {
       if (target && echo.attackTimer <= 0) {
         echo.direction = Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
         echo.attackFlash = .22; echo.attackTarget = {x: target.x, y: target.y};
-        this.strike(target, 15 * (this.activeEchoRunes.has('power') ? 1.3 : 1), false, echo);
+        this.strikeWithEcho(echo,target,15);
         this.renderer.emitMagic('sparkle', target.x, target.y, 40);
-        echo.attackTimer = .65;
+        echo.attackTimer = .65*(this.activeEchoRunes.has('rapid')?.8:1);
       }
     }
     return true;
@@ -1293,18 +1309,20 @@ export class GameEngine {
     if (!this.echo || (!this.boss&&!this.enemies.some(e=>e.hp>0))) return;
     const originX=this.echo.x, originY=this.echo.y;
     const angle=Math.atan2(event.targetY-event.y,event.targetX-event.x);
+    const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
     const targets=[...this.enemies.filter(e=>e.hp>0),...(this.boss?[...this.boss.pillars.filter(p=>p.hp>0),...(this.boss.armor===0?[this.boss]:[])]:[])];
-    const target=targets.filter(p=>Math.hypot(p.x-originX,p.y-originY)<(event.kind==='skill'?180:150))
+    const target=targets.filter(p=>Math.hypot(p.x-originX,p.y-originY)<(event.kind==='skill'?180:150)&&!walls.some(w=>segmentWall(this.echo!,p,w,0)!==null))
       .map(p=>({p,offset:Math.abs(Math.atan2(Math.sin(Math.atan2(p.y-originY,p.x-originX)-angle),Math.cos(Math.atan2(p.y-originY,p.x-originX)-angle)))}))
       .filter(item=>item.offset<=(this.pingTarget&&Math.hypot(item.p.x-this.pingTarget.x,item.p.y-this.pingTarget.y)<45?Math.PI/6:Math.PI/9))
       .sort((a,b)=>(this.pingTarget?Math.hypot(a.p.x-this.pingTarget.x,a.p.y-this.pingTarget.y)-Math.hypot(b.p.x-this.pingTarget.x,b.p.y-this.pingTarget.y):a.offset-b.offset))[0]?.p;
     const x=target?.x??originX+Math.cos(angle)*120, y=target?.y??originY+Math.sin(angle)*120;
-    this.damageCombatTarget(x,y,(event.kind==='skill'?15:10)*(this.activeEchoRunes.has('power')?1.3:1), event.kind==='skill'?75:65, this.echo);
+    if(target)this.strikeWithEcho(this.echo,target,event.kind==='skill'?15:10);
     this.renderer.emitMagic('sparkle',x,y,event.kind==='skill'?65:36);
   }
 
   public swapEcho() {
-    if(this.screen!=='playing'||!this.echo||this.swapCooldown>0||(this.echo.stability??100)<30)return;
+    const cost=this.activeEchoRunes.has('swap')?15:30;
+    if(this.screen!=='playing'||!this.echo||this.swapCooldown>0||(this.echo.stability??100)<cost)return;
     const obstacles=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
     const dx=this.echo.x-this.player.x,dy=this.echo.y-this.player.y;
     const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/6));
@@ -1319,8 +1337,8 @@ export class GameEngine {
     this.echo.x=x;this.echo.y=y;
     this.echo.samples=this.echo.samples.map(sample=>({...sample,x:sample.x-dx,y:sample.y-dy}));
     this.echo.combatAnchor=undefined; this.echo.returnBlockedFor=0;
-    this.hitEcho(this.echo, 30, false);
-    this.swapCooldown=7;this.invulnerability=Math.max(.2,this.invulnerability);
+    this.hitEcho(this.echo, cost, false);
+    this.swapCooldown=this.activeEchoRunes.has('swap')?4:7;this.invulnerability=Math.max(.2,this.invulnerability);
     this.notifyHUD();
   }
 
@@ -1735,6 +1753,7 @@ export class GameEngine {
     for(const active of [...this.echoes]) {
     this.selectedEcho=this.echoes.indexOf(active);
     const fighting = this.echo ? this.updateEchoCombat(this.echo, dt) : false;
+    if(this.echo&&!fighting&&this.activeEchoRunes.has('regen'))this.echo.stability=Math.min(100,(this.echo.stability??100)+2*dt);
     if (this.echo && !fighting && this.echo.status === 'replaying') {
       this.echo.elapsedMs += dt * 1000;
       while(this.echo && (this.echo.events?.[this.echo.nextEvent??0]?.time??Infinity)<=this.echo.elapsedMs) {

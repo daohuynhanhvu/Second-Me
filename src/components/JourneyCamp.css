@@ -104,3 +104,6 @@
 @keyframes river-splash{0%{opacity:0;transform:translateY(0)}25%{opacity:.65}100%{opacity:0;transform:translateY(-9px)}}
 .map-still .map-river-svg{display:none}
 @media(prefers-reduced-motion:reduce){.map-river-svg{display:none}}
+
+.camp-relics>div{display:grid;grid-template-columns:repeat(6,29px);gap:12px 10px;padding:3px 5px 5px}
+@media(min-width:761px) and (max-height:780px){.camp-relics>div{grid-template-columns:repeat(6,25px);gap:10px}}

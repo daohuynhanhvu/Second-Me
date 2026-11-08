@@ -9,13 +9,14 @@ function setup(t:any){
  const old=Object.getOwnPropertyDescriptor(globalThis,'document');Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{},classList:{toggle(){}}}}});t.after(()=>old?Object.defineProperty(globalThis,'document',old):Reflect.deleteProperty(globalThis,'document'));
  const g=new GameEngine();g.restartLevel();return g;
 }
-test('all 60 equally-sized random branches yield three unique choices; each rune occurs 36 times',()=>{
+test('all equally-sized branches yield unique triples with identical rune frequencies',()=>{
+ const n=ECHO_RUNES.length;
  const counts=Object.fromEntries(ECHO_RUNES.map(r=>[r.id,0]));const outcomes=new Set<string>();
- for(let a=0;a<5;a++)for(let b=0;b<4;b++)for(let c=0;c<3;c++){
-  const values=[(a+.5)/5,(b+.5)/4,(c+.5)/3];const choice=rollRuneChoices(()=>values.shift()!);
+ for(let a=0;a<n;a++)for(let b=0;b<n-1;b++)for(let c=0;c<n-2;c++){
+  const values=[(a+.5)/n,(b+.5)/(n-1),(c+.5)/(n-2)];const choice=rollRuneChoices(()=>values.shift()!);
   assert.equal(new Set(choice).size,3);outcomes.add(choice.join(','));for(const id of choice)counts[id]++;
  }
- assert.equal(outcomes.size,60);assert.deepEqual(Object.values(counts),[36,36,36,36,36]);
+ assert.equal(outcomes.size,n*(n-1)*(n-2));assert.deepEqual(Object.values(counts),Array(n).fill(3*(n-1)*(n-2)));
 });
 test('each clear offers choices, only one offered rune is granted, repeat clears can grant duplicates',()=>{
  const c=new Campaign();c.completeLevel(1,10);assert.equal(c.pendingRuneChoices.length,3);assert.equal(Object.values(c.echoRunes).length,0);
@@ -35,10 +36,10 @@ test('pending reward blocks continuing and retrying until chosen, even after ret
 test('runes cannot be consumed in level 1 or pause; buffs do not stack and reset on retry',t=>{
  const g=setup(t);g.campaign.echoRunes={guard:2,power:2};assert.equal(g.useEchoRune('guard'),false);g.currentLevelIdx=1;g.restartLevel();assert.equal(g.useEchoRune('guard'),true);assert.equal(g.campaign.echoRunes.guard,1);assert.equal(g.useEchoRune('guard'),false);g.screen='paused';assert.equal(g.useEchoRune('power'),false);g.restartLevel();assert.equal(g.activeEchoRunes.size,0);assert.equal(g.campaign.echoRunes.guard,1);
 });
-test('restoration requires an injured Echo; Calling caps at four total summons; Luring affects existing and new Echoes',t=>{
+test('restoration requires an injured Echo; Calling caps at four total summons; Pursuit persists for existing and new Echoes',t=>{
  const g=setup(t);g.currentLevelIdx=1;g.restartLevel();g.enemies=[];g.campaign.echoRunes={call:2,restore:2,lure:1};assert.equal(g.useEchoRune('call'),false);assert.equal(g.useEchoRune('restore'),false);
  g.toggleRecording();g.toggleRecording();g.spawnEcho();assert.equal(g.useEchoRune('call'),true);assert.equal(g.campaign.echoRunes.call,1);assert.equal(g.useEchoRune('call'),false);
- g.echo!.stability=30;assert.equal(g.useEchoRune('restore'),true);assert.equal(g.echo!.stability,80);assert.equal(g.useEchoRune('lure'),true);assert.equal(g.echo!.aggroTime,6);g.spawnEcho();assert.equal(g.echo!.aggroTime,6);
+ g.echo!.stability=30;assert.equal(g.useEchoRune('restore'),true);assert.equal(g.echo!.stability,80);assert.equal(g.useEchoRune('lure'),true);assert.ok(g.activeEchoRunes.has('lure'));g.spawnEcho();assert.ok(g.activeEchoRunes.has('lure'));
 });
 test('Amplification increases only Echo replay damage against trail enemies',t=>{
  const g=setup(t);g.currentLevelIdx=1;g.restartLevel();g.currentLevel.walls=[];g.currentLevel.doors=[];g.player.x=340;g.player.y=110;g.campaign.echoRunes={power:1};
