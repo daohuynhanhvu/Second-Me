@@ -5,6 +5,7 @@ import { drawTrap, trapSpritesReady } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawFrostGuardian } from './frostGuardian.ts';
 import { drawSoldierSprite } from './soldierSprite.ts';
+import { drawComboHero, drawComboEffects, comboPose } from './comboSprites.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185'];
 
@@ -121,10 +122,13 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     drawLightningOrb(ctx, x, y, orb.angle + Math.PI / 2, 6, time); ctx.restore();
   }
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
-  if(game.characterClass==='swordsman')drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  if (game.characterClass === 'mage' && game.campaign.forged) {
+  // Kael and Aeris show their combo frames while attacking (rendering/comboSprites.ts).
+  const comboFrame = comboPose(game) ? drawComboHero(ctx, game) : false;
+  if(game.characterClass==='swordsman' && !comboFrame)drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
+  if (game.characterClass === 'mage' && game.campaign.forged && !comboFrame) {
     drawMageStaff(ctx, game.player.x, game.player.y, game.player.direction);
   }
+  drawComboEffects(ctx, game, time);
   for (const shot of game.magicShots) {
     const t = Math.min(1, shot.age / 0.3);
     const x = shot.x + (shot.targetX - shot.x) * t, y = shot.y + (shot.targetY - shot.y) * t;

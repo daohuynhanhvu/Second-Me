@@ -32,6 +32,23 @@ import { renderAdventure } from './rendering/adventure.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 import { voice, type VoiceRole } from './logic/voice.ts';
 import { music, type MusicScene } from './logic/music.ts';
+import { Combo, COMBO_HITS, comboDamage, hitDuration, type ComboHero } from './logic/combo.ts';
+import { preloadComboSprites, comboPose } from './rendering/comboSprites.ts';
+
+/** A spell from Aeris's combo in flight: it moves, and strikes what it touches. */
+export interface ComboShot { x: number; y: number; vx: number; vy: number; life: number; radius: number; amount: number; heavy: boolean; pierce: boolean; group: Set<object> }
+export interface ComboFx { kind: 'arc' | 'spin' | 'impact' | 'nova' | 'charge'; x: number; y: number; angle: number; radius: number; life: number; max: number; heavy?: boolean; flip?: boolean }
+export interface DamageText { x: number; y: number; text: string; life: number; max: number; heavy: boolean; blocked?: boolean }
+/** Hit circles of the combat targets (game px), for sword arcs and spells. */
+const PILLAR_R = 26, BOSS_R = 44;
+/** Kael's swings: reach of the arc's centre in front of him, its radius, how many it can hit. */
+const KAEL_SWINGS = [
+  { reach: 46, radius: 48, max: 1 },          // Quick Slash
+  { reach: 48, radius: 52, max: 1 },          // Reverse Slash
+  { reach: 0, radius: 84, max: Infinity },    // Spinning Slash: all around him
+  { reach: 54, radius: 76, max: Infinity },   // Heavy Finisher: bigger, after the dash
+];
+const FINISHER_DASH = 42;                     // px Kael lunges during the finisher's dash frames
 
 export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | 'wave';
 const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'], mechanical: ['fire','armor','haste'] };
@@ -87,6 +104,8 @@ export interface HUDState {
   mechanicalOwned: boolean;
   /** Level id the loading screen is preparing, or null for the first load into the lobby. */
   loadingLevel?: number | null;
+  /** True when this load was started from the main menu (Start / Continue): it ends with the portal. */
+  loadingFromMenu?: boolean;
 }
 
 export class GameEngine {
@@ -101,7 +120,11 @@ export class GameEngine {
   public levelLoading = false;
   /** The level the loading screen is preparing; `built` once it is set up behind the screen. */
   private pendingLevel: { idx: number; built: boolean; after?: () => void } | null = null;
+  /** The current load began on the main menu, so it ends with the portal (otherwise a fade into the level). */
+  private loadingFromMenu = false;
   private stageBlank = false;
+  /** The menu screen whose still backdrop has been drawn (lobby, shop, characters). */
+  private backdropFor: GameScreen | null = null;
   public currentLevelIdx: number = 0;
   public currentLevel: LevelData;
 
@@ -191,6 +214,14 @@ export class GameEngine {
   public buyMechanical() { if(!MECHANICAL_ENABLED || this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
 
   public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
+  /** Kael's / Aeris's four-hit normal attack (logic/combo.ts); null for other classes. */
+  public combo: Combo | null = null;
+  /** Where the combo is aimed (latest press). */
+  public comboAim = { x: 0, y: 0 };
+  public comboShots: ComboShot[] = [];
+  public comboFx: ComboFx[] = [];
+  public damageTexts: DamageText[] = [];
+  private lunge = { time: 0, vx: 0, vy: 0 };
   public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
   public skillDropTimer = 5;
   public stoneShield = 0;
@@ -310,6 +341,7 @@ export class GameEngine {
   }
 
   public openLobby() {
+    this.loadingFromMenu = this.screen === 'intro';
     this.pendingLevel = null;
     this.screen = 'loading';
     this.heldKeys.clear();
@@ -344,6 +376,7 @@ export class GameEngine {
   private enterLevel(idx: number, after?: () => void) {
     if (!this.levelLoading) { this.currentLevelIdx = idx; this.restartLevel(); after?.(); return; }
     if (this.screen === 'loading') return;   // already on its way to a level
+    this.loadingFromMenu = this.screen === 'intro';   // Continue on the main menu
     voice.stopAll();
     this.pendingLevel = { idx, built: false, after };
     this.screen = 'loading';
@@ -449,6 +482,8 @@ export class GameEngine {
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.magicShots = [];
+    this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
+    preloadComboSprites();
     this.orbitOrbs = []; this.lightCircle = null; this.overdrive = 0;
     this.skillDrop = null; this.skillDropTimer = 5;
     this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
@@ -570,10 +605,23 @@ export class GameEngine {
 
   private damageCombatTarget(x:number,y:number,amount:number,radius=65) {
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
-    if(this.insideLightCircle) amount *= 1.2;
     const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
-    if(pillar) {
+    if(pillar) return this.strike(pillar, amount);
+    if(Math.hypot(this.boss.x-x,this.boss.y-y)>radius) return false;
+    return this.strike(this.boss, amount);
+  }
+
+  /**
+   * The game's one damage rule, for every hit: Light Sanctuary adds 20%, a pillar takes the
+   * damage, the boss takes it only once every pillar is down. Shows the damage number.
+   */
+  private strike(target: BossState | BossState['pillars'][number], amount: number, heavy = false): boolean {
+    if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
+    if(this.insideLightCircle) amount *= 1.2;
+    if(target !== this.boss) {
+      const pillar = target;
       pillar.hp=Math.max(0,pillar.hp-amount);
+      this.addDamageText(pillar.x, pillar.y - 34, amount, heavy);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
       if(pillar.hp===0) {
@@ -586,11 +634,44 @@ export class GameEngine {
         : (this.language==='vi'?`Đã phá trụ · Còn ${this.boss.armor/25} trụ`:`Pillar destroyed · ${this.boss.armor/25} remaining`));
       this.notifyHUD(); return true;
     }
-    if(Math.hypot(this.boss.x-x,this.boss.y-y)>radius) return false;
-    if(this.boss.pillars.some(p=>p.hp>0)) { this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,35); return false; }
+    if(this.boss.pillars.some(p=>p.hp>0)) {
+      this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,35);
+      this.addDamageText(this.boss.x, this.boss.y - 60, 0, false, this.language==='vi'?'MIỄN':'IMMUNE');
+      return false;
+    }
     this.boss.hp=Math.max(0,this.boss.hp-amount);
     this.boss.hitFlash=.18;
+    this.addDamageText(this.boss.x, this.boss.y - 60, amount, heavy);
     this.finishBossHit(); return true;
+  }
+
+  private addDamageText(x: number, y: number, amount: number, heavy: boolean, label?: string) {
+    const max = heavy ? 1.1 : 0.8;
+    this.damageTexts.push({ x: x + (Math.random() - 0.5) * 14, y, text: label ?? String(Math.round(amount)), life: max, max, heavy, blocked: !!label });
+    if (this.damageTexts.length > 24) this.damageTexts.shift();
+  }
+
+  /**
+   * Strikes every target whose hit circle overlaps (x, y, radius), nearest first, at most
+   * `max` of them, each at most once per hit (`group` holds those already struck).
+   */
+  private damageArea(x: number, y: number, radius: number, amount: number, group: Set<object>, max: number, heavy = false) {
+    if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return 0;
+    const near: { t: BossState | BossState['pillars'][number]; d: number }[] = [];
+    for (const p of this.boss.pillars) if (p.hp > 0) { const d = Math.hypot(p.x - x, p.y - y); if (d <= radius + PILLAR_R) near.push({ t: p, d }); }
+    const db = Math.hypot(this.boss.x - x, this.boss.y - y);
+    if (db <= radius + BOSS_R) near.push({ t: this.boss, d: db });
+    near.sort((a, b) => a.d - b.d);
+    let hits = 0;
+    for (const { t } of near) {
+      if (hits >= max) break;
+      if (group.has(t)) continue;
+      group.add(t);
+      this.strike(t, amount, heavy);
+      this.renderer.emitMagic('sparkle', t.x, t.y, heavy ? 70 : 40);
+      hits++;
+    }
+    return hits;
   }
 
   private spawnCombatSkill() {
@@ -643,8 +724,35 @@ export class GameEngine {
     this.notifyHUD();
   }
 
+  private comboHero(): ComboHero | null {
+    return this.characterClass === 'swordsman' || this.characterClass === 'mage' ? this.characterClass : null;
+  }
+
+  /** The combo for the current hero (a new one when the hero changes). */
+  private comboFor(): Combo | null {
+    const hero = this.comboHero();
+    if (!hero) { this.combo = null; return null; }
+    if (!this.combo || this.combo.hits !== COMBO_HITS[hero]) this.combo = new Combo(COMBO_HITS[hero]);
+    return this.combo;
+  }
+
+  /** Haste (Kael's pickup) and Overdrive play the combo twice as fast, as they did the old swing. */
+  private get comboSpeed() { return this.hasteTime > 0 || this.overdrive > 0 ? 2 : 1; }
+
   public attack(target?: { x: number; y: number }) {
-    if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
+    if (this.screen !== 'playing' || this.bossDeathPending) return;
+    const combo = this.comboFor();
+    if (combo) {
+      if (this.dodgeTime > 0) return;                   // mid-dodge: no attack
+      this.comboAim = target ?? this.combatAim() ?? {
+        x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0),
+        y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+      const step = combo.press();
+      if (step >= 0) this.startComboHit(step);
+      this.notifyHUD();
+      return;
+    }
+    if (this.attackCooldown > 0) return;
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
@@ -663,6 +771,94 @@ export class GameEngine {
         this.damageCombatTarget(aim.x,aim.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,55);
     }
     this.notifyHUD();
+  }
+
+  /** A combo hit begins: record it for the Echo, voice it, start Kael's finisher dash. */
+  private startComboHit(step: number) {
+    const hero = this.comboHero();
+    if (!hero) return;
+    const hit = COMBO_HITS[hero][step];
+    this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:this.comboAim.x,targetY:this.comboAim.y});
+    voice.say(this.voiceRole, 'attack');
+    this.attackCooldown = hitDuration(hit) / this.comboSpeed;      // the HUD's "recovering" hint
+    const dx = this.comboAim.x - this.player.x, dy = this.comboAim.y - this.player.y, d = Math.hypot(dx, dy) || 1;
+    if (hero === 'swordsman' && hit.heavy) {
+      // Dash over the finisher's dash frames (1-2), toward the target but not into it.
+      const reach = Math.min(FINISHER_DASH, Math.max(0, d - 60));
+      const t = hit.frameTime * 2;
+      this.lunge = { time: t, vx: dx / d * reach / t, vy: dy / d * reach / t };
+    }
+    if (hero === 'mage' && hit.heavy) this.comboFx.push({ kind: 'charge', x: this.player.x, y: this.player.y + 6, angle: 0, radius: 70, life: hitDuration(hit) * 0.6, max: hitDuration(hit) * 0.6 });
+  }
+
+  /** A combo hit's hit frame: the one moment it deals damage. */
+  private landComboHit(step: number) {
+    const hero = this.comboHero();
+    if (!hero) return;
+    const hit = COMBO_HITS[hero][step];
+    const empowered = hero === 'swordsman' && this.currentLevel.plates.some(p => p.isPressed);
+    const amount = comboDamage(hero, step, empowered);
+    const px = this.player.x, py = this.player.y - 18;             // body centre
+    const angle = Math.atan2(this.comboAim.y - py, this.comboAim.x - px);
+    const ux = Math.cos(angle), uy = Math.sin(angle);
+    const group = new Set<object>();                               // targets this hit has struck
+    if (hero === 'swordsman') {
+      const sw = KAEL_SWINGS[step];
+      const cx = px + ux * sw.reach, cy = py + uy * sw.reach;
+      this.damageArea(cx, cy, sw.radius, amount, group, sw.max, !!hit.heavy);
+      if (step === 2) this.comboFx.push({ kind: 'spin', x: px, y: py + 8, angle, radius: sw.radius, life: 0.3, max: 0.3 });
+      else this.comboFx.push({ kind: 'arc', x: px + ux * 18, y: py + uy * 18, angle, radius: sw.radius * 0.75, life: 0.22, max: 0.22, heavy: hit.heavy, flip: step === 1 });
+      if (hit.heavy) { this.comboFx.push({ kind: 'impact', x: cx, y: cy, angle, radius: 46, life: 0.35, max: 0.35 }); sounds.playPlateActivate(); }
+    } else {
+      const shot = (a: number, speed: number, radius: number, pierce: boolean, fromX = px + Math.cos(a) * 18, fromY = py - 4 + Math.sin(a) * 18) =>
+        this.comboShots.push({ x: fromX, y: fromY, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, life: 460 / speed, radius, amount, heavy: false, pierce, group });
+      if (step === 0) shot(angle, 560, 8, false);
+      else if (step === 1) for (const off of [-0.24, 0, 0.24]) shot(angle + off, 600, 7, false);
+      else if (step === 2) {
+        // Three orbs set off from their places on the orbit, each through whatever it meets.
+        for (let i = 0; i < 3; i++) {
+          const oa = angle + i * Math.PI * 2 / 3;
+          const ox = px + Math.cos(oa) * 34, oy = py + Math.sin(oa) * 24;
+          const tx = this.comboAim.x + Math.cos(oa) * 22, ty = this.comboAim.y + Math.sin(oa) * 22;
+          shot(Math.atan2(ty - oy, tx - ox), 470, 9, true, ox, oy);
+        }
+      } else {
+        this.damageArea(px, py + 8, 150, amount, group, Infinity, true);
+        this.comboFx.push({ kind: 'nova', x: px, y: py + 8, angle: 0, radius: 150, life: 0.45, max: 0.45 });
+        sounds.playPlateActivate();
+      }
+    }
+    this.notifyHUD();
+  }
+
+  /** Moves spells, Kael's dash, effects and numbers; runs the combo's clock. */
+  private updateCombo(dt: number) {
+    this.combo?.update(dt * this.comboSpeed, s => this.startComboHit(s), s => this.landComboHit(s));
+    if (this.lunge.time > 0) {
+      const step = Math.min(dt, this.lunge.time);
+      this.lunge.time -= step;
+      const obstacles = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
+      const r = resolveMovement(this.player.x, this.player.y, this.player.x + this.lunge.vx * step, this.player.y + this.lunge.vy * step, 24, 24, obstacles);
+      this.player.x = r.x; this.player.y = r.y;
+    }
+    for (const shot of this.comboShots) {
+      shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
+      if (!this.boss || this.bossDeathPending) continue;
+      const hitR = shot.radius;
+      for (const t of [...this.boss.pillars.filter(p => p.hp > 0), this.boss]) {
+        const r = t === this.boss ? BOSS_R : PILLAR_R;
+        if (shot.group.has(t) || Math.hypot(t.x - shot.x, t.y - shot.y) > r + hitR) continue;
+        shot.group.add(t);
+        this.strike(t, shot.amount, shot.heavy);
+        this.renderer.emitMagic('sparkle', shot.x, shot.y, 36);
+        if (!shot.pierce) { shot.life = 0; break; }
+      }
+    }
+    this.comboShots = this.comboShots.filter(s => s.life > 0);
+    for (const fx of this.comboFx) fx.life -= dt;
+    this.comboFx = this.comboFx.filter(f => f.life > 0);
+    for (const t of this.damageTexts) t.life -= dt;
+    this.damageTexts = this.damageTexts.filter(t => t.life > 0);
   }
 
   public useSkill(_target?: { x: number; y: number }) {
@@ -711,6 +907,7 @@ export class GameEngine {
 
   public dodge() {
     if (this.screen !== 'playing' || !this.boss || this.dodgeCooldown > 0) return;
+    this.combo?.cancel(); this.lunge.time = 0;           // a dodge breaks the combo
     this.dodgeTime = 0.16;
     this.dodgeCooldown = 1.2;
     this.invulnerability = Math.max(this.invulnerability, 0.4);
@@ -723,6 +920,7 @@ export class GameEngine {
     if(this.armorShield>0) { this.armorShield--; this.invulnerability=.3; this.notifyHUD(); return; }
     this.health = Math.max(0, this.health - 1);
     this.invulnerability = 1.3;
+    this.combo?.cancel(); this.lunge.time = 0;           // staggered: the combo is lost
     this.renderer.particles.emit(this.player.x, this.player.y, 18, '#fb7185', 75, 4, 0.6);
     if (this.health === 0) {
       this.defeatReason = 'damage';
@@ -1064,8 +1262,14 @@ export class GameEngine {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         this.stageBlank = true;
       }
+    } else if (this.screen === 'lobby' || this.screen === 'shop' || this.screen === 'characters') {
+      // These menus cover the stage almost entirely (91-96% opaque): draw it once as their
+      // backdrop and leave it, instead of redrawing a hidden level every frame.
+      this.stageBlank = false;
+      if (this.backdropFor !== this.screen && !this.suspendVisuals) { this.render(); this.backdropFor = this.screen; }
     } else {
       this.stageBlank = false;
+      this.backdropFor = null;
       if (!this.suspendVisuals) this.render();
     }
     music.set(this.musicScene(), this.screen === 'paused');
@@ -1158,6 +1362,7 @@ export class GameEngine {
         if(this.fireBurnTick<=0) { this.fireBurnTick+=1; this.damageCombatTarget(this.boss.x,this.boss.y,5,70); }
       }
     }
+    this.updateCombo(dt);
     for (const shot of this.magicShots) {
       shot.age += dt;
       if (shot.age >= 0.3) this.damageCombatTarget(shot.targetX,shot.targetY,shot.skill?40:15,shot.skill?110:55);
@@ -1439,7 +1644,7 @@ export class GameEngine {
       this.canvas.width,
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
-      this.characterClass !== 'mage' ? {...this.player,x:-1000,y:-1000} : this.player,
+      this.characterClass !== 'mage' || comboPose(this) ? {...this.player,x:-1000,y:-1000} : this.player,
       null,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
@@ -1498,6 +1703,7 @@ export class GameEngine {
         skillCooldown: this.skillCooldown,
         mechanicalOwned: this.campaign.mechanicalOwned,
         loadingLevel: this.pendingLevel ? LEVELS[this.pendingLevel.idx].id : null,
+        loadingFromMenu: this.loadingFromMenu,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
         activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ×${this.stoneShield}`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ×${this.armorShield}`:'',

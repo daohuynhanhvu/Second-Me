@@ -26,8 +26,10 @@ const TEXT = {
  * transition plays (loadingScene.ts); onDone(true) comes on its final white flash, which the
  * caller fades out over the next screen (onDone(false): reduced motion, a plain fade).
  */
-export function LoadingScreen({ language, reducedMotion, level = null, onReveal, onDone }: {
-  language: 'en' | 'vi'; reducedMotion: boolean; level?: Omit<LevelLoadSpec, 'delayMs'> | null; onReveal?: () => void; onDone: (flash: boolean) => void;
+export function LoadingScreen({ language, reducedMotion, level = null, portal = false, onReveal, onDone }: {
+  language: 'en' | 'vi'; reducedMotion: boolean; level?: Omit<LevelLoadSpec, 'delayMs'> | null;
+  /** End with the portal transition (loads started from the main menu); otherwise fade into the level. */
+  portal?: boolean; onReveal?: () => void; onDone: (flash: boolean) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -55,7 +57,7 @@ export function LoadingScreen({ language, reducedMotion, level = null, onReveal,
       root: root.current, percent: percent.current,
       lines: lines.current.filter((l): l is HTMLLIElement => !!l),
       perf: dev ? perf.current : undefined,
-    }, { reducedMotion, stress, hold, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
+    }, { reducedMotion, stress, hold, portal, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
     if (dev) (window as unknown as { __loadingScene?: LoadingScene }).__loadingScene = scene;
     const observer = new ResizeObserver(() => scene.resize());
     observer.observe(canvas.current);

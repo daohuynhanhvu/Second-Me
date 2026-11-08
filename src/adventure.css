@@ -125,7 +125,7 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 /* The loading text sinks into the forest floor with the bar (same 1.3 s ease-in). */
 .loading-v2:is([data-phase=move],[data-phase=rotate],[data-phase=activate],[data-phase=dive],[data-phase=done]) :is(.lv-lines,.lv-footer){transform:translateY(19.6cqw);opacity:0;transition:transform 1.3s cubic-bezier(.55,0,.9,.45),opacity 1.1s ease-in .15s}
 .loading-v2[data-phase=fade] :is(.lv-lines,.lv-footer){opacity:0}
-.loading-v2[data-phase=fade]{opacity:0}
+.loading-v2[data-phase=fade]{opacity:0;transition:opacity .9s ease-in-out}   /* FADE_S in loadingScene.ts */
 .loading-v2.still .lv-lines li i{animation:none}
 .lobby-screen{animation:lv-enter .45s ease-out}
 @keyframes lv-enter{from{opacity:0}}
@@ -147,3 +147,7 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 .loading-v2.still :is(.lv-reflect,.lv-ray,.lv-rune,.lv-fog){animation:none}
 .soldier-profile canvas{position:absolute;width:62px;height:62px;left:-11px;top:-7px;image-rendering:pixelated}.selected-soldier-avatar canvas{position:absolute;width:45px;height:45px;left:-5px;top:-5px;image-rendering:pixelated}.lobby-header nav .selected-soldier-avatar canvas{width:30px;height:30px;left:-4px;top:-4px}
 .wizard-avatar canvas{position:absolute;width:45px;height:45px;left:-5px;top:-5px;image-rendering:pixelated}.lobby-header nav .wizard-avatar canvas{width:30px;height:30px;left:-4px;top:-4px}.aeris-profile{position:relative;display:block;width:40px;height:55px;overflow:hidden;transform:scale(6.5);image-rendering:pixelated;filter:drop-shadow(0 3px 3px #0008)}.aeris-profile canvas{position:absolute;width:62px;height:62px;left:-11px;top:-7px;image-rendering:pixelated}@media(max-width:600px){.aeris-profile{transform:scale(3.8)}}
+
+/* Character screen: Kael's / Aeris's combo (components/ComboShowcase.tsx). */
+.combo-preview{display:block;max-width:92%;max-height:92%;width:auto;height:auto;image-rendering:pixelated;margin:auto}
+

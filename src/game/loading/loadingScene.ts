@@ -48,6 +48,7 @@ const STRIPE = 26;                        // spacing of the light bands in the b
  *             the stone is drawn into the eye; the tunnel opens behind it, turquoise floods
  *             the screen, a white flash hands over to the next screen (AdventureApp fades it).
  */
+const FADE_S = 0.9;                       // the plain fade into a level (CSS .loading-v2 transition matches)
 const MOVE_S = 1.5;
 const ROTATE_S = 1.5;
 const SINK_S = 1.3;                       // the bar group is gone before the portal arrives
@@ -100,6 +101,12 @@ export interface SceneOptions {
   onReveal?: () => void;
   /** Dev only: stay on the loading screen after 100% (for profiling). */
   hold?: boolean;
+  /**
+   * End with the portal transition (loads started from the main menu). Otherwise, and with
+   * reduced motion, the screen fades out over FADE_S, uncovering what it loaded (onReveal is
+   * called as the fade starts so the level is already drawn underneath).
+   */
+  portal?: boolean;
 }
 
 /** `fade` replaces the portal transition when reduced motion is on. */
@@ -213,7 +220,7 @@ export class LoadingScene {
     this.portalClip = new Path2D(); this.portalClip.ellipse(p.cx, p.cy, p.rx - 5, p.ry - 8, 0, 0, Math.PI * 2);
     this.rimPath = new Path2D(); this.rimPath.ellipse(p.cx, p.cy, p.rx, p.ry, 0, 0, Math.PI * 2);
     this.toBitmaps();
-    if (!opts.reducedMotion) {
+    if (opts.portal && !opts.reducedMotion) {
       // The spiral twist's shader compiles in the background while loading runs.
       this.twistFx = PortalTwist.create();
       this.layer = canvasOf(LAYER, LAYER); this.layerCtx = this.layer.getContext('2d')!;
@@ -298,11 +305,14 @@ export class LoadingScene {
     // Phases: loading → (real 100%) finishing: let the wizard complete his stride →
     // the portal transition (move → activate → dive) → done. Reduced motion: a short fade.
     if (this.phase === 'loading' && this.shown >= 1 && !this.opts.hold) this.setPhase('finishing');
-    else if (this.phase === 'finishing' && this.frame === 0 && this.phaseTime > 0.05) this.setPhase(this.opts.reducedMotion || !transitionArtReady() ? 'fade' : 'move');
+    else if (this.phase === 'finishing' && this.frame === 0 && this.phaseTime > 0.05) {
+      if (this.opts.portal && !this.opts.reducedMotion && transitionArtReady()) this.setPhase('move');
+      else { this.setPhase('fade'); this.opts.onReveal?.(); }   // the level is set up under the fading screen
+    }
     else if (this.phase === 'move' && this.phaseTime >= MOVE_S) this.setPhase('rotate');
     else if (this.phase === 'rotate' && this.phaseTime >= ROTATE_S) this.setPhase('activate');
     else if (this.phase === 'activate' && this.phaseTime >= ACTIVATE_S) this.setPhase('dive');
-    else if ((this.phase === 'dive' && this.phaseTime >= DIVE_S) || (this.phase === 'fade' && this.phaseTime > 0.45)) {
+    else if ((this.phase === 'dive' && this.phaseTime >= DIVE_S) || (this.phase === 'fade' && this.phaseTime > FADE_S)) {
       const flash = this.phase === 'dive';
       this.setPhase('done'); this.stop();
       this.opts.onReveal?.(); this.opts.onFinished(flash);

@@ -1,3 +1,4 @@
+import { COMBO_HITS, hitDuration } from './combo.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Campaign, createBoss, swordHit, updateBoss, levelRating } from './campaign.ts';
@@ -56,12 +57,12 @@ test('mage magic and class skill damage the boss, while the class fixes the weap
   game.player.x=game.boss!.x-200;game.player.y=game.boss!.y;
   const target = {x:game.boss!.x,y:game.boss!.y};
   game.attack(target);
-  assert.equal(game.boss!.hp,240);
-  for(let i=0;i<7;i++)update(.05);
-  assert.equal(game.boss!.hp,225);
+  assert.equal(game.boss!.hp,240);                 // no damage when the cast starts
+  for(let i=0;i<20;i++)update(.05);
+  assert.equal(game.boss!.hp,228);                 // Arcane Bolt: 0.8 × 15 ATK, once
   game.useSkill({x:game.boss!.x,y:game.boss!.y});
   for(let i=0;i<7;i++)update(.05);
-  assert.equal(game.boss!.hp,225);
+  assert.equal(game.boss!.hp,228);
   assert.equal(game.orbitOrbs.length,1);
   game.goToLobby();game.selectClass('swordsman');
   assert.equal(game.weapon,'sword');
@@ -97,10 +98,11 @@ test('all five wins unlock the forge, forging gates the boss, and the boss gates
   game.player.x=LEVELS[5].exit.x+30;game.player.y=LEVELS[5].exit.y+30;
   controls.update(0.05);
   assert.equal(game.screen,'playing');
-  while(game.boss!.hp>0) {
-    game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;
-    game.attackCooldown=0;game.attack();
+  for(let i=0;i<4000 && game.boss!.hp>0;i++) {
+    game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;game.invulnerability=9;
+    game.attack();controls.update(0.05);
   }
+  assert.equal(game.boss!.hp,0);
   assert.equal(game.screen,'playing'); // Play the death animation before showing the ending.
   controls.update(1.1);
   assert.equal(game.screen,'ending');
@@ -217,7 +219,8 @@ test('all six class pickups apply their distinct damage or defense',t=>{
   game.characterClass='swordsman';
   internal.collectCombatSkill('haste');assert.equal(game.hasteTime,6);
   game.player.x=game.boss!.x-80;game.player.y=game.boss!.y;
-  game.attackCooldown=0;game.attack();assert.equal(game.attackCooldown,.27);
+  game.attackCooldown=0;game.attack();             // haste plays the combo twice as fast
+  assert.equal(game.attackCooldown,hitDuration(COMBO_HITS.swordsman[0])/2);
   internal.collectCombatSkill('armor');assert.equal(game.armorShield,1);
   game.invulnerability=0;internal.takeDamage();assert.equal(game.health,5);assert.equal(game.armorShield,0);
   const before=game.boss!.hp;internal.collectCombatSkill('wave');assert.equal(game.boss!.hp,before-55);
@@ -252,7 +255,11 @@ test('attack cooldown prevents duplicate hits and a dodge prevents immediate dam
   game.screen='forge';game.forgeWeapon();game.enterBoss();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
   game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;
-  game.attack();game.attack();assert.equal(game.boss!.hp,225);
+  game.attack();game.attack();                     // the second press is too early to count
+  assert.equal(game.boss!.hp,240);
+  const tick=(game as unknown as {updateCombo(dt:number):void}).updateCombo.bind(game);
+  for(let i=0;i<10;i++)tick(.05);
+  assert.equal(game.boss!.hp,228);
   game.dodge();(game as unknown as {takeDamage():void}).takeDamage();
   assert.equal(game.health,5);assert.ok(game.dodgeCooldown>0);
 });

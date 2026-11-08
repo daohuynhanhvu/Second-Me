@@ -17,6 +17,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   useEffect(() => {
     const engine = new GameEngine(); ref.current = engine;
     engine.levelLoading = true;   // levels open through the loading screen
+    if (import.meta.env.DEV) (window as unknown as { __engine?: GameEngine }).__engine = engine;   // console checks
     engine.setCanvas(canvas.current); engine.onHUDChange = state => setHud({ ...state }); engine.start();
     prepare?.(engine);
     return () => engine.stop();
@@ -29,7 +30,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
     {hud.screen === 'intro' && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} onDone={() => setIntroRun(0)}/>}
     {hud.screen === 'loading' && <LoadingScreen key={hud.loadingLevel ?? 'lobby'} language={lang} reducedMotion={hud.reducedMotion}
-      level={hud.loadingLevel == null ? null : { levelId: hud.loadingLevel, character: hud.characterClass, lang }}
+      level={hud.loadingLevel == null ? null : { levelId: hud.loadingLevel, character: hud.characterClass, lang }} portal={!!hud.loadingFromMenu}
       onReveal={() => ref.current?.revealLoadedLevel()} onDone={flash => { if (flash) setPortalFlash(n => n + 1); ref.current?.finishLoading(); }}/>}
     {portalFlash > 0 && <div key={portalFlash} className="portal-flash" aria-hidden="true" onAnimationEnd={() => setPortalFlash(0)}/>}
     {hud.screen === 'lobby' && <Lobby engine={engine} hud={hud}/>}
