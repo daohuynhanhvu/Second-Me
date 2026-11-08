@@ -90,7 +90,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     const walking = boss.mode === 'stalking' && Math.hypot(game.player.x - boss.x, game.player.y - boss.y) > 85;
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
     if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
-    if (game.campaign.forged && game.characterClass === 'swordsman' && game.attackFlash > 0) {
+    if (game.characterClass === 'swordsman' && game.attackFlash > 0) {
       ctx.save(); ctx.translate(game.player.x, game.player.y); ctx.rotate(game.attackAngle);
       ctx.beginPath(); ctx.arc(0, 0, 90, -1.05, 1.05); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
@@ -111,23 +111,27 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     drawLightningOrb(ctx, x, y, orb.angle + Math.PI / 2, 6, time); ctx.restore();
   }
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
-  if(game.characterClass==='swordsman' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  if (game.characterClass === 'mage' && game.campaign.forged && !game.exitTravelRemaining) {
+  if(game.characterClass==='swordsman' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0,1-game.attackFlash/.22);
+  if (game.characterClass === 'mage' && !game.exitTravelRemaining) {
     drawMageStaff(ctx, game.player.x, game.player.y, game.player.direction);
   }
   for (const shot of game.magicShots) {
-    const t = Math.min(1, shot.age / 0.3);
+    const t = Math.min(1, shot.age / (shot.duration ?? .3));
     const x = shot.x + (shot.targetX - shot.x) * t, y = shot.y + (shot.targetY - shot.y) * t;
     drawLightningOrb(ctx, x, y, Math.atan2(shot.targetY - shot.y, shot.targetX - shot.x), shot.skill ? 14 : 10, time);
   }
   if(game.skillDrop) {
     const drop=game.skillDrop;
-    const y=-35+(drop.y+35)*drop.fall;
-    ctx.save();ctx.translate(drop.x,y);ctx.rotate(time*2);ctx.shadowColor='#f5d77c';ctx.shadowBlur=24;
-    ctx.fillStyle='#d7af58';ctx.strokeStyle='#fff0ae';ctx.lineWidth=3;
-    ctx.fillRect(-18,-18,36,36);ctx.strokeRect(-18,-18,36,36);
-    ctx.rotate(-time*2);ctx.fillStyle='#153428';ctx.textAlign='center';ctx.font='bold 20px sans-serif';ctx.fillText('✦',0,7);ctx.restore();
-    if(drop.fall<1) {ctx.strokeStyle='rgba(255,232,159,.5)';ctx.beginPath();ctx.arc(drop.x,drop.y,23,0,Math.PI*2);ctx.stroke();}
+    const y=drop.y-5+Math.sin(time*3)*3;
+    ctx.save();ctx.globalAlpha*=Math.min(1,drop.fall*2);ctx.translate(drop.x,y);
+    const color=game.characterClass==='mage'?'#91eaff':'#ffe29a';
+    ctx.fillStyle='#163137';ctx.strokeStyle=color;ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(0,9,23,9,0,0,Math.PI*2);ctx.stroke();
+    ctx.fillRect(-13,-19,26,28);ctx.strokeRect(-13,-19,26,28);
+    ctx.fillStyle=color;ctx.textAlign='center';ctx.font='bold 20px monospace';
+    ctx.fillText(game.characterClass==='mage'?'*':'+',0,3);
+    ctx.font='bold 9px monospace';ctx.fillText('SKILL RUNE',0,30);
+    ctx.restore();
   }
   if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c';ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
   if(game.stoneShield>0 || game.armorShield>0) {ctx.strokeStyle=game.stoneShield>0?'#aeb6a3':'#e2d099';ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}

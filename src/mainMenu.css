@@ -45,19 +45,6 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
 
 .intro-dialog{z-index:50}.intro-dialog .panel{max-width:440px}.intro-dialog .primary{width:100%;margin-top:16px}
 .adventure-app:lang(vi) .lobby-welcome h1,.adventure-app:lang(vi) .node-number,.lobby-welcome h1,.lobby-header b,.node-number{font-family:'Second Me Serif',Georgia,serif!important}
-@media(max-aspect-ratio:4/3){
-  .intro-screen{background-size:auto 150%!important;background-position:16% bottom!important}
-  .intro-scene-effects{inset:auto;bottom:0;left:16%;width:auto;height:150%;aspect-ratio:1376/768;transform:translateX(-16%)}
-  .intro-magic{opacity:.72}
-  .intro-mobile-title{position:absolute;z-index:2;top:4%;left:4%;right:4%;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;color:#fff0b0;text-shadow:2px 3px 2px #000,-1px -1px #000}
-  .intro-mobile-title span,.intro-mobile-title small{font:500 clamp(8px,2.2vw,13px)/1.4 system-ui,'Segoe UI',sans-serif;letter-spacing:.12em}
-  .intro-mobile-title strong{font:700 clamp(28px,8vw,49px)/1.1 'Second Me Serif',Georgia,serif;white-space:nowrap}
-  .intro-language{top:20%;left:auto;right:5%;width:auto;background:#0b211dd9;border:1px solid #b7ab7680;border-radius:4px;padding:3px 7px}
-  .intro-menu{left:5%;top:auto;bottom:3%;width:90%;height:min(46%,355px);padding:5px 7px;background:#0d2421ef;border-color:#b3a579a1}
-  .intro-menu-item{font-size:clamp(17px,4.2vw,24px)}
-}
-@media(max-height:500px) and (max-aspect-ratio:4/3){.intro-mobile-title{top:1%;gap:1px}.intro-mobile-title strong{font-size:26px}.intro-language{top:21%}.intro-menu{height:64%;bottom:2%}.intro-menu-item{font-size:15px}}
-
 /* Stone slab items: public/assets/menu/stone-button.png (tools/assets/prepare_menu_buttons.py) holds 5 slab
    shapes (columns, --slab picks one) x 3 layers (rows: base, face, lit face), each 304x78 painting px for a
    298x75 item. The base (thickness + shadow) stays; the face, carrying the label, rises 3 px when the item
@@ -71,3 +58,17 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
 .intro-menu-item:active:not(:disabled) .intro-menu-face{transform:translateY(2.56%);transition-duration:.06s}
 .intro-menu-item:disabled{opacity:1;color:#a8a283}
 .intro-menu-item:disabled::before,.intro-menu-item:disabled .intro-menu-face{filter:brightness(.55) saturate(.6)}
+
+/* Keep the painting and its overlays in the same art coordinate system. */
+.intro-screen{background:#07120e!important}
+.intro-artwork{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,calc(100dvh * 1376 / 768));aspect-ratio:1376/768;background:url('/assets/menu/second-me-forest-clean.png') center/100% 100% no-repeat}
+/* The menu is one authored scene: scale it together even in a tall desktop pane. */
+.intro-artwork{container-type:inline-size}
+.intro-menu-item{font-size:clamp(9px,1.9cqw,29px)}
+.intro-language{font-size:clamp(8px,.8cqw,14px)}
+@media(max-width:600px) and (orientation:portrait){
+  .intro-artwork{top:32%;width:100%}
+  .intro-menu{left:50%;top:106%;bottom:auto;transform:translateX(-50%);width:min(78%,304px,calc((68dvh - 32vw - 30px) * 304 / 420));height:auto;padding:0;clip-path:none;grid-template-rows:none;gap:6px;background:none;box-shadow:none}
+  .intro-menu-item{aspect-ratio:304/78;font-size:clamp(13px,4vw,20px)}
+  .intro-language{top:auto;bottom:3%;right:3%;left:auto;width:auto;padding:4px 8px;background:#0b211de6}
+}

@@ -1,3 +1,4 @@
+import { segmentCircle, segmentWall } from './logic/combatGeometry.ts';
 import { puzzleBalance, SHARD_BONUS, PUZZLE_HINTS } from './logic/balance.ts';
 import { TutorialDirector, type GuideTopic } from './logic/tutorials.ts';
 import { isPuzzleExitOpen } from './logic/puzzle.ts';
@@ -212,7 +213,7 @@ export class GameEngine {
   public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
   public buyMechanical() { if(!MECHANICAL_ENABLED || this.screen !== 'shop') return; this.campaign.buyMechanical(); this.notifyHUD(); }
 
-  public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean }[] = [];
+  public magicShots: { x: number; y: number; targetX: number; targetY: number; age: number; skill: boolean; duration?:number }[] = [];
   public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
   public skillDropTimer = 5;
   public stoneShield = 0;
@@ -635,15 +636,34 @@ export class GameEngine {
     this.finishBossHit(); return true;
   }
 
+  private updateMagicShots(dt:number) {
+    const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
+    this.magicShots=this.magicShots.filter(shot=>{
+      const duration=shot.duration??.3, before=Math.min(1,shot.age/duration);
+      shot.age+=dt;const after=Math.min(1,shot.age/duration);
+      const point=(t:number)=>({x:shot.x+(shot.targetX-shot.x)*t,y:shot.y+(shot.targetY-shot.y)*t});
+      const a=point(before),b=point(after);
+      let first=Infinity;
+      for(const wall of walls){const t=segmentWall(a,b,wall);if(t!==null)first=Math.min(first,t);}
+      let hit:{x:number;y:number}|undefined;
+      if(this.boss)for(const target of [...this.boss.pillars.filter(p=>p.hp>0),this.boss]) {
+        const t=segmentCircle(a,b,target,target===this.boss?40:26);
+        if(t!==null&&t<first){first=t;hit=target;}
+      }
+      if(hit)this.damageCombatTarget(hit.x,hit.y,shot.skill?40:15,10);
+      return first===Infinity&&shot.age<duration;
+    });
+  }
+
   private spawnCombatSkill() {
-    if(!this.boss)return;
+    if(!this.boss||this.skillDrop)return;
     const skills=CLASS_SKILLS[this.characterClass];
     const kind=skills[Math.floor(Math.random()*skills.length)];
     const angle=Math.random()*Math.PI*2;
     const x=Math.max(80,Math.min(1200,this.player.x+Math.cos(angle)*105));
     const y=Math.max(85,Math.min(630,this.player.y+Math.sin(angle)*105));
     this.skillDrop={kind,x,y,fall:0};
-    this.showBanner(this.language==='vi'?'Ô kỹ năng đã rơi xuống!':'A skill pickup has landed!');
+    this.showBanner(this.language==='vi'?'Ấn kỹ năng đã xuất hiện trên mặt đất.':'A skill rune has appeared on the ground.');
   }
 
   private collectCombatSkill(kind:CombatSkill) {
@@ -690,20 +710,26 @@ export class GameEngine {
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
     this.attackAngle = Math.atan2(recordedAim.y - this.player.y, recordedAim.x - this.player.x);
+    const dx=recordedAim.x-this.player.x,dy=recordedAim.y-this.player.y;
+    if(Math.hypot(dx,dy)>1)this.player.direction=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
     voice.say(this.voiceRole, 'attack');
     if (this.characterClass === 'mage') {
-      const fallback = this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
-      const aim = target ?? fallback;
-      const reach = Math.hypot(aim.x - this.player.x, aim.y - this.player.y);
-      const scale = Math.min(1, 450 / Math.max(1, reach));
-      this.magicShots.push({ x: this.player.x, y: this.player.y - 12, targetX: this.player.x + (aim.x - this.player.x) * scale, targetY: this.player.y + (aim.y - this.player.y) * scale, age: 0, skill: false });
-      this.renderer.emitMagic('summon', this.player.x, this.player.y - 10, 38);
+      const origin={x:this.player.x+(this.player.direction==='left'?-20:20),y:this.player.y-24};
+      const dx=recordedAim.x-origin.x,dy=recordedAim.y-origin.y,reach=Math.hypot(dx,dy),scale=Math.min(1,450/Math.max(1,reach));
+      const targetX=origin.x+dx*scale,targetY=origin.y+dy*scale;
+      this.magicShots.push({...origin,targetX,targetY,age:0,skill:false,duration:Math.max(.08,Math.hypot(targetX-origin.x,targetY-origin.y)/900)});
+      this.attackFlash=.16;
     } else {
       this.attackFlash = 0.22;
-      const aim=target ?? this.combatAim();
-      if(aim && Math.hypot(aim.x-this.player.x,aim.y-this.player.y)<=112)
-        this.damageCombatTarget(aim.x,aim.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,55);
+      const candidates=this.boss?[...this.boss.pillars.filter(p=>p.hp>0),this.boss]:[];
+      const hit=candidates.filter(p=>{
+        const dx=p.x-this.player.x,dy=p.y-this.player.y,distance=Math.hypot(dx,dy);
+        const angle=Math.atan2(dy,dx)-this.attackAngle;
+        return distance<=112&&Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)))<=Math.PI/2.5;
+      }).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
+      if(hit&&!getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors).some(w=>segmentWall(this.player,hit,w)!==null))
+        this.damageCombatTarget(hit.x,hit.y,this.currentLevel.plates.some(p=>p.isPressed)?24:15,10);
     }
     this.notifyHUD();
   }
@@ -1235,11 +1261,7 @@ export class GameEngine {
         if(this.fireBurnTick<=0) { this.fireBurnTick+=1; this.damageCombatTarget(this.boss.x,this.boss.y,5,70); }
       }
     }
-    for (const shot of this.magicShots) {
-      shot.age += dt;
-      if (shot.age >= 0.3) this.damageCombatTarget(shot.targetX,shot.targetY,shot.skill?40:15,shot.skill?110:55);
-    }
-    this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
+    this.updateMagicShots(dt);
     this.attackFlash = Math.max(0, this.attackFlash - dt);
     for (const hit of this.combatHits) hit.life -= dt;
     this.combatHits = this.combatHits.filter(hit => hit.life > 0);

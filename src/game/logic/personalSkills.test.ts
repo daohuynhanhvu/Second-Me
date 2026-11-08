@@ -37,7 +37,7 @@ test('orbs cap at three, orbit and deal nearby damage, then expire',t=>{
   tick(6.1);assert.equal(g.orbitOrbs.length,0);
 });
 test('sanctuary heals and boosts damage only inside its fixed radius, and expires',t=>{
-  const g=setup(t);g.characterClass='swordsman';g.health=2;g.player.x=500;g.player.y=300;
+  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.characterClass='swordsman';g.health=2;g.player.x=500;g.player.y=300;
   g.useSkill();const tick=(g as any).updatePersonalSkill.bind(g);tick(2);assert.equal(g.health,3);
   g.boss!.x=540;g.boss!.y=300;g.attack();assert.equal(g.boss!.hp,222);
   g.player.x=650;tick(2);assert.equal(g.health,3);g.attackCooldown=0;g.attack({x:540,y:300});assert.equal(g.boss!.hp,207);

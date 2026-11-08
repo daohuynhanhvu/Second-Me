@@ -75,6 +75,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       if (event.key === 'Escape') setPanel('none');
     }
   }}>
+    <div className="intro-artwork">
     <IntroEffects/>
     <h1 className="intro-accessible-title">SECOND ME</h1>
     <div className="intro-mobile-title" aria-hidden="true"><span>THE ANCIENT PATH REMEMBERS</span><strong>SECOND ME</strong><small>ECHOES OF THE WILD</small></div>
@@ -93,6 +94,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
         </button>
       ))}
     </nav>
+    </div>
     {panel === 'settings' && <SettingsPanel engine={engine} hud={hud} close={() => setPanel('none')}/>}
     {(panel === 'credits' || panel === 'quit') && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={panel === 'credits' ? (vi ? 'Tác giả' : 'Credits') : (vi ? 'Thoát trò chơi' : 'Quit game')} onClick={event => event.stopPropagation()}>
       <div className="panel-top"><span className="eyebrow gold">{panel === 'credits' ? (vi ? 'TÁC GIẢ' : 'CREDITS') : (vi ? 'THOÁT TRÒ CHƠI' : 'QUIT GAME')}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={() => setPanel('none')}><X size={18}/></button></div>
