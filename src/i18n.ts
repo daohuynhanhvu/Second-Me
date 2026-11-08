@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['A new staff and lightning orbs', 'Trượng phép và cầu sét mới'],
+  ['Aeris’s staff now features a blue crystal and a more balanced size. Her magic shots and lightning orbs have a new blue pixel-art look.', 'Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.'],
   ['Aeris’s new look', 'Diện mạo mới cho Aeris'],
   ['Aeris the mage now wears a blue, gold-trimmed cloak in a chibi pixel style. Her facing directions and movements, along with her Echo, have been refreshed.', 'Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.'],
   ['Kael’s new look', 'Diện mạo mới cho Kael'],

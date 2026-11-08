@@ -79,11 +79,12 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Diện mạo mới cho Aeris', description: 'Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.' };
+const latestNews = { title: 'Trượng phép và cầu sét mới', description: 'Trượng của Aeris có tinh thể xanh và kích thước cân đối hơn. Cầu phép và cầu sét được làm mới theo phong cách pixel xanh lam.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
     <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article>
+    <article><time>08.11.2026</time><div><h3>Diện mạo mới cho Aeris</h3><p>Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Diện mạo mới cho Kael</h3><p>Kỵ sĩ Kael có diện mạo pixel chibi mới với tóc vàng, giáp bạc và áo choàng đỏ. Các hướng di chuyển và động tác chém cũng được làm mới.</p></div></article>
     <article><span>LÒ RÈN 1.5</span><div><h3>Thử thách từng chặng</h3><p>Năm màn đầu có 10 giây mỗi chặng. Mỗi 3 giây, mảnh thời gian rơi gần bạn; nhặt được cộng 4 giây. Bẫy dập và đá rơi giữ chân 0,25 giây; dây leo làm chậm cả một dải.</p></div></article>
     <article><time>06.11.2026</time><div><h3>Sảnh hành trình đã mở</h3><p>Chọn màn, xem tiến độ, điều chỉnh cài đặt và chơi lại bất kỳ màn nào sau khi hoàn thành chiến dịch.</p></div></article>
@@ -150,7 +151,7 @@ export function Characters({engine,hud}:{engine:GameEngine|null;hud:HUDState}) {
 }
 
 export function StaffArt({ large = false }: { large?: boolean }) {
-  return <svg viewBox="0 0 100 210" className={large ? 'sword-art large' : 'sword-art'} aria-label="Trượng Echo"><defs><linearGradient id="staffWood" x1="0" x2="1"><stop stopColor="#57412f"/><stop offset=".5" stopColor="#b78b5c"/><stop offset="1" stopColor="#5f4734"/></linearGradient></defs><path d="M47 67Q41 121 44 200L55 200Q58 122 52 67Z" fill="url(#staffWood)" stroke="#d5b27a"/><path d="M50 69 20 43 32 17 50 8 68 17 80 43Z" fill="#48645e" stroke="#c8a56f" strokeWidth="4"/><path d="M50 18 64 40 50 60 36 40Z" fill="#8cf4ee" stroke="#e4ffff" strokeWidth="3"/><circle cx="50" cy="39" r="8" fill="#fff" opacity=".65"/><path d="M42 104q13 7 17-3M42 141q13 8 17-3M44 179q10 6 12-2" fill="none" stroke="#dbbb76" strokeWidth="4"/></svg>;
+  return <svg viewBox="0 0 100 210" className={large ? 'sword-art large' : 'sword-art'} aria-label="Trượng Echo" shapeRendering="crispEdges"><path d="M43 75H57V202H43Z" fill="#261b18"/><path d="M47 79H54V198H47Z" fill="#75503a"/><path d="M27 30H39V51H61V30H73V57H66V70H58V83H42V70H34V57H27Z" fill="#2a1d19"/><path d="M32 34H38V55H44V68H56V68H62V55H68V34H72V57H65V69H58V78H42V69H35V57H32Z" fill="#76513a"/><path d="M44 13H56V20H64V45H58V56H42V45H36V20H44Z" fill="#073e67"/><path d="M46 17H54V23H60V42H54V51H46V44H40V23H46Z" fill="#078fc4"/><path d="M46 22H51V26H55V31H51V41H46V36H43V27H46Z" fill="#68e6ff"/><path d="M47 28H51V33H47Z" fill="#e1ffff"/></svg>;
 }
 
 export function SwordArt({ large = false }: { large?: boolean }) {
