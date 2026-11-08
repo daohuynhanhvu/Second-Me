@@ -818,6 +818,7 @@ export class GameEngine {
 
     // Title screen start
     if (this.screen === 'intro') {
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, select')) return;
       if (code === 'Enter' || code === 'Space') {
         this.openLobby();
       }

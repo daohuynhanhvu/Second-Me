@@ -23,7 +23,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   }, [hud.screen]);
   const engine = ref.current;
   return localize(<main className="adventure-app" lang={hud.language} translate="no"><div className="game-stage"><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
-    {hud.screen === 'intro' && <Intro engine={engine}/>}
+    {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
     {hud.screen === 'loading' && <Loading/>}
     {hud.screen === 'lobby' && <Lobby engine={engine} hud={hud}/>}
     {hud.screen === 'shop' && <Shop engine={engine} hud={hud}/>}

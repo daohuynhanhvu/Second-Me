@@ -15,13 +15,37 @@ function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
     : <WizardAvatar/>;
 }
 
-export function Intro({ engine }: { engine: GameEngine | null }) {
-  return localize(<div className="intro-screen overlay"><div className="mist mist-one"/><div className="mist mist-two"/>
-    <div className="intro-mark"><WizardAvatar/><span>THE ANCIENT PATH REMEMBERS</span></div>
-    <div className="intro-copy"><span className="eyebrow gold">CHAPTER II · THE EMBERFORGE</span><h1>SECOND<br/><em>ME</em></h1><p>Echoes of the Wild</p>
-      <button className="intro-enter" onClick={() => engine?.openLobby()}>BƯỚC VÀO KHU RỪNG <ArrowRight size={18}/></button><small>ENTER / SPACE</small></div>
-    <div className="intro-runes">◇　✦　◈　✺　◆</div>
-  </div>);
+export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
+  const [panel, setPanel] = useState<'none' | 'settings' | 'credits' | 'quit'>('none');
+  const vi = hud.language === 'vi';
+  const hasProgress = hud.completed.length > 0 || hud.forged;
+  return <div className="intro-screen overlay" onKeyDown={event => {
+    if (panel !== 'none' && ['Enter', ' ', 'Escape'].includes(event.key)) {
+      event.stopPropagation();
+      if (event.key === 'Escape') setPanel('none');
+    }
+  }}>
+    <h1 className="intro-accessible-title">SECOND ME</h1>
+    <div className="intro-mobile-title" aria-hidden="true"><span>THE ANCIENT PATH REMEMBERS</span><strong>SECOND ME</strong><small>ECHOES OF THE WILD</small></div>
+    <div className="intro-language" role="group" aria-label={vi ? 'Ngôn ngữ' : 'Language'}>
+      <button type="button" className={!vi ? 'selected' : ''} aria-pressed={!vi} onClick={() => engine?.setLanguage('en')}>EN</button>
+      <span aria-hidden="true">/</span>
+      <button type="button" className={vi ? 'selected' : ''} aria-pressed={vi} onClick={() => engine?.setLanguage('vi')}>VI</button>
+    </div>
+    <nav className="intro-menu" aria-label={vi ? 'Menu chính' : 'Main menu'}>
+      <button className="intro-menu-item selected" onClick={() => engine?.openLobby()}><span aria-hidden="true">▹</span>{vi ? 'BẮT ĐẦU' : 'START GAME'}<span aria-hidden="true">◇</span></button>
+      <button className="intro-menu-item" disabled={!hasProgress} onClick={() => engine?.continueGame()}>{vi ? 'TIẾP TỤC' : 'CONTINUE'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('settings')}>{vi ? 'CÀI ĐẶT' : 'SETTINGS'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('credits')}>{vi ? 'TÁC GIẢ' : 'CREDITS'}</button>
+      <button className="intro-menu-item" onClick={() => setPanel('quit')}>{vi ? 'THOÁT' : 'QUIT'}</button>
+    </nav>
+    {panel === 'settings' && <SettingsPanel engine={engine} hud={hud} close={() => setPanel('none')}/>}
+    {(panel === 'credits' || panel === 'quit') && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={panel === 'credits' ? (vi ? 'Tác giả' : 'Credits') : (vi ? 'Thoát trò chơi' : 'Quit game')} onClick={event => event.stopPropagation()}>
+      <div className="panel-top"><span className="eyebrow gold">{panel === 'credits' ? (vi ? 'TÁC GIẢ' : 'CREDITS') : (vi ? 'THOÁT TRÒ CHƠI' : 'QUIT GAME')}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={() => setPanel('none')}><X size={18}/></button></div>
+      <h2>SECOND ME</h2><p className="muted">{panel === 'credits' ? (vi ? 'Một chuyến phiêu lưu Echo đang được phát triển. Cảm ơn bạn đã đồng hành cùng khu rừng.' : 'An Echo adventure in development. Thank you for exploring the forest with us.') : (vi ? 'Bạn có thể đóng tab trình duyệt để thoát game. Tiến độ đã được lưu trên máy này.' : 'Close this browser tab to leave the game. Your progress is saved on this device.')}</p>
+      <button className="primary" onClick={() => setPanel('none')}>{vi ? 'QUAY LẠI' : 'BACK TO MENU'}</button>
+    </div></div>}
+  </div>;
 }
 
 export function Loading() {
