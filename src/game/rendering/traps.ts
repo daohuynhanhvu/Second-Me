@@ -1,6 +1,7 @@
 import type { Trap } from '../logic/types.ts';
 import { trapPhase, IMPACT_SECONDS, warningSeconds } from '../logic/traps.ts';
 import { drawStrip, forestReady, coreAspect, type Box } from './forestSprites.ts';
+import { livingImage, drawLivingCell } from './livingAssets.ts';
 
 /**
  * Trap drawing comes in layers so characters can stand between them:
@@ -10,15 +11,79 @@ import { drawStrip, forestReady, coreAspect, type Box } from './forestSprites.ts
  */
 export type TrapLayer = 'all' | 'floor' | 'overhead';
 
-export const trapSpritesReady = () => forestReady('crusher', 'rocks', 'vines', 'spikes');
+export const trapSpritesReady = () => !!livingImage('traps-pixel.png') || forestReady('crusher', 'rocks', 'vines', 'spikes');
 
-export function drawTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, layer: TrapLayer = 'all') {
+export function drawTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, layer: TrapLayer = 'all', biome = 1) {
+  if (livingImage('traps-pixel.png')) {
+    drawLivingTrap(ctx, trap, time, layer, biome); return;
+  }
   if (layer === 'all' || !trapSpritesReady()) {
     if (layer !== 'floor') drawTrapProcedural(ctx, trap, time);
     return;
   }
   if (layer === 'floor') drawTrapFloor(ctx, trap, time);
   else drawTrapOverhead(ctx, trap, time);
+}
+
+function drawLivingTrap(ctx: CanvasRenderingContext2D, trap: Trap, time: number, layer: TrapLayer, biome: number) {
+  const { x, y, width: w, height: h, kind } = trap;
+  const phase = trapPhase(trap, time), { warn, sinceImpact } = cycle(trap, time);
+  const column = { vines: 0, crusher: 1, spikes: 2, rocks: 3 }[kind];
+  const ice = biome >= 5, cx = x + w / 2, cy = y + h / 2;
+  ctx.save();
+  if (layer !== 'overhead') {
+    // A soft contact shadow seats every mechanism in the landscape.
+    ctx.fillStyle = '#12201b44'; ctx.beginPath(); ctx.ellipse(cx, cy + h * .17, w * .49, h * .34, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save();
+    if (ice) ctx.filter = 'saturate(.45) hue-rotate(110deg) brightness(1.22)';
+    else if (biome === 3) ctx.filter = 'hue-rotate(40deg) saturate(.7)';
+    const sway = kind === 'vines' ? Math.sin(time * 1.6 + x) * 1.5 : 0;
+    const shake = kind === 'crusher' && phase === 'warning' ? Math.sin(time * 40) * warn : 0;
+    const draw = (row: number) => drawLivingCell(ctx, 'traps-pixel.png', column, row, x - w * .12 + sway + shake, y - h * .17, w * 1.24, h * 1.3);
+    if (kind === 'rocks') { ctx.globalAlpha = phase === 'impact' ? 1 : .55; draw(phase === 'impact' ? 2 : 0); }
+    else {
+      const row = kind === 'vines' ? 0 : phase === 'impact' ? 2 : phase === 'warning' ? 1 : 0;
+      draw(row);
+      if (kind === 'vines') {
+        ctx.globalAlpha = .12 + .12 * Math.sin(time * 1.5); draw(1);
+      }
+    }
+    ctx.restore();
+    if (kind !== 'vines' && phase !== 'idle') {
+      // Warm amber means impending damage; cool environment light stays decorative.
+      const pulse = .65 + Math.sin(time * 12) * .15;
+      ctx.strokeStyle = phase === 'impact' ? '#ffe1a3' : '#efb764';
+      ctx.globalAlpha = phase === 'impact' ? .8 : pulse;
+      ctx.lineWidth = phase === 'impact' ? 2.5 : 1.5;
+      ctx.beginPath(); ctx.ellipse(cx, cy + h * .09, w * .49, h * .42, 0, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const angle = i * Math.PI / 3;
+        const rx = cx + Math.cos(angle) * w * .51, ry = cy + h * .09 + Math.sin(angle) * h * .44;
+        ctx.beginPath(); ctx.moveTo(rx - 2, ry - 2); ctx.lineTo(rx + 2, ry + 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (phase === 'impact') {
+        const fade = Math.max(0, 1 - sinceImpact / IMPACT_SECONDS);
+        ctx.fillStyle = ice ? '#d6f0ff' : '#d8c7a3'; ctx.globalAlpha = fade * .65;
+        for (let i = 0; i < 8; i++) {
+          const angle = i * 2.4, distance = (1 - fade) * w * .6;
+          ctx.beginPath(); ctx.arc(cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance * .5, 1.5 + fade * 2, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+  }
+  if (layer !== 'floor' && kind === 'rocks') {
+    let drop: number | null = null;
+    if (phase === 'warning' && warn > .35) drop = (warn - .35) / .65;
+    else if (phase === 'impact' && sinceImpact < .08) drop = 1;
+    if (drop !== null) {
+      const size = Math.min(w, h) * 1.12;
+      ctx.globalAlpha = Math.min(1, drop * 3);
+      if (ice) ctx.filter = 'saturate(.45) hue-rotate(110deg) brightness(1.22)';
+      drawLivingCell(ctx, 'traps-pixel.png', 3, 1, cx - size / 2, cy - (1 - drop * drop) * 260 - size / 2, size, size);
+    }
+  }
+  ctx.restore();
 }
 
 /** Seconds into the trap's cycle, and how far into its warning / impact windows. */

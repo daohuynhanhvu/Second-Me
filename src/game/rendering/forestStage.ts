@@ -7,6 +7,10 @@
  */
 import type { LevelData, Rect, SecurityDoor, PressurePlate } from '../logic/types.ts';
 import { drawTrap, trapSpritesReady } from './traps.ts';
+import { biomeIndex, biomeLoaded, drawBiomeFloor, drawBiomeProp, drawBiomeWalls, drawBiomeWeather } from './biomes.ts';
+import { livingReady, livingImage, drawLivingDecor } from './livingAssets.ts';
+import { drawPortalEnergy } from './portalEffects.ts';
+import { drawPixelInteraction } from './pixelInteractions.ts';
 import {
   preloadForest, forestLoaded, forestReady, groundImage, drawStrip, drawStripBlend, boxAround,
   drawDecor, decorSize, DECOR_GROUND, DECOR_SOLID, DECOR_LONG, DECOR_ROUND, type Box,
@@ -18,6 +22,7 @@ export interface StageState {
   levelTime: number;
   /** True once the exit accepts the player. */
   exitOpen: boolean;
+  reducedMotion?: boolean;
 }
 
 type Ctx = CanvasRenderingContext2D;
@@ -50,14 +55,15 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
     // A new level (or a restart) rewinds the clock: forget per-level animation state.
     if (state.levelTime < lastTime) { plateSince.clear(); exitOpenedAt = null; }
     lastTime = state.levelTime;
-    const key = `${w}:${h}:${lvl.id}:${forestLoaded()}:${JSON.stringify(lvl.walls)}:${JSON.stringify(lvl.traps ?? [])}`;
+    const key = `${w}:${h}:${lvl.id}:${forestLoaded()}:${biomeLoaded()}:${livingReady()}:${JSON.stringify(lvl.walls)}:${JSON.stringify(lvl.traps ?? [])}`;
     if (key !== cacheKey) { cacheKey = key; [ground, props] = buildLayers(w, h, lvl); }
     if (ground) ctx.drawImage(ground, 0, 0);
-    drawStartPortal(ctx, lvl, state.levelTime);
+    drawBiomeWeather(ctx, lvl, state.reducedMotion ? 0 : state.levelTime, w, h);
+    drawStartPortal(ctx, lvl, state.levelTime, state.reducedMotion);
   };
 
   scene.drawRunes = (ctx, lvl, time) => {
-    if (trapSpritesReady()) for (const trap of lvl.traps ?? []) drawTrap(ctx, trap, state.levelTime, 'floor');
+    if (trapSpritesReady()) for (const trap of lvl.traps ?? []) drawTrap(ctx, trap, state.levelTime, 'floor', lvl.id);
     if (!forestReady('button')) return orig.drawRunes(ctx, lvl, time);
     for (const plate of lvl.plates) drawLinks(ctx, lvl, plate, time);
     for (const plate of lvl.plates) drawButton(ctx, plate, state.levelTime, time);
@@ -67,7 +73,7 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
     if (!forestReady('portalExit')) return orig.drawPortal(ctx, exit, time);
     if (state.exitOpen && exitOpenedAt === null) exitOpenedAt = state.levelTime;
     if (!state.exitOpen) exitOpenedAt = null;
-    drawExitPortal(ctx, exit, exitOpenedAt === null ? null : state.levelTime - exitOpenedAt, time);
+    drawExitPortal(ctx, exit, exitOpenedAt === null ? null : state.levelTime - exitOpenedAt, time, state.reducedMotion);
   };
 
   scene.drawGateThresholds = (ctx, lvl) => { if (!forestReady('door')) orig.drawGateThresholds(ctx, lvl); };
@@ -77,11 +83,14 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
   };
 
   scene.drawWalls = (ctx, lvl, time) => {
-    orig.drawWalls(ctx, lvl, time);
+    if (biomeLoaded()) drawBiomeWalls(ctx, lvl);
+    else orig.drawWalls(ctx, lvl, time);
     if (props && lvl === level) ctx.drawImage(props, 0, 0);
   };
 
   function drawButton(ctx: Ctx, plate: PressurePlate, t: number, time: number) {
+    const pad = 9;
+    if(drawPixelInteraction(ctx,plate.isPressed?1:0,plate.x-pad,plate.y-pad,plate.width+pad*2,plate.height+pad*2))return;
     let s = plateSince.get(plate.id);
     if (!s || s.pressed !== plate.isPressed) plateSince.set(plate.id, s = { pressed: plate.isPressed, at: t });
     const e = t - s.at;
@@ -113,7 +122,14 @@ function drawLinks(ctx: Ctx, lvl: LevelData, plate: PressurePlate, time: number)
 }
 
 /** The player rises out of a rune circle that settles into a calm swirl. */
-function drawStartPortal(ctx: Ctx, lvl: LevelData, t: number) {
+function drawStartPortal(ctx: Ctx, lvl: LevelData, t: number, reduced = false) {
+  if (biomeLoaded() === 2) {
+    ctx.save(); ctx.globalAlpha = t < 1.2 ? 1 : .85;
+    drawBiomeProp(ctx, 7, lvl.playerSpawn.x, lvl.playerSpawn.y + 15, 100);
+    ctx.restore();
+    drawPortalEnergy(ctx,lvl.playerSpawn.x,lvl.playerSpawn.y,t,t<1.2?1-t*.3:.18,reduced);
+    return;
+  }
   if (!forestReady('portalStart')) return;
   const { x, y } = lvl.playerSpawn;
   const box = boxAround('portalStart', 3, x, y + 8, 92);
@@ -124,8 +140,18 @@ function drawStartPortal(ctx: Ctx, lvl: LevelData, t: number) {
 }
 
 /** Dormant stone ring until every rune is reached, then the vortex opens. */
-function drawExitPortal(ctx: Ctx, exit: LevelData['exit'], sinceOpen: number | null, time: number) {
+function drawExitPortal(ctx: Ctx, exit: LevelData['exit'], sinceOpen: number | null, time: number, reduced = false) {
   const cx = exit.x + exit.width / 2, cy = exit.y + exit.height / 2;
+  if (biomeLoaded() === 2) {
+    ctx.save();
+    ctx.globalAlpha = sinceOpen === null ? .45 : 1;
+    if (sinceOpen === null) ctx.filter = 'saturate(.15) brightness(.65)';
+    ctx.shadowColor = '#83eaff'; ctx.shadowBlur = sinceOpen === null ? 0 : 14 + Math.sin(time * 2) * 5;
+    drawBiomeProp(ctx, 7, cx, cy + 18, 120);
+    ctx.restore();
+    if(sinceOpen!==null) drawPortalEnergy(ctx,cx,cy,sinceOpen,sinceOpen<1.2?1:.62,reduced,true);
+    return;
+  }
   const box = boxAround('portalExit', 5, cx, cy, 116);
   if (sinceOpen === null) drawStripBlend(ctx, 'portalExit', 3, 2, 0.15 + 0.1 * Math.sin(time * 1.6), box, { ref: 5 });
   else if (sinceOpen < 0.35) drawStripBlend(ctx, 'portalExit', 3, 4, sinceOpen / 0.35, box, { ref: 5 });
@@ -141,6 +167,12 @@ function drawExitPortal(ctx: Ctx, exit: LevelData['exit'], sinceOpen: number | n
 
 /** Stone door in its frame; frames 0-4 follow openProgress. Horizontal doors lie on their side. */
 function drawDoor(ctx: Ctx, door: SecurityDoor) {
+  const verticalDoor = door.orientation === 'vertical';
+  ctx.save();ctx.translate(door.x+door.width/2,door.y+door.height/2);
+  if(!verticalDoor)ctx.rotate(Math.PI/2);
+  const dw=(verticalDoor?door.width:door.height)+18,dh=(verticalDoor?door.height:door.width)+16;
+  const pixelDoor=drawPixelInteraction(ctx,2,-dw/2,-dh/2,dw,dh,door.openProgress);
+  ctx.restore();if(pixelDoor)return;
   const vertical = door.orientation === 'vertical';
   const padAcross = 7, padAlong = 5;
   const box: Box = vertical
@@ -184,6 +216,75 @@ function buildLayers(w: number, h: number, lvl: LevelData): [HTMLCanvasElement |
   ground.width = props.width = w; ground.height = props.height = h;
   const g = ground.getContext('2d')!, p = props.getContext('2d')!;
   const rand = rng(lvl.id * 977 + 13);
+
+  if (drawBiomeFloor(g, w, h, lvl)) {
+    const clear = keepClear(lvl);
+    if (lvl.id === 6) {
+      for (const x of [130, 1150]) for (const y of [120, 580]) clear.push({ x: x - 80, y: y - 80, width: 160, height: 160 });
+    }
+    if (livingImage('decor-pixel.png')) {
+      const pools = [[0, 1, 2, 3], [2, 3, 0], [4, 5], [6, 7, 3], [8, 9], [10, 11]];
+      const pool = pools[biomeIndex(lvl.id)];
+      const placed: Rect[] = [];
+      const place = (x: number, y: number, size: number, onWall = false) => {
+        const rect = { x: x - size * .5, y: y - size * .66, width: size, height: size };
+        if (clear.some(c => hits(rect, c, 12)) || placed.some(c => hits(rect, c, 14))) return;
+        if (!onWall && lvl.walls.some(wall => hits(rect, wall, 3))) return;
+        placed.push(rect);
+        const solidPools = [[1, 2, 3], [2, 3], [5], [6, 7], [8, 9], [10, 11]];
+        const choices = onWall ? solidPools[biomeIndex(lvl.id)] : pool;
+        drawLivingDecor(onWall ? p : g, choices[Math.floor(rand() * choices.length)], x, y, size, rand() > .5);
+      };
+      // Uneven groups at sheltered corners, rather than a repeated row of identical props.
+      for (const wall of lvl.walls) {
+        if (wall.x <= 0 || wall.y <= 0 || wall.x + wall.width >= w || wall.y + wall.height >= h) continue;
+        if (Math.max(wall.width, wall.height) <= 160) {
+          place(wall.x + wall.width * .5, wall.y + wall.height * .55, Math.min(180, Math.max(100, wall.width * 1.5)), true);
+        } else {
+          for (const side of [-1, 1]) {
+            const size = 65 + rand() * 22;
+            place(wall.x + (side < 0 ? -size * .55 : wall.width + size * .55), wall.y + wall.height - 32, size);
+          }
+        }
+      }
+      for (let i = 0; i < 240 && placed.length < (lvl.id === 6 ? 12 : 22); i++) {
+        const size = 52 + rand() * 38;
+        const side = Math.floor(rand() * 4);
+        const x = side === 0 ? 42 + size * .5 : side === 1 ? w - 42 - size * .5 : 90 + rand() * (w - 180);
+        const y = side === 2 ? 48 + size * .66 : side === 3 ? h - 44 - size * .34 : 100 + rand() * (h - 200);
+        place(x, y, size);
+      }
+      // Low, walkable accents inhabit empty pockets without masking puzzle objects.
+      const smallPool = lvl.id >= 5 ? [8, 9, 10] : lvl.id === 3 ? [4, 5] : lvl.id === 4 ? [6, 7] : [0, 1, 3];
+      for (let i = 0, count = 0; i < 250 && count < (lvl.id === 6 ? 10 : 30); i++) {
+        const size = 25 + rand() * 22;
+        const x = 85 + rand() * (w - 170), y = 95 + rand() * (h - 190);
+        const rect = { x: x - size / 2, y: y - size * .66, width: size, height: size };
+        if (clear.some(c => hits(rect, c, 22)) || lvl.walls.some(wall => hits(rect, wall, 16)) || placed.some(c => hits(rect, c, 24))) continue;
+        placed.push(rect); count++;
+        g.save(); g.globalAlpha = .85;
+        drawLivingDecor(g, smallPool[Math.floor(rand() * smallPool.length)], x, y, size, rand() > .5);
+        g.restore();
+      }
+      return [ground, props];
+    }
+    // Place larger silhouettes at the boundary, leaving routes and mechanics quiet.
+    const index = biomeIndex(lvl.id);
+    for (let i = 0; i < 8; i++) {
+      const x = 150 + Math.floor(i / 2) * ((w - 300) / 3) + (rand() - .5) * 30;
+      const y = i % 2 ? h - 52 : 57;
+      const size = 45 + rand() * 26;
+      const r = { x: x - size / 2, y: y - size * .7, width: size, height: size };
+      if (!clear.some(c => hits(r, c, 14))) drawBiomeProp(p, index, x, y, size);
+    }
+    // Small obstacles receive a matching single prop, instead of stacked textures.
+    for (const wall of lvl.walls) {
+      if (wall.x <= 0 || wall.y <= 0 || wall.x + wall.width >= w || wall.y + wall.height >= h) continue;
+      if (Math.max(wall.width, wall.height) > 160) continue;
+      drawBiomeProp(p, index, wall.x + wall.width / 2, wall.y + wall.height / 2, Math.min(80, Math.max(wall.width, wall.height)));
+    }
+    return [ground, props];
+  }
 
   // Ground: the painted forest floor, repeated down the stage, a touch darker so play pieces pop.
   const scale = w / tile.width;

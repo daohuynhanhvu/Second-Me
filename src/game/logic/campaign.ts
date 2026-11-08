@@ -75,7 +75,8 @@ export interface BossState {
   mode: 'stalking' | 'warning' | 'strike' | 'recover'; timer: number;
   targetX: number; targetY: number; hitFlash: number;
   projectiles: { x: number; y: number; vx: number; vy: number; life: number }[];
-  pillars: { x: number; y: number; hp: number; maxHp: number }[];
+  pillars: { x: number; y: number; hp: number; maxHp: number; hitFlash?: number; destroyedAge?: number }[];
+  shieldBreak?: number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
   burstAreas: { x: number; y: number; radius: number; timer: number; struck: boolean }[];
@@ -100,6 +101,11 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+  boss.shieldBreak = Math.max(0, (boss.shieldBreak ?? 0) - dt);
+  for (const pillar of boss.pillars) {
+    pillar.hitFlash = Math.max(0, (pillar.hitFlash ?? 0) - dt);
+    if (pillar.hp <= 0) pillar.destroyedAge = (pillar.destroyedAge ?? 0) + dt;
+  }
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
   if (activePillars) boss.hp = Math.min(boss.maxHp, boss.hp + activePillars * 2 * dt);

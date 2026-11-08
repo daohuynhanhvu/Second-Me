@@ -29,6 +29,7 @@ import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
 import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
+import { drawPortalEnergy, finishPixelFrame } from './rendering/portalEffects.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
 import { voice, type VoiceRole } from './logic/voice.ts';
 import { music, type MusicScene } from './logic/music.ts';
@@ -167,6 +168,11 @@ export class GameEngine {
   public invulnerability = 0;
   public attackCooldown = 0;
   public attackFlash = 0;
+  public attackAngle = 0;
+  public summonEffects: {x:number;y:number;life:number}[] = [];
+  public exitTravelRemaining = 0;
+  private exitOpenedAt: number | null = null;
+  public combatHits: { x: number; y: number; damage: number; life: number; broken: boolean }[] = [];
   public dodgeCooldown = 0;
   public dodgeTime = 0;
   public lastReward: number | null = null;
@@ -447,6 +453,8 @@ export class GameEngine {
     this.defeatReason = 'damage';
     this.health = 5;
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
+    this.combatHits = [];
+    this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.magicShots = [];
     this.orbitOrbs = []; this.lightCircle = null; this.overdrive = 0;
@@ -573,10 +581,22 @@ export class GameEngine {
     if(this.insideLightCircle) amount *= 1.2;
     const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
     if(pillar) {
+      const dealt = Math.min(pillar.hp, amount);
       pillar.hp=Math.max(0,pillar.hp-amount);
+      pillar.hitFlash = .2;
+      this.combatHits.push({ x: pillar.x, y: pillar.y - 20, damage: dealt, life: .7, broken: pillar.hp === 0 });
+      this.combatHits = this.combatHits.slice(-24);
+      sounds.playIceHit(pillar.hp === 0);
       this.boss.armor=this.boss.pillars.filter(p=>p.hp>0).length*25;
       this.renderer.emitMagic('sparkle',pillar.x,pillar.y,65);
       if(pillar.hp===0) {
+        pillar.destroyedAge = 0;
+        if (this.boss.armor === 0) {
+          this.boss.shieldBreak = 1;
+          this.boss.mode = 'recover'; this.boss.timer = 1.8;
+          this.boss.burstCooldown = Math.max(2, this.boss.burstCooldown);
+          this.boss.burstRemaining = 0; this.boss.burstAreas = []; this.boss.projectiles = [];
+        }
         this.echoCharges=Math.min(4,this.echoCharges+1);
         voice.say(this.voiceRole, 'kill');
         if(this.boss.armor===0) voice.say('guardian', 'event', { id: 'armor', delay: 1.2 });
@@ -589,6 +609,9 @@ export class GameEngine {
     if(Math.hypot(this.boss.x-x,this.boss.y-y)>radius) return false;
     if(this.boss.pillars.some(p=>p.hp>0)) { this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,35); return false; }
     this.boss.hp=Math.max(0,this.boss.hp-amount);
+    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: amount, life: .7, broken: false });
+    this.combatHits = this.combatHits.slice(-24);
+    sounds.playIceHit(false);
     this.boss.hitFlash=.18;
     this.finishBossHit(); return true;
   }
@@ -644,9 +667,10 @@ export class GameEngine {
   }
 
   public attack(target?: { x: number; y: number }) {
-    if (this.screen !== 'playing' || this.bossDeathPending || this.attackCooldown > 0) return;
+    if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.attackCooldown > 0) return;
     this.attackCooldown = this.hasteTime>0 || this.overdrive>0 ? .27 : .55;
     const recordedAim = target ?? this.combatAim() ?? { x: this.player.x + (this.player.direction === 'left' ? -180 : this.player.direction === 'right' ? 180 : 0), y: this.player.y + (this.player.direction === 'up' ? -180 : this.player.direction === 'down' ? 180 : 0) };
+    this.attackAngle = Math.atan2(recordedAim.y - this.player.y, recordedAim.x - this.player.x);
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:recordedAim.x,targetY:recordedAim.y});
     voice.say(this.voiceRole, 'attack');
     if (this.characterClass === 'mage') {
@@ -666,7 +690,7 @@ export class GameEngine {
   }
 
   public useSkill(_target?: { x: number; y: number }) {
-    if (this.screen !== 'playing' || this.bossDeathPending || this.skillCooldown > 0) return;
+    if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
     if (this.characterClass === 'mage') {
       if(this.orbitOrbs.length >= 3) return;
       const aim = _target ?? this.combatAim() ?? this.player;
@@ -836,6 +860,7 @@ export class GameEngine {
     };
 
     sounds.playEchoSpawn();
+    this.summonEffects.push({x:safeEchoSpawn.x,y:safeEchoSpawn.y,life:1});
     this.renderer.particles.emit(first.x, first.y, 25, '#22d3ee', 80, 4, 0.7);
     this.showBanner('Echo đã xuất hiện và đang phát lại đường đi.');
     this.notifyHUD();
@@ -1081,6 +1106,14 @@ export class GameEngine {
 
   private update(dt: number) {
     if (this.screen !== 'playing') return;
+    if (this.exitTravelRemaining > 0) {
+      this.exitTravelRemaining = Math.max(0,this.exitTravelRemaining-dt);
+      this.elapsedLevelTime += dt;
+      if (this.exitTravelRemaining === 0) this.handleVictory();
+      return;
+    }
+    for (const effect of this.summonEffects) effect.life -= dt;
+    this.summonEffects = this.summonEffects.filter(effect=>effect.life>0);
     if (this.bossDeathPending) {
       this.bossDeathElapsed += dt;
       if (this.bossDeathElapsed >= 1.05) {
@@ -1164,6 +1197,8 @@ export class GameEngine {
     }
     this.magicShots = this.magicShots.filter(shot => shot.age < 0.3);
     this.attackFlash = Math.max(0, this.attackFlash - dt);
+    for (const hit of this.combatHits) hit.life -= dt;
+    this.combatHits = this.combatHits.filter(hit => hit.life > 0);
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt);
     this.dodgeTime = Math.max(0, this.dodgeTime - dt);
 
@@ -1406,7 +1441,7 @@ export class GameEngine {
       if(this.boss.phase!==previousPhase)this.echoCharges=Math.max(1,this.echoCharges);
     } else if ((this.legTimeRemaining === null || this.checkpointIndex === this.currentLevel.plates.length) &&
       checkExitReached(this.player.x, this.player.y, this.currentLevel.exit)) {
-      this.handleVictory();
+      this.exitTravelRemaining = .7;
     }
   }
 
@@ -1433,13 +1468,14 @@ export class GameEngine {
     if (!this.ctx || !this.canvas) return;
 
     this.renderer.stage.levelTime = this.elapsedLevelTime;
+    this.renderer.stage.reducedMotion = this.reducedMotion;
     this.renderer.stage.exitOpen = this.legTimeRemaining === null || this.checkpointIndex >= this.currentLevel.plates.length;
     this.renderer.render(
       this.ctx,
       this.canvas.width,
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
-      this.characterClass !== 'mage' ? {...this.player,x:-1000,y:-1000} : this.player,
+      this.characterClass !== 'mage' || (this.exitTravelRemaining>0 && this.exitTravelRemaining<.35) ? {...this.player,x:-1000,y:-1000} : {...this.player,y:this.player.y-(this.exitTravelRemaining>0?(.7-this.exitTravelRemaining)*65:0)},
       null,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
@@ -1447,6 +1483,14 @@ export class GameEngine {
       this.gameTime
     );
     renderAdventure(this.ctx, this, this.elapsedLevelTime);
+    const t = this.elapsedLevelTime;
+    if(t<1.3) drawPortalEnergy(this.ctx,this.currentLevel.playerSpawn.x,this.currentLevel.playerSpawn.y,t,Math.max(0,1-t/1.3),this.reducedMotion);
+    for(const effect of this.summonEffects) drawPortalEnergy(this.ctx,effect.x,effect.y,1-effect.life,effect.life,this.reducedMotion);
+    const exit = this.currentLevel.exit, open = this.renderer.stage.exitOpen && !this.boss;
+    if(open && this.exitOpenedAt===null) this.exitOpenedAt=t;
+    if(!open) this.exitOpenedAt=null;
+    if(open) drawPortalEnergy(this.ctx,exit.x+exit.width/2,exit.y+exit.height/2,t-this.exitOpenedAt!,this.exitTravelRemaining>0?1:.6,this.reducedMotion,true);
+    finishPixelFrame(this.ctx,this.canvas);
   }
 
   private notifyHUD() {

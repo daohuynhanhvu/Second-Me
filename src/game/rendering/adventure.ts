@@ -4,6 +4,8 @@ import { drawTrap, trapSpritesReady } from './traps.ts';
 import { translate, getCurrentLanguage } from '../../i18n.ts';
 import { drawFrostGuardian } from './frostGuardian.ts';
 import { drawSoldierSprite } from './soldierSprite.ts';
+import { drawTimeRelic } from './timeRelic.ts';
+import { drawPillars, drawCombatHits } from './bossFeedback.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185'];
 
@@ -26,16 +28,11 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   // With the hand-drawn art the trap floors were drawn under the characters by the renderer;
   // only falling boulders go on top here.
   const trapLayer = trapSpritesReady() ? 'overhead' : 'all';
-  for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, trapLayer);
+  for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, trapLayer, game.currentLevel.id);
   if (game.legTimeRemaining !== null) {
     if (game.timePickup) {
       const { x, y } = game.timePickup;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(time * 1.8);
-      ctx.shadowColor = '#8cfbd5'; ctx.shadowBlur = 20;
-      ctx.fillStyle = '#b7ffe4'; ctx.strokeStyle = '#3bab83'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, 0); ctx.lineTo(0, 15); ctx.lineTo(-12, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.restore();
-      if (game.showHints) { ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#b7ffe4'; ctx.fillText('+4s', x, y - 22); }
+      drawTimeRelic(ctx, x, y, time, game.reducedMotion, game.showHints);
     }
     game.currentLevel.plates.forEach((plate, index) => {
       const current = index === game.checkpointIndex;
@@ -69,14 +66,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
   const boss = game.boss;
   if (boss) {
-    for(const pillar of boss.pillars) {
-      const active=pillar.hp>0;
-      ctx.save();ctx.translate(pillar.x,pillar.y);ctx.shadowColor=active?'#8eeaff':'#536764';ctx.shadowBlur=active?22:0;
-      ctx.fillStyle=active?'#477a83':'#34433d';ctx.strokeStyle=active?'#b9f7ff':'#65706a';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(0,-36);ctx.lineTo(21,-10);ctx.lineTo(15,25);ctx.lineTo(-15,25);ctx.lineTo(-21,-10);ctx.closePath();ctx.fill();ctx.stroke();
-      if(active) {ctx.fillStyle='#c6fbff';ctx.beginPath();ctx.arc(0,-12,9,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d8faff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(`${Math.ceil(pillar.hp)}/${pillar.maxHp}`,0,42);}
-      ctx.restore();
-    }
+    drawPillars(ctx, boss, time, game.reducedMotion);
     for(const area of boss.burstAreas) {
       ctx.beginPath();ctx.arc(area.x,area.y,area.radius,0,Math.PI*2);
       ctx.fillStyle=area.struck?'rgba(137,231,255,.5)':'rgba(111,190,224,.16)';
@@ -100,8 +90,8 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, game.player.x > boss.x, walking);
     if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
     if (game.campaign.forged && game.characterClass === 'swordsman' && game.attackFlash > 0) {
-      ctx.save(); ctx.translate(game.player.x, game.player.y);
-      ctx.beginPath(); ctx.arc(0, 0, 64, -2, 1.4); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.save(); ctx.translate(game.player.x, game.player.y); ctx.rotate(game.attackAngle);
+      ctx.beginPath(); ctx.arc(0, 0, 90, -1.05, 1.05); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
   }
@@ -113,7 +103,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.fillRect(c.x+Math.cos(a)*53-2,c.y+Math.sin(a)*34-2,4,4);}
     ctx.restore();
   }
-  if(game.characterClass==='mechanical')drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
+  if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   for(const orb of game.orbitOrbs) {
     ctx.save();ctx.globalAlpha=Math.min(1,orb.life);ctx.shadowColor='#82cfff';ctx.shadowBlur=8;
     const x=game.player.x+Math.cos(orb.angle)*36,y=game.player.y-12+Math.sin(orb.angle)*28;
@@ -121,8 +111,8 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,y-4);ctx.lineTo(x+1,y);ctx.lineTo(x-2,y+4);ctx.stroke();ctx.restore();
   }
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
-  if(game.characterClass==='swordsman')drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  if (game.characterClass === 'mage' && game.campaign.forged) {
+  if(game.characterClass==='swordsman' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
+  if (game.characterClass === 'mage' && game.campaign.forged && !game.exitTravelRemaining) {
     ctx.save(); ctx.translate(game.player.x+17, game.player.y);
     ctx.strokeStyle='#b69262'; ctx.lineWidth=7; ctx.beginPath();ctx.moveTo(0,11);ctx.lineTo(3,-39);ctx.stroke();
     ctx.shadowColor='#84fff2';ctx.shadowBlur=20;ctx.fillStyle='#80f5e9';ctx.beginPath();ctx.arc(3,-46,11,0,Math.PI*2);ctx.fill();
@@ -149,5 +139,6 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();
   }
+  drawCombatHits(ctx, game.combatHits, game.reducedMotion);
   ctx.restore();
 }

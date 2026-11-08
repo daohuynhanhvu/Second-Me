@@ -228,7 +228,10 @@ def main() -> None:
     OUT_IMG.mkdir(parents=True, exist_ok=True)
     atlas = {name: build_strip(name, src / f, *opts) for name, (f, *opts) in SHEETS.items()}
     atlas['ground'] = build_ground(src / 'nền map.png')
-    atlas['decor'] = build_decor(src / 'trang trí map.jpg')
+    decor_source = next((src / name for name in ('trang tri map.jpg', 'trang trí map.jpg') if (src / name).is_file()), None)
+    if decor_source is None:
+        raise FileNotFoundError(f'Missing decoration sheet in {src}')
+    atlas['decor'] = build_decor(decor_source)
     OUT_JSON.write_text(json.dumps(atlas, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     for k, v in atlas.items():
         print(k, {kk: vv for kk, vv in v.items() if kk not in ('cores', 'items', 'anchor')}, len(v.get('items', [])) or '')
