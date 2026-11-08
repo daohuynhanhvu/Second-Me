@@ -187,7 +187,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
   return <div className="characters-screen overlay hero-select-screen">
     <div className="hero-select-scene" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
       <h1 id="hero-select-title" className="hero-select-title">{vi ? 'CHỌN NHÂN VẬT' : 'CHOOSE YOUR HERO'}</h1>
-      <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>✕</button>
+      <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>Back</button>
       <div className="hero-select-grid" role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
         {Array.from({length:8}, (_, i) => {
           const c = roster[i];
