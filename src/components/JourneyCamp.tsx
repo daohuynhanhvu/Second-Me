@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, Check, Compass, Flame, Lock, Play, RotateCcw, Snowflake, Sword, Users } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
+import { RuneLoadoutEditor, RuneStone } from './EchoRunes.tsx';
 import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
 import './JourneyCamp.css';
 import { JourneyAmbience } from './JourneyAmbience.tsx';
@@ -17,18 +18,19 @@ const trailSegments = [
 const positions = [[14,72],[28,36],[46,63],[61,32],[78,51],[88,17]];
 export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number}) {
   const vi=hud.language==='vi';
+  const [runeEditor,setRuneEditor]=useState(false);
   const [inspect,setInspect]=useState<number|null>(null);
   const [touchInspect,setTouchInspect]=useState<number|null>(null);
   const active=inspect??next,level=LEVELS[active];
   const count=hud.completed.length+(complete?1:0);
   const unlocked=(i:number)=>hud.devUnlocked||complete||(i<=hud.completed.length&&(i<5||hud.forged));
-  return <div className="journey-layout">
+  return <div className="journey-layout">{runeEditor&&<RuneLoadoutEditor hud={hud} engine={engine} close={()=>setRuneEditor(false)}/>}
     <aside className="journey-camp">
       <div className="camp-overline"><Flame size={14}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}<span>{vi?'ĐÃ LƯU':'SAVED'}</span></div>
       <h1>{complete?(vi?'Khu rừng đã thức giấc.':'The forest awakens.'):(vi?'Lần theo tiếng vọng.':'Follow the echoes.')}</h1>
       <p className="camp-intro">{vi?'Giữa những tán cây, một ký ức vẫn đang chờ bạn tìm lại.':'Beyond the canopy, a forgotten memory is waiting to be found.'}</p>
       <div className="camp-progress"><span>{vi?'HÀNH TRÌNH CỦA BẠN':'YOUR JOURNEY'}<b>{String(count).padStart(2,'0')} <small>/ 06</small></b></span><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}><i style={{width:`${count/6*100}%`}}/></div></div>
-      <div className="camp-relics"><span>{vi?'ẤN NÂNG ECHO':'ECHO UPGRADE RUNES'}<b>{Object.values(hud.echoRunes??{}).reduce((a,n)=>a+n,0)}</b></span><div>{ECHO_RUNES.map(r=><span key={r.id} title={vi?r.vi:r.en} className={(hud.echoRunes?.[r.id]??0)>0?'found':''}><b>{r.glyph}</b><small>{hud.echoRunes?.[r.id]??0}</small></span>)}</div></div>
+      <div className="camp-relics"><span>{vi?'5 Ô RUNE ĐÃ CHỌN':'5 CHOSEN RUNE SLOTS'}<button className="rune-edit-link" onClick={()=>setRuneEditor(true)}>{vi?'ĐỔI RUNE':'CHANGE'}</button></span><div>{Array.from({length:5},(_,i)=>{const r=ECHO_RUNES.find(r=>r.id===hud.runeLoadout?.[i]);return <button key={i} className={`camp-rune-slot ${r?'found':''}`} title={r?(vi?r.vi:r.en):(vi?'Chọn rune':'Choose rune')} onClick={()=>setRuneEditor(true)}>{r?<span className="camp-stone-art" style={{color:r.color}}><RuneStone id={r.id}/></span>:<b>+</b>}{r&&<small>{hud.echoRunes?.[r.id]??0}</small>}</button>;})}</div></div>
       <button className="camp-hero" onClick={()=>engine?.openCharacters()}><span className="camp-hero-mark"><Users size={20}/></span><span><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}<em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):(vi?'Pháp sư':'Mage')}</em></b></span><ArrowRight size={16}/></button>
       <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={17} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}<small>{complete?'ECHO GROVE':LEVELS[next].subtitle}</small></span><ArrowRight size={18}/></button>
       <div className="camp-tools"><button className="camp-new" onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>

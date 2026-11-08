@@ -90,6 +90,7 @@ export interface HUDState {
   lastReward: number | null;
   lastRuneReward?:EchoRuneId|null;
   echoRunes?:EchoRuneStock;
+  runeLoadout?:EchoRuneId[];
   activeEchoRunes?:EchoRuneId[];
   pendingRuneChoices?:EchoRuneId[];
   enemiesRemaining?:number;
@@ -1210,12 +1211,19 @@ export class GameEngine {
     }
   }
 
+  public runeEditing=false;
+  public setRuneEditing(open:boolean){this.runeEditing=open;this.heldKeys.clear();}
+  public setRuneSlot(slot:number,id:EchoRuneId|null):boolean{
+    if(!['lobby','playing','paused','forge','victory'].includes(this.screen))return false;
+    if(!this.campaign.setRuneSlot(slot,id))return false;
+    this.notifyHUD();return true;
+  }
   public chooseRune(id:EchoRuneId):boolean {
     if(!['victory','lobby'].includes(this.screen)||!this.campaign.chooseRune(id))return false;
     this.lastRuneReward=id;this.notifyHUD();return true;
   }
   public canUseEchoRune(id:EchoRuneId):boolean {
-    if(this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
+    if(this.runeEditing||this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
     if(id==='call')return this.echoCharges+(this.echoFreeSummon?1:0)<this.echoLimit;
     if(id==='restore')return this.echoes.some(e=>(e.stability??100)<100);
     return !this.activeEchoRunes.has(id);
@@ -1345,6 +1353,7 @@ export class GameEngine {
   // --- Input Handling ---
 
   private handleKeyDown = (e: KeyboardEvent) => {
+    if(this.runeEditing)return;
     // Prevent default browser scroll on arrow keys / space
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
       e.preventDefault();
@@ -1554,7 +1563,7 @@ export class GameEngine {
   }
 
   private update(dt: number) {
-    if (this.screen !== 'playing') return;
+    if (this.screen !== 'playing' || this.runeEditing) return;
     if(this.tutorialEnabled){
       const previousTopic=this.guides.active;
       if(!this.guides.blocking)this.discoverMechanics();
@@ -1991,7 +2000,7 @@ export class GameEngine {
         completed: [...this.campaign.completed],
         forged: this.campaign.forged,
         lastReward: this.lastReward,
-        lastRuneReward:this.lastRuneReward,echoRunes:{...this.campaign.echoRunes},activeEchoRunes:[...this.activeEchoRunes],pendingRuneChoices:[...this.campaign.pendingRuneChoices],enemiesRemaining:this.enemies.filter(e=>e.hp>0).length,
+        lastRuneReward:this.lastRuneReward,echoRunes:{...this.campaign.echoRunes},runeLoadout:[...this.campaign.runeLoadout],activeEchoRunes:[...this.activeEchoRunes],pendingRuneChoices:[...this.campaign.pendingRuneChoices],enemiesRemaining:this.enemies.filter(e=>e.hp>0).length,
         health: this.health,
         bossHp: this.boss?.hp ?? 0,
         bossPhase: this.boss?.phase ?? 0,

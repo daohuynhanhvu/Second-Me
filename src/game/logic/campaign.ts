@@ -1,5 +1,5 @@
 import { DAMAGE, damagePoints } from './damage.ts';
-import { rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
+import { ECHO_RUNES, rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
 export const MECHANICAL_ENABLED = false;
@@ -24,6 +24,7 @@ export class Campaign {
   bossDefeated = false;
   mechanicalOwned = false;
   echoRunes:EchoRuneStock = {};
+  runeLoadout:EchoRuneId[]=[];
   lastRuneDrop:EchoRuneId|null = null;
   pendingRuneChoices:EchoRuneId[]=[];
   coins = 0;
@@ -45,16 +46,17 @@ export class Campaign {
       this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
       this.echoRunes=cleanRuneStock(value.echoRunes);
       this.pendingRuneChoices=cleanRuneChoices(value.pendingRuneChoices);
+      this.runeLoadout=Array.isArray(value.runeLoadout)?[...new Set(value.runeLoadout.filter((id:unknown)=>typeof id==='string'&&ECHO_RUNES.some(r=>r.id===id)))].slice(0,5) as EchoRuneId[]:ECHO_RUNES.filter(r=>(this.echoRunes[r.id]??0)>0).slice(0,5).map(r=>r.id);
       const migrateRunes=value.echoRunes===undefined&&this.completed.length>0;
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
       if(migrateRunes)this.save();
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.echoRunes={}; }
+    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      echoRunes:this.echoRunes,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, bestStars: this.bestStars,
+      echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -64,11 +66,23 @@ export class Campaign {
     return true;
   }
   grantRune(random:()=>number=Math.random):EchoRuneId {
-    const id=rollEchoRune(random);this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);return id;
+    const id=rollEchoRune(random);this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);this.autoSlotRune(id);return id;
   }
   chooseRune(id:EchoRuneId):boolean {
     if(!this.pendingRuneChoices.includes(id))return false;
-    this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);this.lastRuneDrop=id;this.pendingRuneChoices=[];this.save();return true;
+    this.echoRunes[id]=Math.min(9999,(this.echoRunes[id]??0)+1);this.autoSlotRune(id);this.lastRuneDrop=id;this.pendingRuneChoices=[];this.save();return true;
+  }
+  private autoSlotRune(id:EchoRuneId){if(this.runeLoadout.length<5&&!this.runeLoadout.includes(id))this.runeLoadout.push(id);}
+  setRuneSlot(slot:number,id:EchoRuneId|null):boolean{
+    if(!Number.isInteger(slot)||slot<0||slot>4)return false;
+    if(id===null){if(slot>=this.runeLoadout.length)return false;this.runeLoadout.splice(slot,1);}
+    else{
+      if(!ECHO_RUNES.some(r=>r.id===id)||(this.echoRunes[id]??0)<=0)return false;
+      const index=Math.min(slot,this.runeLoadout.length),old=this.runeLoadout[index],existing=this.runeLoadout.indexOf(id);
+      if(existing>=0){if(existing===index)return false;if(old)this.runeLoadout[existing]=old;else this.runeLoadout.splice(existing,1);}
+      this.runeLoadout[Math.min(index,this.runeLoadout.length)]=id;
+    }
+    this.save();return true;
   }
   spendRune(id:EchoRuneId):boolean {
     if(!((this.echoRunes[id]??0)>0))return false;
@@ -96,7 +110,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.save(); }
+  reset() { this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {
