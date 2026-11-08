@@ -11,6 +11,7 @@ import { biomeIndex, biomeLoaded, drawBiomeFloor, drawBiomeProp, drawBiomeWalls,
 import { livingReady, livingImage, drawLivingDecor } from './livingAssets.ts';
 import { drawPortalEnergy } from './portalEffects.ts';
 import { drawPixelInteraction } from './pixelInteractions.ts';
+import { understoryReady, planUnderstory, drawUnderstoryStatic, drawUnderstoryMotion } from './forestUnderstory.ts';
 import {
   preloadForest, forestLoaded, forestReady, groundImage, drawStrip, drawStripBlend, boxAround,
   drawDecor, decorSize, DECOR_GROUND, DECOR_SOLID, DECOR_LONG, DECOR_ROUND, type Box,
@@ -55,9 +56,10 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
     // A new level (or a restart) rewinds the clock: forget per-level animation state.
     if (state.levelTime < lastTime) { plateSince.clear(); exitOpenedAt = null; }
     lastTime = state.levelTime;
-    const key = `${w}:${h}:${lvl.id}:${forestLoaded()}:${biomeLoaded()}:${livingReady()}:${JSON.stringify(lvl.walls)}:${JSON.stringify(lvl.traps ?? [])}`;
+    const key = `${w}:${h}:${lvl.id}:${forestLoaded()}:${biomeLoaded()}:${livingReady()}:${understoryReady()}:${JSON.stringify(lvl.walls)}:${JSON.stringify(lvl.traps ?? [])}`;
     if (key !== cacheKey) { cacheKey = key; [ground, props] = buildLayers(w, h, lvl); }
     if (ground) ctx.drawImage(ground, 0, 0);
+    drawUnderstoryMotion(ctx,lvl.id,state.reducedMotion?0:state.levelTime);
     drawBiomeWeather(ctx, lvl, state.reducedMotion ? 0 : state.levelTime, w, h);
     drawStartPortal(ctx, lvl, state.levelTime, state.reducedMotion);
   };
@@ -221,6 +223,10 @@ function buildLayers(w: number, h: number, lvl: LevelData): [HTMLCanvasElement |
     const clear = keepClear(lvl);
     if (lvl.id === 6) {
       for (const x of [130, 1150]) for (const y of [120, 580]) clear.push({ x: x - 80, y: y - 80, width: 160, height: 160 });
+    }
+    if(understoryReady()) {
+      drawUnderstoryStatic(g,planUnderstory(lvl,w,h,clear));
+      return [ground,props];
     }
     if (livingImage('decor-pixel.png')) {
       const pools = [[0, 1, 2, 3], [2, 3, 0], [4, 5], [6, 7, 3], [8, 9], [10, 11]];

@@ -28,6 +28,10 @@ export function drawForestBoundary(ctx: CanvasRenderingContext2D, level: LevelDa
         g.fillStyle=level.id>=5?'#172d36':'#10291e';g.fillRect(x,y,width,height);
         continue;
       }
+      if(width>=height*1.5&&Math.max(width,height)<=160) {
+        g.drawImage(image,3*sw,row*sh,sw,sh,x-12,y-14,width+24,height+28);
+        continue;
+      }
       g.save();g.beginPath();g.rect(x-10,y,width+20,height);g.clip();
       const vertical=height>width,length=vertical?height:width;
       // Dense root/rock masses read as an impassable barrier without brick seams.
