@@ -1,4 +1,5 @@
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
+import { IntroEffects } from './IntroEffects.tsx';
 import React, { useState } from 'react';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
@@ -25,6 +26,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       if (event.key === 'Escape') setPanel('none');
     }
   }}>
+    <IntroEffects/>
     <h1 className="intro-accessible-title">SECOND ME</h1>
     <div className="intro-mobile-title" aria-hidden="true"><span>THE ANCIENT PATH REMEMBERS</span><strong>SECOND ME</strong><small>ECHOES OF THE WILD</small></div>
     <div className="intro-language" role="group" aria-label={vi ? 'Ngôn ngữ' : 'Language'}>
