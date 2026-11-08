@@ -389,7 +389,6 @@ export class GameEngine {
     this.screen = 'playing';
     document.body.dataset.state = 'playing';
     this.restartLevel();
-    this.showBanner('WASD di chuyển · E ghi đường đi · Q gọi Echo · Chuột phải dùng kỹ năng.');
   }
 
   public continueGame() {
@@ -543,7 +542,7 @@ export class GameEngine {
 
   public enterBoss() {
     if (this.screen !== 'forge' || !this.campaign.forged) return;
-    this.enterLevel(5, () => this.showBanner('Chuột trái: tấn công · Chuột phải: kỹ năng · Shift: lướt né.', 6));
+    this.enterLevel(5);
   }
 
   private finishBossHit() {
@@ -976,6 +975,8 @@ export class GameEngine {
 
     // In playing state
     if (this.screen === 'playing') {
+      if (/^(Digit|Numpad)[1-4]$/.test(code)) { this.selectEcho(Number(code.slice(-1)) - 1); return; }
+      if (key === 'c') { this.pauseEcho(); return; }
       if (code === 'Space') { this.useSkill(); return; }
       if (code === 'ShiftLeft' || code === 'ShiftRight') { this.dodge(); return; }
       if (key === 'f') { this.useTimeItem(); return; }

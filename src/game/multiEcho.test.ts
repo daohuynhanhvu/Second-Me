@@ -10,8 +10,13 @@ test('four independent echoes keep unique colors; fifth summon preserves them',t
  const game=new GameEngine();game.restartLevel();
  for(let i=0;i<4;i++){game.player.x=200+i*30;game.toggleRecording();game.toggleRecording();game.spawnEcho();}
  assert.equal(game.echoes.length,4);assert.equal(new Set(game.echoes.map(e=>e.colorSlot)).size,4);
+ const input=game as unknown as {handleKeyDown(event:KeyboardEvent):void};
+ const press=(key:string,code:string)=>input.handleKeyDown({key,code,repeat:false,preventDefault(){}} as KeyboardEvent);
+ press('2','Digit2');assert.equal(game.selectedEcho,1);
+ press('c','KeyC');assert.equal(game.echo?.status,'paused');
+ press('c','KeyC');assert.equal(game.echo?.status,'replaying');
  const original=[...game.echoes];game.spawnEcho();assert.deepEqual(game.echoes,original);
- game.selectEcho(1);game.dismissEcho();assert.equal(game.echoes.length,3);assert.ok(game.echoes.includes(original[0]));
+ game.dismissEcho();assert.equal(game.echoes.length,3);assert.ok(game.echoes.includes(original[0]));
  game.echoCharges=1;game.spawnEcho();assert.equal(game.echoes.length,4);assert.equal(new Set(game.echoes.map(e=>e.colorSlot)).size,4);
  game.legTimeRemaining=null;(game as any).update(.05);
  assert.ok(game.echoes.every(e=>e.elapsedMs===50));

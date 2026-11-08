@@ -1,3 +1,4 @@
+import { getWizardSheet } from './wizardSprite.ts';
 import { GameRenderer } from './renderer.ts';
 import { LEVELS } from '../logic/levels.ts';
 import { INTRO_VOICE } from '../logic/voice.ts';
@@ -90,7 +91,6 @@ export class CinematicIntro {
   private fired = new Set<string>();
   private shakes: { at: number; amp: number; decay: number }[] = [];
   private flash = { at: -99, a: 0, rgb: [235, 250, 255] as RGB };
-  private wizardSrc = Array.from({ length: 20 }, (_, i) => load(`assets/blue-wizard/idle/${String(i).padStart(2, '0')}.png`));
   private wiz: { frames: PixelSprite[]; w: number; h: number } | null = null;
   private sold: Record<'Idle' | 'Walk' | 'Attack01', Sheet>;
   private boss: Sheet;
@@ -140,47 +140,18 @@ export class CinematicIntro {
     draw('SECOND', 150, '#edf3dc');
     draw('ME', 276, '#a5c89b');
   }
-  /** Aeris's painted idle frames -> pixel art at the same density as Kael (outline, few tones, eyes kept). */
+  /** Reuse Aeris's in-game sprite in the cinematic. */
   private buildWizard() {
-    if (this.wiz || !this.wizardSrc.every(ready)) return;
-    const S = 512, tmp = makeCanvas(S, S), tg = tmp.getContext('2d', { willReadFrequently: true })!;
-    const datas: Uint8ClampedArray[] = [];
-    let x0 = S, y0 = S, x1 = 0, y1 = 0;
-    for (const img of this.wizardSrc) {
-      tg.clearRect(0, 0, S, S); tg.drawImage(img, 0, 0, S, S);
-      const d = tg.getImageData(0, 0, S, S).data; datas.push(d);
-      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (d[(y * S + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    }
-    const targetH = 28, inner = targetH - 2, cw = x1 - x0 + 1, ch = y1 - y0 + 1, f = ch / inner;
-    const tw = Math.ceil(cw / f) + 2, th = targetH;
-    const q = (v: number) => Math.round(Math.min(255, v * 1.07) / 255 * 6) / 6 * 255;
-    const frames = datas.map(d => {
-      const c = makeCanvas(tw, th), g = c.getContext('2d')!, img = g.createImageData(tw, th), o = img.data;
-      const eyes: [number, number][] = [];
-      for (let ty = 0; ty < inner; ty++) for (let tx = 0; tx < tw - 2; tx++) {
-        const sx0 = Math.floor(x0 + tx * f), sx1 = Math.min(x1 + 1, Math.floor(x0 + (tx + 1) * f));
-        const sy0 = Math.floor(y0 + ty * f), sy1 = Math.min(y1 + 1, Math.floor(y0 + (ty + 1) * f));
-        let sa = 0, sr = 0, sg = 0, sb = 0, n = 0, yel = 0;
-        for (let y = sy0; y < sy1; y++) for (let x = sx0; x < sx1; x++) {
-          const i = (y * S + x) * 4, a = d[i + 3]; n++;
-          sa += a; sr += d[i] * a; sg += d[i + 1] * a; sb += d[i + 2] * a;
-          if (a > 128 && d[i] > 170 && d[i + 1] > 160 && d[i + 2] < 110) yel++;
-        }
-        if (!n || sa / (n * 255) < 0.45) continue;
-        const i = ((ty + 1) * tw + tx + 1) * 4;
-        if (yel / n > 0.05) { o[i] = 255; o[i + 1] = 228; o[i + 2] = 92; eyes.push([tx + 1, ty + 1]); }
-        else { o[i] = q(sr / sa); o[i + 1] = q(sg / sa); o[i + 2] = q(sb / sa); }
-        o[i + 3] = 255;
-      }
-      // 1px dark outline, like the soldier and Guardian sheets.
-      const solid = (x: number, y: number) => x >= 0 && y >= 0 && x < tw && y < th && o[(y * tw + x) * 4 + 3] === 255;
-      const edge: number[] = [];
-      for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) if (!solid(x, y) && (solid(x - 1, y) || solid(x + 1, y) || solid(x, y - 1) || solid(x, y + 1))) edge.push(y * tw + x);
-      for (const p of edge) { o[p * 4] = 8; o[p * 4 + 1] = 11; o[p * 4 + 2] = 20; o[p * 4 + 3] = 254; }
-      g.putImageData(img, 0, 0);
-      return { c, eyes };
+    if (this.wiz) return;
+    const sheet = getWizardSheet(); if (!sheet) return;
+    const size = 28;
+    const frames = Array.from({length: 8}, (_, frame) => {
+      const c = makeCanvas(size, size), g = c.getContext('2d')!;
+      g.imageSmoothingEnabled = false;
+      g.drawImage(sheet, frame * 256, 512, 256, 256, 0, 0, size, size);
+      return {c, eyes: [] as [number, number][]};
     });
-    this.wiz = { frames, w: tw, h: th };
+    this.wiz = {frames, w: size, h: size};
   }
   /** Where the Guardian's glowing core sits in every frame (art pixels inside the 192x128 cell). */
   private buildBossCore() {
