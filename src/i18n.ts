@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Shop in the top menu', 'Cửa hàng trên thanh menu'],
+  ['The shop has moved to the top of the lobby, next to the main menu button.', 'Cửa hàng đã chuyển lên thanh trên cùng của sảnh, ngay cạnh nút về menu chính.'],
   ['New Guardian frost effect', 'Hiệu ứng băng mới của boss'],
   ['The Frost Guardian’s blue frost ring spins before dealing damage, then disappears.', 'Vòng băng xanh của Thủ Vệ Băng xoay trước khi gây sát thương rồi biến mất.'],
   ['Character facing update', 'Điều chỉnh hướng nhìn nhân vật'],

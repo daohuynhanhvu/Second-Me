@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Check, Compass, Flame, Lock, Play, RotateCcw, ShoppingBasket, Snowflake, Sword, Users } from 'lucide-react';
+import { ArrowRight, Check, Compass, Flame, Lock, Play, RotateCcw, Snowflake, Sword, Users } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
 import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
@@ -31,7 +31,7 @@ export function JourneyCamp({engine,hud,complete,next}:{engine:GameEngine|null;h
       <div className="camp-relics"><span>{vi?'ẤN NÂNG ECHO':'ECHO UPGRADE RUNES'}<b>{Object.values(hud.echoRunes??{}).reduce((a,n)=>a+n,0)}</b></span><div>{ECHO_RUNES.map(r=><span key={r.id} title={vi?r.vi:r.en} className={(hud.echoRunes?.[r.id]??0)>0?'found':''}><b>{r.glyph}</b><small>{hud.echoRunes?.[r.id]??0}</small></span>)}</div></div>
       <button className="camp-hero" onClick={()=>engine?.openCharacters()}><span className="camp-hero-mark"><Users size={20}/></span><span><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}<em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):(vi?'Pháp sư':'Mage')}</em></b></span><ArrowRight size={16}/></button>
       <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={17} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}<small>{complete?'ECHO GROVE':LEVELS[next].subtitle}</small></span><ArrowRight size={18}/></button>
-      <div className="camp-tools"><button onClick={()=>engine?.openShop()}><ShoppingBasket size={17}/><span>{vi?'Cửa hàng':'Shop'}</span><b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></button><button className="camp-new" onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
+      <div className="camp-tools"><button className="camp-new" onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
       <p className="camp-footnote"><span/>{vi?'Tiến độ được lưu trên thiết bị này.':'Your journey is saved on this device.'}</p>
     </aside>
     <section className="journey-chart" aria-label={vi?'Bản đồ hành trình':'Journey map'}>
