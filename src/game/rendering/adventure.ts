@@ -1,5 +1,5 @@
 import { drawBossFrostZone } from './bossFrostZone.ts';
-import { drawEnemies } from './enemies.ts';
+import { drawEnemies, drawEnemyAttacks } from './enemies.ts';
 import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
 import { drawMechanicalSprite } from './mechanicalSprite.ts';
 import type { GameEngine } from '../GameEngine.ts';
@@ -124,6 +124,20 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   // Kael and Aeris show their combo frames while attacking (rendering/comboSprites.ts).
   const comboFrame = !game.exitTravelRemaining && comboPose(game) ? drawComboHero(ctx, game) : false;
   if(game.characterClass==='swordsman' && !comboFrame && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0,1-game.attackFlash/.22);
+  // Match Kael's foreground layer: the legacy stage draws walls after its player pass.
+  // Drawing Aeris there used to cover her head when standing below a wall.
+  if (game.characterClass === 'mage' && !comboFrame && (!game.exitTravelRemaining || game.exitTravelRemaining > .35)) {
+    const y = game.player.y - (game.exitTravelRemaining > 0 ? (.7 - game.exitTravelRemaining) * 65 : 0);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath(); ctx.ellipse(game.player.x, y + 12, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+    game.renderer.drawCharacterSprite(ctx, game.player.x, y, game.player.direction, 0, false, time, game.player.isMoving);
+    if (game.recorder.getStatus() === 'recording') {
+      ctx.fillStyle = '#fb7185'; ctx.font = 'bold 10px ui-monospace,monospace'; ctx.textAlign = 'center';
+      ctx.fillText(`REC ${Math.max(0, (8000 - game.recorder.getDuration()) / 1000).toFixed(1)}s`, game.player.x, y - 58);
+    }
+    ctx.restore();
+  }
   if (game.characterClass === 'mage' && !comboFrame && !game.exitTravelRemaining) {
     drawMageStaff(ctx, game.player.x, game.player.y, game.player.direction);
   }
@@ -152,6 +166,17 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();
   }
+  drawEnemyAttacks(ctx,game.enemies,game.reducedMotion);
+  // Hits on the hero have a distinct red impact, shield feedback and actual HP loss.
+  for(const hit of game.incomingHits){
+    const k=1-hit.life/.85;ctx.save();ctx.globalAlpha=Math.min(1,hit.life/.2);
+    ctx.textAlign='center';ctx.font='bold 19px ui-monospace,monospace';ctx.lineWidth=4;ctx.strokeStyle='#180e0b';
+    const text=hit.damage>0?`−${hit.damage} HP`:`${game.language==='vi'?'CHẶN':'BLOCK'} ${hit.absorbed}`;
+    const y=hit.y-(game.reducedMotion?0:k*28);ctx.strokeText(text,hit.x,y);ctx.fillStyle=hit.damage>0?'#ff947f':'#b4e9ec';ctx.fillText(text,hit.x,y);
+    if(k<.35){ctx.strokeStyle=hit.damage>0?'#ffb59a':'#a4e8ed';ctx.lineWidth=3;ctx.beginPath();ctx.arc(hit.x,hit.y+35,12+k*70,0,Math.PI*2);ctx.stroke();}
+    ctx.restore();
+  }
+  if(game.hurtFlash>0){ctx.save();ctx.globalAlpha=game.hurtFlash/.28*.24;ctx.fillStyle='#e85c43';ctx.beginPath();ctx.ellipse(game.player.x,game.player.y-15,21,31,0,0,Math.PI*2);ctx.fill();ctx.restore();}
   drawCombatHits(ctx, game.combatHits, game.reducedMotion);
   ctx.restore();
 }

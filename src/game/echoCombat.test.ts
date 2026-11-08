@@ -61,20 +61,20 @@ test('targets outside the 3m anchor cannot pull an Echo farther or take automati
   assert.equal(enemy.hp,hp);
 });
 
-test('enemy attacks recall only the hit Echo on its third hit even with guard active',t=>{
+test('guard reduces incoming damage and recalls only the depleted Echo',t=>{
   const {game,update,summon}=setup(t);const echo=summon(400,300),other=summon(700,300);echo.status='finished';other.status='finished';game.activeEchoRunes.add('guard');
   const enemy={...createEnemies(game.currentLevel)[0],x:420,y:300,homeX:420,homeY:300,hp:300,maxHp:300,timer:100};game.enemies=[enemy];
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=13;i++){
     enemy.mode='warning';enemy.timer=.01;enemy.targetEcho=echo;enemy.targetId=game.echoes.indexOf(echo);enemy.targetX=echo.x;enemy.targetY=echo.y;enemy.x=echo.x+20;enemy.y=echo.y;
-    update();assert.equal(game.echoes.includes(echo),i<3);assert.ok(game.echoes.includes(other));
+    update();assert.equal(game.echoes.includes(echo),i<13);assert.ok(game.echoes.includes(other));
   }
 });
 
-test('boss slams recall an Echo only after three hits and prioritize it over the player',t=>{
+test('boss slams deal 30 stability damage and prioritize Echo over the player',t=>{
   const {game,update,summon}=setup(t,5);const echo=summon(400,300);echo.status='finished';const boss=game.boss!;boss.x=850;boss.y=300;boss.burstCooldown=100;
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=4;i++){
     boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-    assert.equal(game.echoes.includes(echo),i<3);assert.equal(game.health,5);
+    assert.equal(game.echoes.includes(echo),i<4);assert.equal(game.health,100);
   }
 });
 
@@ -98,7 +98,7 @@ test('automatic Echo attacks damage a boss after its existing armor is broken',t
   assert.ok(boss.hp<240,'Echo damages the exposed boss');
 });
 
-test('hits from enemies and boss accumulate toward the same three-hit limit',t=>{
+test('enemy and boss damage accumulate in the same stability pool',t=>{
   const {game,update,summon}=setup(t,5);const echo=summon(400,300);echo.status='finished';
   const boss=game.boss!;boss.x=900;boss.y=300;boss.mode='recover';boss.timer=100;boss.burstCooldown=100;
   const enemy={...createEnemies({...game.currentLevel,id:2})[0],x:420,y:300,homeX:420,homeY:300,hp:300,maxHp:300,timer:100};game.enemies=[enemy];
@@ -107,7 +107,12 @@ test('hits from enemies and boss accumulate toward the same three-hit limit',t=>
     update();assert.ok(game.echoes.includes(echo));
   }
   boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-  assert.equal(game.echoes.length,0,'the third combined hit recalls the Echo');
+  assert.ok(game.echoes.includes(echo),'24 enemy damage plus 30 boss damage leaves 46 stability');
+  assert.equal(echo.stability,46);
+  boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
+  assert.equal(echo.stability,16);
+  boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
+  assert.equal(game.echoes.length,0,'a further 30 damage depletes the Echo');
 });
 
 test('Echo combat cannot damage an enemy through a closed wall',t=>{
@@ -119,8 +124,20 @@ test('Echo combat cannot damage an enemy through a closed wall',t=>{
   assert.equal(enemy.hp,100);assert.equal(echo.combatAnchor,undefined);
 });
 
-test('stability reaching zero does not recall an Echo before three enemy hits',t=>{
+test('passive stability depletion recalls an Echo without any enemy hits',t=>{
   const {game,update,summon}=setup(t);const echo=summon(400,300);echo.status='paused';echo.stability=1;
   for(let i=0;i<20;i++)update(.1);
-  assert.equal(echo.stability,0);assert.ok(game.echoes.includes(echo));assert.equal(echo.hitsTaken,0);
+  assert.equal(echo.stability,0);assert.ok(!game.echoes.includes(echo));
+});
+
+ test('damage magnitude and Restoration determine Echo survival, not hit count',t=>{
+  const {game,summon}=setup(t);const echo=summon(400,300);
+  const hit=(damage:number)=>(game as unknown as {hitEcho(e:typeof echo,n:number):void}).hitEcho(echo,damage);
+  for(let i=0;i<5;i++)hit(5);
+  assert.equal(echo.stability,75);assert.ok(game.echoes.includes(echo));
+  hit(60);assert.equal(echo.stability,15);
+  game.campaign.echoRunes.restore=1;game.useEchoRune('restore');
+  assert.equal(echo.stability,65);
+  hit(64);assert.ok(game.echoes.includes(echo));
+  hit(1);assert.ok(!game.echoes.includes(echo));
 });

@@ -176,7 +176,7 @@ test('Echo draws boss attention and spends stability to absorb a hit',t=>{
   (game as unknown as {update(dt:number):void}).update(.05);
   assert.ok(game.echo);
   assert.ok(game.echo!.stability!<100);
-  assert.equal(game.health,5);
+  assert.equal(game.health,100);
 });
 
 test('boss burst has a readable windup and bounded phase-one projectile density',()=>{
@@ -215,16 +215,16 @@ test('all six class pickups apply their distinct damage or defense',t=>{
   const internal=game as unknown as {collectCombatSkill(kind:import('../GameEngine.ts').CombatSkill):void;takeDamage():void};
   internal.collectCombatSkill('fire');assert.equal(game.boss!.hp,205);assert.equal(game.fireBurnTime,3);
   internal.collectCombatSkill('lightning');assert.equal(game.boss!.hp,155);
-  internal.collectCombatSkill('stone');assert.equal(game.stoneShield,2);
-  internal.takeDamage();assert.equal(game.health,5);assert.equal(game.stoneShield,1);
+  internal.collectCombatSkill('stone');assert.equal(game.stoneShield,40);
+  internal.takeDamage();assert.equal(game.health,100);assert.equal(game.stoneShield,20);
   game.invulnerability=0;internal.takeDamage();assert.equal(game.stoneShield,0);
   game.characterClass='swordsman';
   internal.collectCombatSkill('haste');assert.equal(game.hasteTime,6);
   game.player.x=game.boss!.x-80;game.player.y=game.boss!.y;
   game.attackCooldown=0;game.attack();             // haste plays the combo twice as fast
   assert.equal(game.attackCooldown,hitDuration(COMBO_HITS.swordsman[0])/2);
-  internal.collectCombatSkill('armor');assert.equal(game.armorShield,1);
-  game.invulnerability=0;internal.takeDamage();assert.equal(game.health,5);assert.equal(game.armorShield,0);
+  internal.collectCombatSkill('armor');assert.equal(game.armorShield,20);
+  game.invulnerability=0;internal.takeDamage();assert.equal(game.health,100);assert.equal(game.armorShield,0);
   const before=game.boss!.hp;internal.collectCombatSkill('wave');assert.equal(game.boss!.hp,before-55);
 });
 
@@ -263,7 +263,7 @@ test('attack cooldown prevents duplicate hits and a dodge prevents immediate dam
   for(let i=0;i<10;i++)tick(.05);
   assert.equal(game.boss!.hp,228);
   game.dodge();(game as unknown as {takeDamage():void}).takeDamage();
-  assert.equal(game.health,5);assert.ok(game.dodgeCooldown>0);
+  assert.equal(game.health,100);assert.ok(game.dodgeCooldown>0);
 });
 
 test('losing and retrying a boss fight keeps sword and restores health and boss', t=>{
@@ -276,7 +276,7 @@ test('losing and retrying a boss fight keeps sword and restores health and boss'
   const internal=game as unknown as {takeDamage():void};
   for(let i=0;i<5;i++){game.invulnerability=0;internal.takeDamage();}
   assert.equal(game.screen,'defeat');game.restartLevel();
-  assert.equal(game.screen,'playing');assert.equal(game.health,5);
+  assert.equal(game.screen,'playing');assert.equal(game.health,100);
   assert.equal(game.boss!.hp,240);assert.equal(game.campaign.forged,true);
   assert.equal(game.campaign.completed.length,5);
 });

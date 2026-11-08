@@ -95,7 +95,7 @@ test('puzzle preparation does not drain health and paused Echoes survive deliber
  const game=new GameEngine();game.screen='playing';game.legTimeRemaining=null;game.player.x=1000;game.player.y=550;
  const control=game as unknown as {update(dt:number):void};
  for(let i=0;i<60;i++)control.update(.1);
- assert.equal(game.health,5,'no automatic dissonance damage in puzzle rooms');
+ assert.equal(game.health,100,'no automatic dissonance damage in puzzle rooms');
  game.recorder.startRecording(game.player.x,game.player.y,'right');game.toggleRecording();game.spawnEcho();game.pauseEcho();
  for(let i=0;i<60;i++)control.update(.1);
  assert.equal(game.echoes.length,1);assert.ok(game.echo!.stability!>=90);

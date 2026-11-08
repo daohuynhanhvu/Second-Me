@@ -1,7 +1,7 @@
 export const ECHO_RUNES = [
  {id:'call',glyph:'ᚠ',vi:'Triệu hồi',en:'Calling',detailVi:'Thêm 1 lượt gọi Echo (tối đa 4).',detailEn:'Gain 1 Echo summon charge (up to 4).',color:'#dfc687'},
  {id:'guard',glyph:'ᚢ',vi:'Bền bỉ',en:'Endurance',detailVi:'Echo mất ít hơn 35% ổn định trong màn hiện tại.',detailEn:'Echoes lose 35% less stability this level attempt.',color:'#9bd8c0'},
- {id:'power',glyph:'ᚦ',vi:'Khuếch đại',en:'Amplification',detailVi:'Đòn phát lại của Echo mạnh hơn 30% trong màn hiện tại.',detailEn:'Echo replay attacks deal 30% more damage this level attempt.',color:'#e3a684'},
+ {id:'power',glyph:'ᚦ',vi:'Khuếch đại',en:'Amplification',detailVi:'Đòn đánh của Echo mạnh hơn 30% trong màn hiện tại.',detailEn:'Echo attacks deal 30% more damage this level attempt.',color:'#e3a684'},
  {id:'lure',glyph:'ᚨ',vi:'Truy kích',en:'Pursuit',detailVi:'Echo di chuyển nhanh hơn 25% khi truy kích trong phạm vi chiến đấu.',detailEn:'Echoes move 25% faster while pursuing targets within their combat range.',color:'#a9c5ef'},
  {id:'restore',glyph:'ᚱ',vi:'Hồi phục',en:'Restoration',detailVi:'Hồi 50 ổn định cho mọi Echo hiện có, tối đa 100.',detailEn:'Restore 50 stability to every active Echo, up to 100.',color:'#c7b2e7'},
 ] as const;

@@ -33,7 +33,7 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
       }
       ctx.fillStyle = '#102b3a';ctx.fillRect(-25, 31, 50, 5);
       ctx.fillStyle = flash > 0 ? '#fff6c9' : '#a0e7f5';ctx.fillRect(-25,31,50*pillar.hp/pillar.maxHp,5);
-      ctx.font = '600 10px sans-serif';ctx.textAlign = 'center';ctx.fillStyle = '#d8f8ff';ctx.fillText(`${Math.ceil(pillar.hp)}/${pillar.maxHp}`,0,49);
+      ctx.font = '600 10px sans-serif';ctx.textAlign = 'center';ctx.fillStyle = '#d8f8ff';ctx.fillText(`${Math.round(pillar.hp*10)/10}/${pillar.maxHp}`,0,49);
     }
     ctx.restore();
   }
@@ -58,7 +58,7 @@ export function drawCombatHits(ctx: CanvasRenderingContext2D, hits: { x:number;y
     }
     ctx.shadowColor='#102339';ctx.shadowBlur=4;ctx.fillStyle=hit.broken?'#e6fbff':'#fff1bf';
     ctx.font=`bold ${hit.broken?21:17}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText(`−${Math.round(hit.damage)}`,0,-30-(reduced?0:progress*26));
+    ctx.fillText(`−${Math.round(hit.damage*10)/10}`,0,-30-(reduced?0:progress*26));
     ctx.restore();
   }
 }

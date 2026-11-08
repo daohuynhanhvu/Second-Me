@@ -1,3 +1,4 @@
+import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logic/damage.ts';
 import { createEnemies, updateEnemies, type Enemy } from './logic/enemies.ts';
 import { ECHO_RUNES, type EchoRuneId, type EchoRuneStock } from './logic/echoRunes.ts';
 import { segmentCircle, segmentWall } from './logic/combatGeometry.ts';
@@ -51,7 +52,6 @@ const PILLAR_R = 26, BOSS_R = 44, ENEMY_R = 26;
 // The game has no physical metre scale; 40 world units approximate one metre.
 const ECHO_COMBAT_RADIUS = 3 * 40;
 const ECHO_COMBAT_SPEED = 110;
-const ECHO_MAX_HITS = 3;
 type CombatTarget = BossState | BossState['pillars'][number] | Enemy;
 /** Kael's swings: reach of the arc's centre in front of him, its radius, how many it can hit. */
 const KAEL_SWINGS = [
@@ -77,7 +77,6 @@ export interface HUDState {
   echoCount: number; // 0 or 1
   echoCharges: number;
   echoStability: number;
-  echoHitsRemaining?: number;
   echoElapsedMs: number;
   echoDurationMs: number;
   echoEvents: EchoEvent[];
@@ -179,7 +178,6 @@ export class GameEngine {
     combatLife?: number;
     aggroTime?: number;
     attackTimer?: number;
-    hitsTaken?: number;
     attackFlash?: number;
     attackTarget?: { x: number; y: number };
     combatAnchor?: { x: number; y: number };
@@ -225,7 +223,9 @@ export class GameEngine {
   /** An ultimate's hit waits for its shout so the skill name lands with the impact. */
   private pendingUltimate: { kind: CombatSkill; time: number } | null = null;
   private get voiceRole(): VoiceRole { return this.characterClass === 'swordsman' ? 'kael' : this.characterClass === 'mechanical' ? 'rivet' : 'aeris'; }
-  public health = 5;
+  public health = PLAYER_MAX_HP;
+  public hurtFlash = 0;
+  public incomingHits: {x:number;y:number;damage:number;absorbed:number;life:number}[] = [];
   public invulnerability = 0;
   public attackCooldown = 0;
   public attackFlash = 0;
@@ -540,7 +540,8 @@ export class GameEngine {
     this.checkpointIndex = 0;
     this.slowed = false;
     this.defeatReason = 'damage';
-    this.health = 5;
+    this.health = PLAYER_MAX_HP;
+    this.hurtFlash=0;this.incomingHits=[];
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.combatHits = [];
     this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
@@ -674,36 +675,36 @@ export class GameEngine {
     return pillar ? {x:pillar.x,y:pillar.y} : this.boss ? {x:this.boss.x,y:this.boss.y} : null;
   }
 
-  private damageCombatTarget(x:number,y:number,amount:number,radius=65) {
+  private damageCombatTarget(x:number,y:number,amount:number,radius=65,source:{x:number;y:number}=this.player) {
     const enemy=this.enemies.filter(e=>e.hp>0&&Math.hypot(e.x-x,e.y-y)<=radius).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];
-    if(enemy) return this.strike(enemy, amount);
+    if(enemy) return this.strike(enemy, amount, false, source);
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
     const pillar=this.boss.pillars.find(p=>p.hp>0 && Math.hypot(p.x-x,p.y-y)<=radius);
-    if(pillar) return this.strike(pillar, amount);
+    if(pillar) return this.strike(pillar, amount, false, source);
     if(Math.hypot(this.boss.x-x,this.boss.y-y)>radius) return false;
-    return this.strike(this.boss, amount);
+    return this.strike(this.boss, amount, false, source);
   }
 
   /**
    * The game's one damage rule, for every hit: Light Sanctuary adds 20%; an enemy or a pillar
    * takes the damage, the boss takes it only once every pillar is down. Shows the damage number.
    */
-  private strike(target: CombatTarget, amount: number, heavy = false): boolean {
+  private strike(target: CombatTarget, amount: number, heavy = false, source:{x:number;y:number}=this.player): boolean {
     if (this.enemies.includes(target as Enemy)) {
       const enemy = target as Enemy;
       if (enemy.hp <= 0) return false;
-      if(this.insideLightCircle)amount*=1.2;const dealt=Math.min(enemy.hp,amount);enemy.hp=Math.max(0,enemy.hp-amount);enemy.hitFlash=.18;
+      if(this.lightCircle&&Math.hypot(source.x-this.lightCircle.x,source.y-this.lightCircle.y)<=58)amount*=1.2;const result=applyDamage(enemy.hp,amount);const dealt=result.dealt;enemy.hp=result.hp;enemy.hitFlash=.18;
       this.combatHits.push({x:enemy.x,y:enemy.y-30,damage:Math.round(dealt*10)/10,life:.7,broken:enemy.hp===0});this.combatHits=this.combatHits.slice(-24);
       this.renderer.emitMagic('sparkle',enemy.x,enemy.y,heavy?48:24);sounds.playIceHit(false);
       if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
       this.notifyHUD();return true;
     }
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
-    if(this.insideLightCircle) amount *= 1.2;
+    if(this.lightCircle&&Math.hypot(source.x-this.lightCircle.x,source.y-this.lightCircle.y)<=58) amount *= 1.2;
     if(target !== this.boss) {
       const pillar = target as BossState['pillars'][number];
-      const dealt = Math.min(pillar.hp, amount);
-      pillar.hp=Math.max(0,pillar.hp-amount);
+      const result=applyDamage(pillar.hp,amount);const dealt=result.dealt;
+      pillar.hp=result.hp;
       pillar.hitFlash = .2;
       this.combatHits.push({ x: pillar.x, y: pillar.y - 20, damage: dealt, life: .7, broken: pillar.hp === 0 });
       this.combatHits = this.combatHits.slice(-24);
@@ -732,8 +733,8 @@ export class GameEngine {
       this.addDamageText(this.boss.x, this.boss.y - 60, 0, false, this.language==='vi'?'MIỄN':'IMMUNE');
       return false;
     }
-    this.boss.hp=Math.max(0,this.boss.hp-amount);
-    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: amount, life: .7, broken: false });
+    const result=applyDamage(this.boss.hp,amount);this.boss.hp=result.hp;
+    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: result.dealt, life: .7, broken: false });
     this.combatHits = this.combatHits.slice(-24);
     sounds.playIceHit(false);
     this.boss.hitFlash=.18;
@@ -814,15 +815,15 @@ export class GameEngine {
     const names:Record<CombatSkill,[string,string]>={
       fire:['Fire bolt: 35 damage + burn','Đạn lửa: 35 sát thương + đốt'],
       lightning:['Lightning: 50 damage','Tia sét: 50 sát thương'],
-      stone:['Stone shield: block 2 hits','Khiên đá: chặn 2 đòn'],
+      stone:['Stone shield: absorb 40 damage','Khiên đá: hấp thụ 40 sát thương'],
       haste:['Haste: attack twice as fast for 6s','Tăng tốc chém gấp đôi trong 6 giây'],
-      armor:['Armor: block 1 hit','Giáp: chặn 1 đòn'],
+      armor:['Armor: absorb 20 damage','Giáp: hấp thụ 20 sát thương'],
       wave:['Sword wave: 55 damage','Kiếm quang: 55 sát thương'],
     };
     this.showBanner(names[kind][this.language==='vi'?1:0],3);
     this.combatFlash={x:this.player.x,y:this.player.y,kind,time:.65};
-    if(kind==='stone')this.stoneShield=2;
-    else if(kind==='armor')this.armorShield=1;
+    if(kind==='stone')this.stoneShield=SHIELD.stone;
+    else if(kind==='armor')this.armorShield=SHIELD.armor;
     else if(kind==='haste')this.hasteTime=6;
     else if(aim) {
       if(kind==='lightning' || kind==='wave') {
@@ -1041,7 +1042,7 @@ export class GameEngine {
       if(this.lightCircle.life<=0) this.lightCircle=null;
       else if(this.insideLightCircle) {
         this.lightCircle.heal+=dt;
-        if(this.lightCircle.heal>=2) {this.lightCircle.heal-=2;this.health=Math.min(5,this.health+1);this.notifyHUD();}
+        if(this.lightCircle.heal>=2) {this.lightCircle.heal-=2;this.health=Math.min(PLAYER_MAX_HP,this.health+20);this.notifyHUD();}
       }
     }
   }
@@ -1055,11 +1056,17 @@ export class GameEngine {
     voice.say(this.voiceRole, 'dodge');
   }
 
-  private takeDamage() {
-    if (this.invulnerability > 0) return;
-    if(this.stoneShield>0) { this.stoneShield--; this.invulnerability=.3; this.notifyHUD(); return; }
-    if(this.armorShield>0) { this.armorShield--; this.invulnerability=.3; this.notifyHUD(); return; }
-    this.health = Math.max(0, this.health - 1);
+  private takeDamage(amount:number = DAMAGE.trap) {
+    if (this.invulnerability > 0 || damagePoints(amount)<=0 || this.health<=0) return;
+    const result=applyDamage(this.health,amount,this.stoneShield+this.armorShield);
+    const stoneAbsorbed=Math.min(this.stoneShield,result.absorbed);
+    this.stoneShield=damagePoints(this.stoneShield-stoneAbsorbed);
+    this.armorShield=damagePoints(this.armorShield-(result.absorbed-stoneAbsorbed));
+    this.incomingHits.push({x:this.player.x,y:this.player.y-45,damage:Math.round(result.dealt*10)/10,absorbed:Math.round(result.absorbed*10)/10,life:.85});
+    this.incomingHits=this.incomingHits.slice(-12);
+    sounds.playImpact(result.dealt===0);
+    if(result.dealt===0){this.invulnerability=.3;this.notifyHUD();return;}
+    this.health=result.hp;this.hurtFlash=.28;
     this.invulnerability = 1.3;
     this.combo?.cancel(); this.lunge.time = 0;           // staggered: the combo is lost
     this.renderer.particles.emit(this.player.x, this.player.y, 18, '#fb7185', 75, 4, 0.6);
@@ -1068,7 +1075,7 @@ export class GameEngine {
       this.screen = 'defeat'; this.heldKeys.clear(); document.body.dataset.state = 'gameover';
       voice.say(this.voiceRole, 'defeat');
       if (this.boss) voice.say('guardian', 'victory', { delay: 2.2 });
-    } else if (this.health <= 2) voice.say(this.voiceRole, 'lowHealth'); // breathless, not just another grunt
+    } else if (this.health <= 40) voice.say(this.voiceRole, 'lowHealth'); // breathless, not just another grunt
     else voice.say(this.voiceRole, 'damage');
     this.notifyHUD();
   }
@@ -1171,7 +1178,6 @@ export class GameEngine {
       stability: 100,
       aggroTime: this.currentLevel.id>=2 ? (this.activeEchoRunes.has('lure')?6:3) : undefined,
       attackTimer: 0,
-      hitsTaken: 0,
       characterClass: this.characterClass,
     };
 
@@ -1224,12 +1230,12 @@ export class GameEngine {
     this.notifyHUD();return true;
   }
 
-  /** Each enemy attack counts as one hit, independently of the stability/swap meter. */
-  private hitEcho(echo: NonNullable<GameEngine['echoShape']>, stabilityLoss: number) {
+  /** Incoming damage consumes stability; Endurance reduces the actual amount lost. */
+  private hitEcho(echo: NonNullable<GameEngine['echoShape']>, stabilityLoss: number, applyGuard = true) {
     if (!this.echoes.includes(echo)) return;
-    echo.hitsTaken = (echo.hitsTaken ?? 0) + 1;
-    echo.stability = Math.max(0, (echo.stability ?? 100) - stabilityLoss * (this.activeEchoRunes.has('guard') ? .65 : 1));
-    if (echo.hitsTaken >= ECHO_MAX_HITS) {
+    const result=applyDamage(echo.stability??100,stabilityLoss*(applyGuard && this.activeEchoRunes.has('guard')?.65:1));
+    echo.stability=result.hp;
+    if (echo.stability <= 0) {
       const selected = this.echo;
       this.echoes = this.echoes.filter(e => e !== echo);
       this.selectedEcho = Math.max(0, selected === echo ? Math.min(this.selectedEcho, this.echoes.length - 1) : this.echoes.indexOf(selected!));
@@ -1275,7 +1281,7 @@ export class GameEngine {
       if (target && echo.attackTimer <= 0) {
         echo.direction = Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
         echo.attackFlash = .22; echo.attackTarget = {x: target.x, y: target.y};
-        this.strike(target, 15 * (this.activeEchoRunes.has('power') ? 1.3 : 1));
+        this.strike(target, 15 * (this.activeEchoRunes.has('power') ? 1.3 : 1), false, echo);
         this.renderer.emitMagic('sparkle', target.x, target.y, 40);
         echo.attackTimer = .65;
       }
@@ -1293,7 +1299,7 @@ export class GameEngine {
       .filter(item=>item.offset<=(this.pingTarget&&Math.hypot(item.p.x-this.pingTarget.x,item.p.y-this.pingTarget.y)<45?Math.PI/6:Math.PI/9))
       .sort((a,b)=>(this.pingTarget?Math.hypot(a.p.x-this.pingTarget.x,a.p.y-this.pingTarget.y)-Math.hypot(b.p.x-this.pingTarget.x,b.p.y-this.pingTarget.y):a.offset-b.offset))[0]?.p;
     const x=target?.x??originX+Math.cos(angle)*120, y=target?.y??originY+Math.sin(angle)*120;
-    this.damageCombatTarget(x,y,(event.kind==='skill'?15:10)*(this.activeEchoRunes.has('power')?1.3:1), event.kind==='skill'?75:65);
+    this.damageCombatTarget(x,y,(event.kind==='skill'?15:10)*(this.activeEchoRunes.has('power')?1.3:1), event.kind==='skill'?75:65, this.echo);
     this.renderer.emitMagic('sparkle',x,y,event.kind==='skill'?65:36);
   }
 
@@ -1313,7 +1319,7 @@ export class GameEngine {
     this.echo.x=x;this.echo.y=y;
     this.echo.samples=this.echo.samples.map(sample=>({...sample,x:sample.x-dx,y:sample.y-dy}));
     this.echo.combatAnchor=undefined; this.echo.returnBlockedFor=0;
-    this.echo.stability=(this.echo.stability??100)-30;
+    this.hitEcho(this.echo, 30, false);
     this.swapCooldown=7;this.invulnerability=Math.max(.2,this.invulnerability);
     this.notifyHUD();
   }
@@ -1583,7 +1589,7 @@ export class GameEngine {
       this.dissonanceSeconds+=dt;
       if(this.dissonanceSeconds>=5) {
         this.dissonanceSeconds-=5;
-        this.takeDamage();
+        this.takeDamage(DAMAGE.dissonance);
         if(this.screen!=='playing')return;
         this.showBanner(this.language==='vi'?'Rạn vỡ ký ức: cần Echo để bảo hộ.':'Dissonance: summon Echo for protection.');
       }
@@ -1603,6 +1609,9 @@ export class GameEngine {
       }
     }
     this.invulnerability = Math.max(0, this.invulnerability - dt);
+    this.hurtFlash=Math.max(0,this.hurtFlash-dt);
+    for(const hit of this.incomingHits)hit.life-=dt;
+    this.incomingHits=this.incomingHits.filter(hit=>hit.life>0);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.updatePersonalSkill(dt);
@@ -1625,9 +1634,9 @@ export class GameEngine {
     this.updateCombo(dt);
     this.updateMagicShots(dt);
     const enemyEchoes=[...this.echoes];
-    updateEnemies(this.enemies,this.currentLevel,this.player,enemyEchoes,dt,target=>{
-      if(target.echoIndex===null)this.takeDamage();
-      else {const echo=enemyEchoes[target.echoIndex];if(echo)this.hitEcho(echo,25);}
+    updateEnemies(this.enemies,this.currentLevel,this.player,enemyEchoes,dt,(target,damage)=>{
+      if(target.echoIndex===null)this.takeDamage(damage);
+      else {const echo=enemyEchoes[target.echoIndex];if(echo)this.hitEcho(echo,damage);}
     });
     if(this.screen!=='playing')return;
     this.attackFlash = Math.max(0, this.attackFlash - dt);
@@ -1776,7 +1785,7 @@ export class GameEngine {
       this.echo.aggroTime=Math.max(0,(this.echo.aggroTime??0)-dt);
     }
     if(this.echo?.status==='paused' || this.echo?.status==='finished') {
-      this.echo.stability=Math.max(0,(this.echo.stability??100)-dt*(this.echo.status==='paused'?(this.boss?8:1.5):0)*(this.activeEchoRunes.has('guard')?.65:1));
+      this.hitEcho(this.echo, dt*(this.echo.status==='paused'?(this.boss?8:1.5):0));
     }
 
     }
@@ -1845,11 +1854,11 @@ export class GameEngine {
     this.slowed = afterMove.slowed;
     if (afterMove.damage && this.invulnerability <= 0) {
       this.trappedTime = Math.max(this.trappedTime, 0.25);
-      this.takeDamage();
+      this.takeDamage(DAMAGE.trap);
     }
     for (const hazard of this.currentLevel.hazards ?? []) {
       const active = (this.elapsedLevelTime + hazard.offset) % hazard.period < 0.9;
-      if (active && Math.hypot(this.player.x - hazard.x, this.player.y - hazard.y) < hazard.radius + 10) this.takeDamage();
+      if (active && Math.hypot(this.player.x - hazard.x, this.player.y - hazard.y) < hazard.radius + 10) this.takeDamage(DAMAGE.hazard);
     }
     if (this.screen !== 'playing') return;
     if (this.boss) {
@@ -1858,9 +1867,10 @@ export class GameEngine {
       const bossEchoes = [...this.echoes];
       const echoTarget = bossEchoes.slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0]??null;
       const burstBefore = boss.burstRemaining;
-      const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, index => {
-        const echo=bossEchoes[index]; if(echo)this.hitEcho(echo,30);
-      });
+      let bossDamage=0;
+      const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
+        const echo=bossEchoes[index]; if(echo)this.hitEcho(echo,damage);
+      }, damage=>{bossDamage=Math.max(bossDamage,damage);});
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
       this.lastBossPhase = this.boss.phase;
       // Slam wind-up: the shout is timed to end exactly as the blow lands.
@@ -1871,7 +1881,7 @@ export class GameEngine {
       if (!this.bossLowVoiced && this.boss.hp > 0 && this.boss.hp < this.boss.maxHp * 0.15) { this.bossLowVoiced = true; voice.say('guardian', 'lowHealth'); }
       if (bossHit) {
         // A decoy redirects attacks; it never makes the player immune to stray projectiles.
-        this.takeDamage();
+        this.takeDamage(bossDamage);
       }
       if(this.boss.phase!==previousPhase)this.echoCharges=Math.max(1,this.echoCharges);
     } else if ((this.devUnlocked || isPuzzleExitOpen(this.currentLevel,this.checkpointIndex)) &&
@@ -1912,7 +1922,8 @@ export class GameEngine {
       this.canvas.width,
       this.canvas.height,
       this.boss ? { ...this.currentLevel, exit: { ...this.currentLevel.exit, x: -300, y: -300 } } : this.currentLevel,
-      this.characterClass !== 'mage' || comboPose(this) || (this.exitTravelRemaining>0 && this.exitTravelRemaining<.35) ? {...this.player,x:-1000,y:-1000} : {...this.player,y:this.player.y-(this.exitTravelRemaining>0?(.7-this.exitTravelRemaining)*65:0)},
+      // All heroes are drawn by renderAdventure after the stage walls, including idle Aeris.
+      {...this.player,x:-1000,y:-1000},
       null,
       this.recorder.getStatus() === 'recording',
       this.recorder.getDuration(),
@@ -1927,6 +1938,11 @@ export class GameEngine {
     if(open && this.exitOpenedAt===null) this.exitOpenedAt=t;
     if(!open) this.exitOpenedAt=null;
     if(open) drawPortalEnergy(this.ctx,exit.x+exit.width/2,exit.y+exit.height/2,t-this.exitOpenedAt!,this.exitTravelRemaining>0?1:.6,this.reducedMotion,true);
+    if(this.hurtFlash>0){
+      this.ctx.save();const g=this.ctx.createRadialGradient(this.canvas.width/2,this.canvas.height/2,this.canvas.height*.25,this.canvas.width/2,this.canvas.height/2,this.canvas.width*.65);
+      g.addColorStop(0,'#b8321800');g.addColorStop(1,`rgba(196,48,24,${this.hurtFlash/.28*.45})`);
+      this.ctx.fillStyle=g;this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);this.ctx.restore();
+    }
     finishPixelFrame(this.ctx,this.canvas);
   }
 
@@ -1946,7 +1962,6 @@ export class GameEngine {
         echoCount: this.echoes.length,
         echoCharges: this.echoCharges + (this.echoFreeSummon?1:0),
         echoStability: this.echo?.stability??0,
-        echoHitsRemaining: this.echo ? Math.max(0, ECHO_MAX_HITS - (this.echo.hitsTaken ?? 0)) : 0,
         echoElapsedMs: this.echo?.elapsedMs??0,
         echoDurationMs: this.echo?.samples.at(-1)?.time??this.recorder.getDuration(),
         echoEvents: this.echo?.events??this.recorder.getEvents(),
@@ -1992,7 +2007,7 @@ export class GameEngine {
         loadingFromMenu: this.loadingFromMenu,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
-        activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ×${this.stoneShield}`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ×${this.armorShield}`:'',
+        activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ${this.stoneShield} HP`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ${this.armorShield} HP`:'',
         skillDrop: this.skillDrop?.kind??null,
       });
     }

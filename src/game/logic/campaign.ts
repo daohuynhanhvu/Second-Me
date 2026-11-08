@@ -1,3 +1,4 @@
+import { DAMAGE, damagePoints } from './damage.ts';
 import { rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
@@ -125,7 +126,7 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number) => void): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
@@ -136,7 +137,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   }
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
-  if (activePillars) boss.hp = Math.min(boss.maxHp, boss.hp + activePillars * 2 * dt);
+  if (activePillars) boss.hp = Math.min(boss.maxHp, damagePoints(boss.hp + activePillars * 2 * dt));
   boss.burstCooldown -= dt;
   if (boss.burstCooldown <= 0) { boss.burstCooldown += 8-boss.phase; boss.burstRemaining = 1+boss.phase*.2; boss.burstPulse = 0; }
   if (boss.burstRemaining > 0) {
@@ -157,8 +158,8 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     area.timer-=dt;
     if(area.timer<=0 && !area.struck) {
       area.struck=true;
-      if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12)burstHit=true;
-      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-area.x,echo.y-area.y)<area.radius+12)onEchoHit?.(index);});
+      if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12){burstHit=true;onPlayerHit?.(DAMAGE.bossArea);}
+      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-area.x,echo.y-area.y)<area.radius+12)onEchoHit?.(index,DAMAGE.bossArea);});
     }
   }
   boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
@@ -178,7 +179,8 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
     boss.mode = 'strike'; boss.timer = 0.3;
     hit = Math.hypot(defender.x - boss.targetX, defender.y - boss.targetY) < 82;
-    echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index);});
+    if(hit)onPlayerHit?.(DAMAGE.bossSlam);
+    echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index,DAMAGE.bossSlam);});
     if (boss.phase >= 2) {
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
@@ -194,8 +196,8 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
     const echoIndex = echoDefenders.findIndex(echo => Math.hypot(shot.x - echo.x, shot.y - echo.y) < 19);
-    if (echoIndex >= 0) { shot.life = 0; onEchoHit?.(echoIndex); }
-    else if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; }
+    if (echoIndex >= 0) { shot.life = 0; onEchoHit?.(echoIndex,DAMAGE.bossProjectile); }
+    else if (Math.hypot(shot.x - defender.x, shot.y - defender.y) < 19) { shot.life = 0; hit = true; onPlayerHit?.(DAMAGE.bossProjectile); }
   }
   boss.projectiles = boss.projectiles.filter(s => s.life > 0 && s.x > 40 && s.x < 1240 && s.y > 40 && s.y < 680);
   return hit || burstHit;

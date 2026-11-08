@@ -35,7 +35,7 @@ test('recall skips Echoes already lost to combat and keeps summon order despite 
  for(let i=0;i<3;i++){game.toggleRecording();game.toggleRecording();game.spawnEcho();}
  const [first,second,third]=game.echoes;
  const hit=(game as unknown as {hitEcho(e:typeof first,amount:number):void}).hitEcho.bind(game);
- hit(first,30);hit(first,30);hit(first,30);
+ hit(first,30);hit(first,30);hit(first,40);
  assert.deepEqual(game.echoes,[second,third]);
  game.echoCharges=1;game.spawnEcho();const newest=game.echo!;
  assert.equal(newest.colorSlot,first.colorSlot,'new Echo can reuse an old color');

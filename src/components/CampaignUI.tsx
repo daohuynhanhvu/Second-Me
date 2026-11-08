@@ -1,3 +1,4 @@
+import { puzzleBalance } from '../game/logic/balance.ts';
 import { ECHO_RUNES } from '../game/logic/echoRunes.ts';
 import { EchoRuneStock, RuneChoicePicker, RuneChoiceDialog } from './EchoRunes.tsx';
 import { JourneyCamp } from './JourneyCamp.tsx';
@@ -127,7 +128,7 @@ export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>
     <article className="news-feature"><span>MỚI · 08.11.2026</span><div><h3>{latestNews.title}</h3><p>{latestNews.description}</p></div></article><article><time>08.11.2026</time><div><h3>Nhẫn tăng giới hạn</h3><p>Mua nhẫn trong cửa hàng với giá 30 xu để tăng giới hạn lên 6 Echo trong một màn. Hiệu ứng không cộng dồn.</p></div></article><article><time>08.11.2026</time><div><h3>Thứ tự thu hồi Echo</h3><p>Nhấn X để thu hồi Echo đã ở trên sân lâu nhất trước, theo thứ tự triệu hồi.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Chiêu gai băng của boss</h3><p>Vòng phép băng xuất hiện cảnh báo, sau đó gai băng trồi lên gây sát thương rồi tan biến.</p></div></article>
-    <article><time>08.11.2026</time><div><h3>Echo tự chiến đấu</h3><p>Echo thu hút kẻ địch, tự chiến đấu trong phạm vi gần và chịu được 3 đòn trước khi bị thu hồi.</p></div></article>
+    <article><time>08.11.2026</time><div><h3>Echo tự chiến đấu</h3><p>Echo thu hút kẻ địch, tự chiến đấu trong phạm vi gần và mất ổn định theo sát thương và chỉ bị thu hồi khi ổn định về 0.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Hiệu ứng nổ băng của boss</h3><p>Vòng băng xoay rồi nổ thành những mảnh xanh khi Thủ Vệ Băng tung chiêu.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Cửa hàng trên thanh menu</h3><p>Cửa hàng đã chuyển lên thanh trên cùng của sảnh, ngay cạnh nút về menu chính.</p></div></article>
     <article><time>08.11.2026</time><div><h3>Hiệu ứng băng mới của boss</h3><p>Vòng băng xanh của Thủ Vệ Băng xoay trước khi gây sát thương rồi biến mất.</p></div></article>
@@ -253,7 +254,7 @@ export function Title({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       {tab === 'trails' ? <><h2>Những lối mòn</h2><div className="trail-list">{LEVELS.map((level, index) => {
         const unlocked = index <= hud.completed.length && (index < 5 || hud.forged);
         return <button key={level.id} disabled={!unlocked} onClick={() => engine?.selectLevel(index)} className="trail-item"><span className="trail-number">0{level.id}</span><span><strong>{level.subtitle}</strong><small>{level.description}</small></span>{!unlocked ? <Lock size={17}/> : hud.completed.includes(level.id) ? <Check size={18}/> : <ArrowRight size={18}/>}</button>;
-      })}</div></> : <><h2>Hợp tác với chính mình</h2><div className="help-grid"><p><kbd>W A S D</kbd> / phím mũi tên: di chuyển.</p><p><kbd>E</kbd> bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.</p><p><kbd>1–6</kbd> chọn Echo; <kbd>C</kbd> tạm dừng; <kbd>Shift + Q</kbd> hoán đổi khi đường thẳng không bị chặn.</p><p><kbd>Q</kbd> gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng. <kbd>X</kbd> xóa Echo.</p><p>5 màn đầu: thời gian mỗi chặng thay đổi theo màn. Đặt Echo giữ các rune được ghi bên cổng cuối; màn 5 có 5 rune nhưng chỉ cần giữ đúng 4 rune cuối. Mỗi chặng có tối đa một mảnh +3 giây và dùng một bình +2 giây; không thể farm vô hạn. Chỉ nhân vật chạm rune kế tiếp mới được nạp giờ.</p><p>Bẫy dập và đá rơi có viền vàng báo trước, gây mất 1 máu và giữ chân 0,25 giây khi trúng. Dây leo làm chậm 45% trên cả dải; có thể đi vòng.</p><p>Mỗi màn nhận một di vật khác nhau. Xong màn 5, ghép đủ năm di vật tại lò rèn.</p><p>Chuột trái tấn công; chuột phải hoặc <kbd>Space</kbd> dùng kỹ năng class; <kbd>F</kbd> dùng vật phẩm +2 giây. <kbd>Shift</kbd> lướt né; <kbd>Esc</kbd> tạm dừng.</p><p>Boss báo trước đòn đánh bằng vòng băng xanh. Né ra ngoài; Echo giữ ấn sẽ tăng sức mạnh.</p></div></>}
+      })}</div></> : <><h2>Hợp tác với chính mình</h2><div className="help-grid"><p><kbd>W A S D</kbd> / phím mũi tên: di chuyển.</p><p><kbd>E</kbd> bắt đầu ghi; nhấn lần nữa để lưu. Echo đứng ở điểm cuối.</p><p><kbd>1–6</kbd> chọn Echo; <kbd>C</kbd> tạm dừng; <kbd>Shift + Q</kbd> hoán đổi khi đường thẳng không bị chặn.</p><p><kbd>Q</kbd> gọi Echo. Để Echo giữ nút trong khi bạn vượt cổng. <kbd>X</kbd> xóa Echo.</p><p>5 màn đầu: thời gian mỗi chặng thay đổi theo màn. Đặt Echo giữ các rune được ghi bên cổng cuối; màn 5 có 5 rune nhưng chỉ cần giữ đúng 4 rune cuối. Mỗi chặng có tối đa một mảnh +3 giây và dùng một bình +2 giây; không thể farm vô hạn. Chỉ nhân vật chạm rune kế tiếp mới được nạp giờ.</p><p>Bẫy dập và đá rơi có viền vàng báo trước, gây 20 sát thương và giữ chân 0,25 giây khi trúng. Dây leo làm chậm 45% trên cả dải; có thể đi vòng.</p><p>Sau mỗi màn 1–5, chọn một trong ba ấn Echo ngẫu nhiên. Hoàn thành năm màn để mở trạm chuẩn bị; không tiêu hao ấn để mở boss.</p><p>Chuột trái tấn công; chuột phải hoặc <kbd>Space</kbd> dùng kỹ năng class; <kbd>F</kbd> dùng vật phẩm +2 giây. <kbd>Shift</kbd> lướt né; <kbd>Esc</kbd> tạm dừng.</p><p>Boss báo trước đòn đánh bằng vòng băng xanh. Né ra ngoài; Echo giữ ấn sẽ tăng sức mạnh.</p></div></>}
     </div></div>}
   </div>);
 }
@@ -263,9 +264,9 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   const [settings, setSettings] = useState(false);
   const boss = hud.bossHp > 0;
   return localize(<div className="adventure-hud overlay">
-    <div className="hud-top"><div className="level-card"><small>{hud.levelName} / 06</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="hearts" aria-label={`${hud.health} trên 5 máu`}>{'♥'.repeat(hud.health)}<em>{'♡'.repeat(5-hud.health)}</em></span></span>
+    <div className="hud-top"><div className="level-card"><small>{hud.levelName} / 06</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="player-health" role="meter" aria-label={hud.language==='vi'?'Máu nhân vật':'Player health'} aria-valuenow={hud.health} aria-valuemin={0} aria-valuemax={100}><b style={{width:`${hud.health}%`}}/><strong>{hud.health} / 100 HP</strong></span></span>
       {(hud.enemiesRemaining??0)>0&&<small>{hud.language==='vi'?`QUÁI CANH ĐƯỜNG · ${hud.enemiesRemaining}`:`TRAIL ENEMIES · ${hud.enemiesRemaining}`}</small>}
-      {(hud.echoCount>0 || hud.echoDurationMs>0) && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO {hud.echoCount}/{hud.echoLimit} · {hud.echoCharges} {hud.language==='vi'?'lượt':'charges'}{hud.echoCount>0 && <> · {hud.echoHitsRemaining ?? 3}/3 {hud.language==='vi'?'đòn':'hits'}</>} · {Math.ceil(hud.echoStability)} {hud.language==='vi'?'ổn định':'stability'}</span>{hud.echoDurationMs>0 && <div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div>}</div>}
+      {(hud.echoCount>0 || hud.echoDurationMs>0) && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO {hud.echoCount}/{hud.echoLimit} · {hud.echoCharges} {hud.language==='vi'?'lượt':'charges'} · {Math.ceil(hud.echoStability)} {hud.language==='vi'?'ổn định':'stability'}</span>{hud.echoDurationMs>0 && <div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div>}</div>}
     </div>
       <div className="hud-tools"><button aria-label={hud.language==='vi'?'Mở sổ tay cơ chế':'Open mechanics guide'} title={hud.language==='vi'?'Sổ tay cơ chế':'Mechanics guide'} onClick={()=>engine?.openGuide()}><BookOpen size={17}/></button><span className="hud-wallet"><CoinIcon/> {hud.coins} · +2s ×{hud.timeItems}</span><button aria-label={hud.language==='vi'?'Túi ấn Echo':'Echo rune inventory'} title={hud.language==='vi'?'Túi ấn Echo':'Echo rune inventory'} onClick={() => setBag(!bag)}><Backpack size={17}/><span>{Object.values(hud.echoRunes??{}).reduce((a,n)=>a+n,0)}</span></button><button aria-label="Cài đặt" onClick={() => setSettings(true)}><Settings size={17}/></button><button aria-label="Bật tắt âm thanh" onClick={() => engine?.toggleAudio()}>{hud.isMuted ? <VolumeX size={17}/> : <Volume2 size={17}/>}</button><button aria-label="Chơi lại màn" onClick={() => engine?.restartLevel()}><RotateCcw size={17}/></button><button aria-label="Pause game" onClick={() => engine?.pauseGame()}><Pause size={17}/></button></div>
     </div>
@@ -280,13 +281,31 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   </div>);
 }
 
+function VictoryOrnaments(){
+ return <div className="victory-ornaments" aria-hidden="true"><span>✦</span><i/><i/><i/><i/><i/></div>;
+}
+
+function VictoryStars({count,vi}:{count:number;vi:boolean}){
+ return <div className="victory-stars" role="img" aria-label={`${count} / 3 ${vi?'sao':'stars'}`}>
+  {[0,1,2].map(i=><span key={i} className={`victory-star ${i<count?'earned':'unearned'}`} style={{'--star-delay':`${.2+i*.24}s`} as React.CSSProperties}>
+   <svg viewBox="0 0 100 100" aria-hidden="true" shapeRendering="crispEdges">
+    <path d="M44 6H56V18H62V30H68V36H94V48H82V60H74V70H80V88H68V82H56V76H44V82H32V88H20V70H26V60H18V48H6V36H32V30H38V18H44Z" className="star-outline"/>
+    <path d="M48 14H52V26H58V38H70V42H84V46H74V56H66V68H70V78H64V72H54V66H46V72H36V78H30V68H34V56H26V46H16V42H30V38H42V26H48Z" className="star-face"/>
+    <path d="M48 14H52V47L16 42H30V38H42V26H48Z" className="star-light"/>
+    <path d="M52 47L70 78H64V72H54V66H46V72H36V78H30L46 48Z" className="star-shade"/>
+   </svg><i>✦</i>
+  </span>)}
+ </div>;
+}
+
 export function Completion({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
   const last=engine?.currentLevelIdx===4,vi=hud.language==='vi',pending=!!hud.pendingRuneChoices?.length;
-  return <div className="modal-backdrop"><div className="panel completion-panel rune-completion"><span className="eyebrow gold">{vi?'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC':'A MEMORY AWAKENED'}</span><h2>{vi?'Lối mòn đã mở':'The trail is open'}</h2><p className="muted">{hud.levelName} · {hud.levelSubtitle}</p>
-    <div className="completion-rating"><strong>{'★'.repeat(hud.lastRating?.stars??0)}{'☆'.repeat(3-(hud.lastRating?.stars??0))}</strong><span><CoinIcon/> +{hud.lastRating?.coins??0} {vi?'xu':'coins'} · {hud.elapsedLevelTime.toFixed(1)}s</span></div>
+  return <div className="modal-backdrop victory-backdrop"><div role="dialog" aria-modal="true" aria-label={vi?"Chiến thắng":"Victory"} className="panel completion-panel rune-completion woodland-victory"><VictoryOrnaments/><span className="eyebrow gold">{vi?'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC':'A MEMORY AWAKENED'}</span><h2>{vi?'HOÀN THÀNH MÀN':'TRAIL COMPLETE'}</h2><p className="muted">{hud.levelName} · {hud.levelSubtitle}</p>
+    <VictoryStars count={hud.lastRating?.stars??0} vi={vi}/>
+    <div className="victory-loot"><span><CoinIcon/> +{hud.lastRating?.coins??0} <small>{vi?'XU':'COINS'}</small></span><i/><span><b>◷</b> {hud.elapsedLevelTime.toFixed(1)}<small> SEC</small></span></div>
     <RuneChoicePicker hud={hud} engine={engine}/>
-    <p className="rune-reward-note">{vi?'Ấn nâng Echo dùng được từ màn 2 đến boss. Bền bỉ, Khuếch đại và Dẫn dụ có hiệu lực hết màn; mỗi lần dùng tốn 1 ấn.':'Echo upgrade runes work in levels 2–6. Endurance, Amplification and Luring last for the current attempt. Each use consumes one rune.'}</p>
-    <div className="collection-line"><span>{vi?'Tiến độ mở đấu trường':'Arena unlock progress'}</span><strong>{hud.completed.length} / 5</strong></div>
+    <p className="rune-reward-note">{vi?'Dùng ấn trong màn 2–6. Mỗi lần dùng tiêu hao 1 ấn; hiệu ứng kết thúc khi rời hoặc chơi lại màn.':'Use in levels 2–6. Each activation consumes one rune; buffs expire on leaving or retrying.'}</p>
+    <div className="collection-line"><span>{vi?'Tiến độ mở đấu trường':'Arena unlock progress'}</span><strong>{hud.completed.length} / 5</strong></div><div className="victory-progress" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} className={hud.completed.includes(i+1)?"complete":""}/>)}</div>
     <button className="primary" disabled={pending} onClick={()=>engine?.nextLevel()}>{pending?(vi?'CHỌN MỘT ẤN ĐỂ TIẾP TỤC':'CHOOSE A RUNE TO CONTINUE'):last?(vi?'ĐẾN TRẠM CHUẨN BỊ':'PREPARE FOR THE GUARDIAN'):`${vi?'TIẾP TỤC · MÀN':'CONTINUE · LEVEL'} ${(engine?.currentLevelIdx??0)+2}`} <ArrowRight size={19}/></button>
     <div className="button-row"><button className="secondary" disabled={pending} onClick={()=>engine?.restartLevel()}><RotateCcw size={15}/>{vi?'CHƠI LẠI MÀN':'RETRY LEVEL'}</button><button className="secondary" onClick={()=>engine?.goToTitle()}><Home size={15}/>{vi?'MENU':'MENU'}</button></div>
   </div></div>;
@@ -296,13 +315,42 @@ export function Forge({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
   return localize(<div className="modal-backdrop forge-backdrop"><div className="panel forge-panel"><div className="panel-top"><span className="eyebrow gold">TRẠM NGHỈ / SAU MÀN 05</span><span className="forge-badge"><Flame size={13}/> LÒ RÈN CỔ</span></div>
     <div className="forge-columns"><div><h2>{hud.forged ? hud.weapon==='staff'?'Một cây trượng.\nNăm ký ức.':'Một lưỡi kiếm.\nNăm ký ức.' : 'Từ những mảnh vỡ,\nrèn nên ánh sáng.'}</h2><p className="muted forge-description">{hud.forged?(hud.language==='vi'?'Vũ khí Echo đã thức tỉnh. Chuẩn bị những ấn bạn muốn dùng trước trận Thủ Vệ Băng.':'Your Echo weapon is ready. Review your runes before facing the Frost Guardian.'):(hud.language==='vi'?'Hoàn thành năm màn để thức tỉnh vũ khí. Việc chuẩn bị này không tiêu hao ấn nâng Echo.':'Complete five trails to awaken your weapon. Preparation does not consume Echo upgrade runes.')}</p>
       <EchoRuneStock hud={hud}/><p className="rune-reward-note">{hud.language==='vi'?'Không cần đủ cả 5 loại ấn để mở boss. Ấn chưa dùng vẫn nằm trong túi.':'No complete rune set is required to enter the arena. Unused runes stay in your inventory.'}</p>
-      <div className="sword-stats"><span>SÁT THƯƠNG <strong>15</strong></span><span>CỘNG HƯỞNG ECHO <strong>24</strong></span></div>
+      <div className="sword-stats"><span>ATK <strong>15</strong></span><span>{hud.language==='vi'?'COMBO 4 ĐÒN':'4-HIT COMBO'} <strong>12 · 14 · 17 · 33</strong></span></div>
     </div><ForgeArt forged={hud.forged} weapon={hud.weapon}/></div>
     <div className="forge-footer"><p>{hud.forged ? 'Đã trang bị · Chuột trái tấn công · Chuột phải / Space kỹ năng' : (hud.language==='vi'?'Đã hoàn thành 5 / 5 màn · Không tiêu hao ấn Echo':'Five trails completed · No Echo runes consumed')}</p><button className="primary" disabled={!hud.forged && hud.completed.length < 5} onClick={() => hud.forged ? engine?.enterBoss() : engine?.forgeWeapon()}>{hud.forged ? <>BƯỚC VÀO ĐẤU TRƯỜNG <ArrowRight size={18}/></> : <><Hammer size={18}/> RÈN {hud.weapon==='staff'?'TRƯỢNG':'KIẾM'} ECHO</>}</button></div>
   </div></div>);
 }
 
+function DefeatScreen({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
+ const vi=hud.language==='vi',timeout=hud.defeatReason==='timeout',boss=!!engine?.boss;
+ const seconds=puzzleBalance((engine?.currentLevelIdx??0)+1).legSeconds;
+ const hint=timeout
+  ?(vi?`Mỗi chặng có ${seconds} giây. Chạm rune theo thứ tự để nạp lại giờ; nhặt mảnh thời gian +3 giây và để Echo giữ cổng.`:`Each leg gives you ${seconds} seconds. Reach runes in order to refill the timer, collect +3s shards and leave Echoes holding the gates.`)
+  :boss
+   ?(vi?'Phá bốn trụ trước để gỡ giáp boss. Gọi Echo hỗ trợ, né vòng băng trước khi gai trồi lên và tận dụng kỹ năng rơi trên sân.':'Break all four pillars to remove the Guardian’s armor. Summon Echoes, dodge frost warnings and collect the arena skill drops.')
+   :(vi?'Né khỏi vùng cảnh báo trước khi bẫy hoặc quái ra đòn. Gọi Echo hỗ trợ chiến đấu và giữ rune để mở đường.':'Leave warning zones before traps or enemies strike. Let Echoes help in combat and hold runes to open the path.');
+ return <div className="modal-backdrop defeat-backdrop"><section className="defeat-stage" role="dialog" aria-modal="true" aria-labelledby="defeat-title">
+  <span className="defeat-kicker">{vi?'MỘT LẦN VẤP NGÃ · CHƯA PHẢI KẾT THÚC':'ONE FALL · NOT THE END'}</span>
+  <h2 id="defeat-title">{timeout?(vi?'HẾT THỜI GIAN':'TIME RAN OUT'):(vi?'GỤC NGÃ':'FALLEN')}</h2>
+  <p className="defeat-level">{hud.levelName} · {hud.levelSubtitle}</p>
+  <div className="defeat-sigil" aria-hidden="true"><svg viewBox="0 0 120 120" shapeRendering="crispEdges">
+   <path d="M32 10H88V18H99V32H106V84H98V99H85V108H33V100H21V85H14V34H22V20H32Z" fill="#192c28" stroke="#52675a" strokeWidth="3"/>
+   <path d="M33 21H83V29H92V83H84V94H34V85H26V35H33Z" fill="#243a31"/>
+   <path d="M40 80V40L59 30L78 40V80M59 30V65" fill="none" stroke="#ba8d6c" strokeWidth="5"/>
+   <path d="M69 10L59 37L68 49L52 67L60 79L45 108" fill="none" stroke="#091812" strokeWidth="8"/>
+   <path d="M72 10L62 37L71 49L55 67L63 79L48 108" fill="none" stroke="#a87e5d" strokeWidth="2"/>
+   <path d="M10 91H17V98H10ZM96 108H103V114H96ZM5 54H10V60H5Z" fill="#76816a"/>
+  </svg><i/><i/><i/></div>
+  <div className="defeat-stats"><span>{vi?'THỜI GIAN':'TIME'} <b>{hud.elapsedLevelTime.toFixed(1)}s</b></span><span>{vi?'MÀN CHƠI':'TRAIL'} <b>{String((engine?.currentLevelIdx??0)+1).padStart(2,'0')}</b></span></div>
+  <div className="defeat-hint"><span>{vi?'LẦN NÀY, THỬ CÁCH KHÁC':'A DIFFERENT APPROACH'}</span><p>{hint}</p></div>
+  <p className="defeat-kept">{vi?'Ấn chưa dùng và tiến trình vẫn được giữ lại.':'Unused runes and campaign progress are safe.'}</p>
+  <button className="defeat-retry" onClick={()=>engine?.restartLevel()}><RotateCcw size={18}/>{vi?'THỬ LẠI':'TRY AGAIN'}<ArrowRight size={17}/></button>
+  <button className="defeat-return" onClick={()=>engine?.goToLobby()}><Map size={15}/>{vi?'VỀ SẢNH CHỌN MÀN':'BACK TO THE TRAILS'}</button>
+ </section></div>;
+}
+
 export function EndScreen({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
   const won = hud.screen === 'ending';
-  return localize(<div className="modal-backdrop"><div className="panel ending-panel"><div className="ending-emblem">{won ? <SwordArt/> : <Shield size={56}/>}</div><span className="eyebrow gold">{won ? 'HÀNH TRÌNH HOÀN TẤT / 06' : 'KÝ ỨC VẪN CÒN Ở ĐÂY'}</span><h2>{won ? 'Khu rừng thức giấc.' : hud.defeatReason === 'timeout' ? 'Hết thời gian.' : 'Đứng dậy lần nữa.'}</h2><p className="muted">{won ? 'Thủ Vệ Băng đã gục ngã. Toàn bộ sáu màn giờ đã mở trong sảnh để bạn tự do chơi lại.' : hud.defeatReason === 'timeout' ? 'Bạn có 10 giây cho mỗi chặng. Chạm ấn thạch theo số để nạp lại giờ; nhặt mảnh thời gian +3 giây, dùng Echo giữ cổng và tránh dây leo. Ấn chưa dùng vẫn được giữ lại.' : engine?.boss ? 'Ấn chưa dùng và vũ khí vẫn được giữ lại. Phá bốn trụ ở góc bản đồ trước, nhặt ô kỹ năng rơi mỗi 5 giây và dùng Echo đánh lạc hướng boss.' : 'Ấn chưa dùng vẫn được giữ lại. Tránh vùng bẫy khi viền vàng báo trước; dây leo làm chậm nhưng không mất máu.'}</p><button className="primary" onClick={() => won ? engine?.goToLobby() : engine?.restartLevel()}>{won ? <><Map size={18}/> VỀ SẢNH CHỌN MÀN</> : <><RotateCcw size={18}/> THỬ LẠI</>}</button>{won && <button className="secondary" onClick={()=>engine?.startGame()}><RotateCcw size={16}/> HÀNH TRÌNH MỚI</button>}<button className="text-button" onClick={() => engine?.goToLobby()}>VỀ SẢNH</button></div></div>);
+  if (!won) return <DefeatScreen engine={engine} hud={hud}/>;
+  return localize(<div className={won?"modal-backdrop victory-backdrop":"modal-backdrop"}><div className={won?"panel ending-panel woodland-victory woodland-ending":"panel ending-panel"}>{won&&<VictoryOrnaments/>}<div className="ending-emblem">{won ? <SwordArt/> : <Shield size={56}/>}</div><span className="eyebrow gold">{won ? 'HÀNH TRÌNH HOÀN TẤT / 06' : 'KÝ ỨC VẪN CÒN Ở ĐÂY'}</span><h2>{won ? 'Khu rừng thức giấc.' : hud.defeatReason === 'timeout' ? 'Hết thời gian.' : 'Đứng dậy lần nữa.'}</h2><p className="muted">{won ? 'Thủ Vệ Băng đã gục ngã. Toàn bộ sáu màn giờ đã mở trong sảnh để bạn tự do chơi lại.' : hud.defeatReason === 'timeout' ? 'Bạn có 10 giây cho mỗi chặng. Chạm ấn thạch theo số để nạp lại giờ; nhặt mảnh thời gian +3 giây, dùng Echo giữ cổng và tránh dây leo. Ấn chưa dùng vẫn được giữ lại.' : engine?.boss ? 'Ấn chưa dùng và vũ khí vẫn được giữ lại. Phá bốn trụ ở góc bản đồ trước, nhặt ô kỹ năng rơi mỗi 5 giây và dùng Echo đánh lạc hướng boss.' : 'Ấn chưa dùng vẫn được giữ lại. Tránh vùng bẫy khi viền vàng báo trước; dây leo làm chậm nhưng không mất máu.'}</p><button className="primary" onClick={() => won ? engine?.goToLobby() : engine?.restartLevel()}>{won ? <><Map size={18}/> VỀ SẢNH CHỌN MÀN</> : <><RotateCcw size={18}/> THỬ LẠI</>}</button>{won && <button className="secondary" onClick={()=>engine?.startGame()}><RotateCcw size={16}/> HÀNH TRÌNH MỚI</button>}<button className="text-button" onClick={() => engine?.goToLobby()}>VỀ SẢNH</button></div></div>);
 }

@@ -3,8 +3,8 @@ import { getActiveObstacles, resolveMovement } from './collision.ts';
 import { segmentWall } from './combatGeometry.ts';
 import type { LevelData } from './types.ts';
 export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur';
-export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;targetEcho?:{x:number;y:number;aggroTime?:number}}
-export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180},bear:{hp:48,speed:60,reach:47,notice:175},skull:{hp:30,speed:82,reach:39,notice:190},shaman:{hp:36,speed:52,reach:155,notice:200},minotaur:{hp:75,speed:58,reach:58,notice:195}};
+export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;targetEcho?:{x:number;y:number;aggroTime?:number}}
+export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180,damage:12},bear:{hp:48,speed:60,reach:47,notice:175,damage:20},skull:{hp:30,speed:82,reach:39,notice:190,damage:12},shaman:{hp:36,speed:52,reach:155,notice:200,damage:16},minotaur:{hp:75,speed:58,reach:58,notice:195,damage:28}};
 const encounters:Record<number,[EnemyKind,number,number][]>= {
  2:[['goblin',440,110],['goblin',700,580]],
  3:[['goblin',430,130],['bear',700,110],['skull',870,560]],
@@ -20,17 +20,19 @@ export function createEnemies(level:LevelData):Enemy[]{
 }
 export interface EnemyTarget{x:number;y:number;echoIndex:number|null}
 /** Leashed, wall-aware enemies telegraph a locked impact point before attacking. */
-export function updateEnemies(enemies:Enemy[],level:LevelData,player:{x:number;y:number},echoes:{x:number;y:number;aggroTime?:number}[],dt:number,onHit:(target:EnemyTarget)=>void){
+export function updateEnemies(enemies:Enemy[],level:LevelData,player:{x:number;y:number},echoes:{x:number;y:number;aggroTime?:number}[],dt:number,onHit:(target:EnemyTarget,damage:number,source:Enemy)=>void){
  const obstacles=getActiveObstacles(level.walls,level.doors);
  const sight=(a:{x:number;y:number},b:{x:number;y:number})=>!obstacles.some(w=>segmentWall(a,b,w,0)!==null);
  for(const e of enemies){
+  e.attackFx=Math.max(0,(e.attackFx??0)-dt);
   e.hitFlash=Math.max(0,e.hitFlash-dt);if(e.hp<=0){e.deathAge+=dt;continue;}
   const stat=ENEMY_STATS[e.kind];e.timer-=dt;
   if(e.mode==='warning'){
    if(e.timer<=0){
+    e.attackFx=.32;
     const index=e.targetEcho?echoes.indexOf(e.targetEcho):-1;
     const target=e.targetId===null?player:index>=0?echoes[index]:undefined;
-    if(target&&Math.hypot(target.x-e.targetX,target.y-e.targetY)<(e.kind==='shaman'?34:44)&&sight(e,target))onHit({...target,echoIndex:e.targetId===null?null:index});
+    if(target&&Math.hypot(target.x-e.targetX,target.y-e.targetY)<(e.kind==='shaman'?34:44)&&sight(e,target))onHit({...target,echoIndex:e.targetId===null?null:index},stat.damage,e);
     e.mode='recover';e.timer=e.kind==='minotaur'?1.3:1.05;
    }continue;
   }
