@@ -1,3 +1,4 @@
+import { getWizardSheet } from '../rendering/wizardSprite.ts';
 /**
  * Animated layer of the loading screen: one canvas over the painted background
  * (public/assets/loading/background.jpg), one requestAnimationFrame loop, delta-time driven.
@@ -509,6 +510,14 @@ export class LoadingScene {
       ctx.fillRect(Math.round(d.x), Math.round(d.y), d.size, d.size);
     }
     ctx.globalAlpha = 1;
+    const aeris = getWizardSheet();
+    if (aeris) {
+      const size = Math.round(WIZARD_ART_HEIGHT * this.ky * 1.15);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(aeris, this.frame * 256, 256, 256, 256, Math.round(this.wizX * this.kx - size / 2), Math.round((layout.bar.y - 12) * this.ky - size * .9), size, size);
+      ctx.setTransform(this.kx, 0, 0, this.ky, 0, 0);
+      return;
+    }
     if (!ready(img)) return;
     // Whole-device-pixel scale and position: crisp, never shimmering.
     const s = Math.max(1, Math.round((WIZARD_ART_HEIGHT * this.ky) / wizard.h));

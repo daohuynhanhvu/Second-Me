@@ -1,11 +1,13 @@
 import { NatureRenderer } from './natureLegacy.js';
 import type { Direction, LevelData, MovementSample } from '../logic/types.ts';
+import { drawWizardSprite, loadWizardSprites } from './wizardSprite.ts';
 import { installForestStage, type StageState } from './forestStage.ts';
 
 // Keep the supplied forest sprites and rendering, without the old application.
 interface ForestRenderer {
   particles: { emit(...args: any[]): void };
   scene: Parameters<typeof installForestStage>[0];
+  drawCharacterSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, frame: number, echo: boolean, time: number, moving?: boolean): void;
   reset(): void;
   update(dt: number, moving: boolean): void;
   emitMagic(kind: string, x: number, y: number, size?: number): void;
@@ -22,5 +24,10 @@ export class GameRenderer extends Base {
   constructor() {
     super();
     installForestStage(this.scene, this.stage);
+    loadWizardSprites();
   }
+  drawCharacterSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, frame: number, echo: boolean, time: number, moving = false) {
+    if (!drawWizardSprite(ctx, x, y, direction, moving, echo, time)) super.drawCharacterSprite(ctx, x, y, direction, frame, echo, time, moving);
+  }
+
 }

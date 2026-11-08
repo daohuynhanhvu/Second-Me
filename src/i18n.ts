@@ -47,6 +47,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Aeris’s new look', 'Diện mạo mới cho Aeris'],
+  ['Aeris the mage now wears a blue, gold-trimmed cloak in a chibi pixel style. Her facing directions and movements, along with her Echo, have been refreshed.', 'Pháp sư Aeris khoác áo choàng xanh viền vàng theo phong cách pixel chibi. Các hướng nhìn và chuyển động của Aeris cùng Echo đã được làm mới.'],
   ['Kael’s new look', 'Diện mạo mới cho Kael'],
   ['Kael the swordsman has a new chibi pixel look with golden hair, silver armor and a red cape. His movement directions and sword attack have also been refreshed.', 'Kỵ sĩ Kael có diện mạo pixel chibi mới với tóc vàng, giáp bạc và áo choàng đỏ. Các hướng di chuyển và động tác chém cũng được làm mới.'],
   ['GAME NEWS', 'THÔNG BÁO TRÒ CHƠI'], ['New echoes in the forest', 'Tiếng vọng mới trong rừng'],
