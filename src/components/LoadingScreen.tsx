@@ -22,11 +22,12 @@ const TEXT = {
  * Loading screen: painted forest, live portal / wizard / bar on one canvas
  * (src/game/loading/loadingScene.ts), and the progress of real asset loading
  * (src/game/loading/preloader.ts). `level` null is the first load into the lobby (every
- * asset); a level loads just what that level uses. onReveal fires as the screen starts to
- * fade, onDone once the hand-off animation has played.
+ * asset); a level loads just what that level uses. Once loading is done the portal
+ * transition plays (loadingScene.ts); onDone(true) comes on its final white flash, which the
+ * caller fades out over the next screen (onDone(false): reduced motion, a plain fade).
  */
 export function LoadingScreen({ language, reducedMotion, level = null, onReveal, onDone }: {
-  language: 'en' | 'vi'; reducedMotion: boolean; level?: Omit<LevelLoadSpec, 'delayMs'> | null; onReveal?: () => void; onDone: () => void;
+  language: 'en' | 'vi'; reducedMotion: boolean; level?: Omit<LevelLoadSpec, 'delayMs'> | null; onReveal?: () => void; onDone: (flash: boolean) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -54,7 +55,7 @@ export function LoadingScreen({ language, reducedMotion, level = null, onReveal,
       root: root.current, percent: percent.current,
       lines: lines.current.filter((l): l is HTMLLIElement => !!l),
       perf: dev ? perf.current : undefined,
-    }, { reducedMotion, stress, hold, onReveal: () => reveal.current?.(), onFinished: () => done.current() });
+    }, { reducedMotion, stress, hold, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
     if (dev) (window as unknown as { __loadingScene?: LoadingScene }).__loadingScene = scene;
     const observer = new ResizeObserver(() => scene.resize());
     observer.observe(canvas.current);
@@ -67,12 +68,19 @@ export function LoadingScreen({ language, reducedMotion, level = null, onReveal,
     <div ref={root} className={`loading-v2 overlay${reducedMotion ? ' still' : ''}`} data-phase="loading" role="progressbar" aria-label={t.loading} aria-valuemin={0} aria-valuemax={100}>
       <div className="lv-world">
         <img className="lv-bg" src={`${import.meta.env.BASE_URL}assets/loading/background.jpg`} alt="" draggable={false}/>
-        {/* Slow ambient layers: compositor-animated (opacity / transform only). */}
-        <div className="lv-reflect" style={{ left: pct(layout.portal.cx, layout.width), top: pct(layout.portal.cy, layout.height) }}/>
-        {[0, 1, 2].map(i => <div key={i} className={`lv-ray lv-ray-${i}`}/>)}
-        {layout.runes.map((r, i) => <div key={i} className="lv-rune" style={{ left: pct(r.x, layout.width), top: pct(r.y, layout.height), animationDelay: `${-i * 1.4}s` }}/>)}
-        <div className="lv-fog lv-fog-a" style={{ backgroundImage: `url(${fogImage()})` }}/>
-        <div className="lv-fog lv-fog-b" style={{ backgroundImage: `url(${fogImage()})` }}/>
+        {/* Shown when the portal transition starts: the arch and bar are then canvas sprites. */}
+        <img className="lv-bg lv-bg-empty" src={`${import.meta.env.BASE_URL}assets/loading/background-empty.jpg`} alt="" draggable={false}/>
+        {/* Slow ambient layers: compositor-animated (opacity / transform only). The wrappers
+            fade them out during the transition (their own animations own `opacity`). */}
+        <div className="lv-portal-light">
+          <div className="lv-reflect" style={{ left: pct(layout.portal.cx, layout.width), top: pct(layout.portal.cy, layout.height) }}/>
+        </div>
+        <div className="lv-ambient">
+          {[0, 1, 2].map(i => <div key={i} className={`lv-ray lv-ray-${i}`}/>)}
+          {layout.runes.map((r, i) => <div key={i} className="lv-rune" style={{ left: pct(r.x, layout.width), top: pct(r.y, layout.height), animationDelay: `${-i * 1.4}s` }}/>)}
+          <div className="lv-fog lv-fog-a" style={{ backgroundImage: `url(${fogImage()})` }}/>
+          <div className="lv-fog lv-fog-b" style={{ backgroundImage: `url(${fogImage()})` }}/>
+        </div>
         {/* Status lines sit under the canvas so the wizard runs in front of them. */}
         <ul className="lv-lines">
           {t.lines.map((line, i) => <li key={i} ref={el => { lines.current[i] = el; }} data-state="pending"><i aria-hidden="true"/>{line}</li>)}

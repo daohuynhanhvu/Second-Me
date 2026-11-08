@@ -43,17 +43,19 @@ export function CinematicIntro({ lang, reducedMotion, onDone }: { lang: 'en' | '
       stopScore?.(); stopScore = null; stopVoice?.(); stopVoice = null;
     };
     const tryAudio = (t: number) => {
-      if (stopScore || sounds.getMuted() || skipAt !== null) return;
-      if (sounds.isAudioRunning()) {
-        // An intro track in public/assets/music replaces the synthesised score (music.ts plays it).
-        // A broken score must never take the film down with it: fall back to silence.
-        try { stopScore = music.has('intro') ? () => {} : sounds.playIntroScore(t, INTRO.cue, INTRO.end); }
-        catch (err) { console.error('[intro] score failed', err); stopScore = () => {}; }
-        // Narration + character intros, pre-rendered with OmniVoice (tools/voice); missing files stay silent.
-        voice.lang = lang;
-        stopVoice = voice.playTimeline(INTRO_VOICE, now);
-        setNeedsSound(false);
-      }
+      if (stopScore || sounds.getMuted() || skipAt !== null || !sounds.isAudioRunning()) return;
+      // Decide between the intro track and the synthesised score only once the music folder's
+      // listing is known (a frame or two), so the two never play together.
+      if (!music.loaded()) { music.preload(); return; }
+      // An intro track in public/assets/music replaces the synthesised score; it starts at the
+      // film's current time. A broken score must never take the film down with it.
+      try { stopScore = music.has('intro') ? music.playIntro(now) : sounds.playIntroScore(t, INTRO.cue, INTRO.end); }
+      catch (err) { console.error('[intro] score failed', err); stopScore = () => {}; }
+      // Narration + character intros, pre-rendered with OmniVoice (tools/voice); missing files
+      // stay silent. The music ducks under each line as it plays.
+      voice.lang = lang;
+      stopVoice = voice.playTimeline(INTRO_VOICE, now, (start, duration) => music.duckForSpeech(start, start + duration));
+      setNeedsSound(false);
     };
 
     skipRef.current = skip;
@@ -66,12 +68,13 @@ export function CinematicIntro({ lang, reducedMotion, onDone }: { lang: 'en' | '
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('pointerdown', onPointer, true);
 
-    if (!sounds.getMuted()) { tryAudio(0); if (!stopScore) setNeedsSound(true); }
+    music.preload();
+    if (!sounds.getMuted()) { tryAudio(0); if (!sounds.isAudioRunning()) setNeedsSound(true); }
     const skipTimer = window.setTimeout(() => setShowSkip(true), 700);
 
     const frame = () => {
       const t = skipAt !== null ? frozenT : now();
-      if (gestured && !stopScore) tryAudio(t);
+      if (!stopScore && (gestured || sounds.isAudioRunning())) tryAudio(t);
       director!.draw(ctx, t);
       if (import.meta.env.DEV) { const w = window as unknown as { __introFrames?: number[] }; (w.__introFrames ??= []).push(performance.now()); }
       // Reveal the menu only after the film has faded to black, or quickly when skipped.

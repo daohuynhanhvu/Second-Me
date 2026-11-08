@@ -1,6 +1,6 @@
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
 import { IntroEffects } from './IntroEffects.tsx';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
 import { ArrowRight, RotateCcw, Home, Pause, Volume2, VolumeX, Lock, Sword, Hammer, Check, Shield, Flame, Backpack, Bell, Settings, Map, Play, X, SlidersHorizontal, ShoppingBasket } from 'lucide-react';
@@ -20,6 +20,37 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
   const [panel, setPanel] = useState<'none' | 'settings' | 'credits' | 'quit'>('none');
   const vi = hud.language === 'vi';
   const hasProgress = hud.completed.length > 0 || hud.forged;
+  // At most one highlighted item: the one under the mouse (none once it leaves), or the one
+  // moved to with the arrow keys. -1 = none; Enter then falls through to "start".
+  const items = [
+    { label: vi ? 'BẮT ĐẦU' : 'START GAME', disabled: false, act: () => engine?.openLobby() },
+    { label: vi ? 'TIẾP TỤC' : 'CONTINUE', disabled: !hasProgress, act: () => engine?.continueGame() },
+    { label: vi ? 'CÀI ĐẶT' : 'SETTINGS', disabled: false, act: () => setPanel('settings') },
+    { label: vi ? 'TÁC GIẢ' : 'CREDITS', disabled: false, act: () => setPanel('credits') },
+    { label: vi ? 'THOÁT' : 'QUIT', disabled: false, act: () => setPanel('quit') },
+  ];
+  const [selected, setSelected] = useState(-1);
+  const menu = useRef({ items, selected, panel });
+  menu.current = { items, selected, panel };
+  useEffect(() => {
+    // Capture phase, so Enter opens the chosen item instead of the engine's "Enter = start".
+    const onKey = (event: KeyboardEvent) => {
+      const m = menu.current;
+      if (m.panel !== 'none' || document.querySelector('.cinematic-intro')) return;
+      const step = event.key === 'ArrowDown' || event.key === 's' ? 1 : event.key === 'ArrowUp' || event.key === 'w' ? -1 : 0;
+      if (step) {
+        event.preventDefault();
+        let i = m.selected < 0 ? (step > 0 ? -1 : 0) : m.selected;
+        do i = (i + step + m.items.length) % m.items.length; while (m.items[i].disabled);
+        setSelected(i);
+      } else if ((event.key === 'Enter' || event.key === ' ') && m.selected >= 0) {
+        event.preventDefault(); event.stopPropagation();
+        m.items[m.selected].act();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
   return <div className="intro-screen overlay" onKeyDown={event => {
     if (panel !== 'none' && ['Enter', ' ', 'Escape'].includes(event.key)) {
       event.stopPropagation();
@@ -35,11 +66,14 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
       <button type="button" className={vi ? 'selected' : ''} aria-pressed={vi} onClick={() => engine?.setLanguage('vi')}>VI</button>
     </div>
     <nav className="intro-menu" aria-label={vi ? 'Menu chính' : 'Main menu'}>
-      <button className="intro-menu-item selected" onClick={() => engine?.openLobby()}><span aria-hidden="true">▹</span>{vi ? 'BẮT ĐẦU' : 'START GAME'}<span aria-hidden="true">◇</span></button>
-      <button className="intro-menu-item" disabled={!hasProgress} onClick={() => engine?.continueGame()}>{vi ? 'TIẾP TỤC' : 'CONTINUE'}</button>
-      <button className="intro-menu-item" onClick={() => setPanel('settings')}>{vi ? 'CÀI ĐẶT' : 'SETTINGS'}</button>
-      <button className="intro-menu-item" onClick={() => setPanel('credits')}>{vi ? 'TÁC GIẢ' : 'CREDITS'}</button>
-      <button className="intro-menu-item" onClick={() => setPanel('quit')}>{vi ? 'THOÁT' : 'QUIT'}</button>
+      {items.map((item, i) => (
+        // A stone slab (mainMenu.css): its face, carrying the label, rises when selected.
+        <button key={i} type="button" className={`intro-menu-item${i === selected ? ' selected' : ''}`} disabled={item.disabled}
+          style={{ '--slab': i } as React.CSSProperties}
+          onMouseEnter={() => !item.disabled && setSelected(i)} onMouseLeave={() => setSelected(-1)} onClick={item.act}>
+          <span className="intro-menu-face"><span className="intro-menu-label">{item.label}</span></span>
+        </button>
+      ))}
     </nav>
     {panel === 'settings' && <SettingsPanel engine={engine} hud={hud} close={() => setPanel('none')}/>}
     {(panel === 'credits' || panel === 'quit') && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={panel === 'credits' ? (vi ? 'Tác giả' : 'Credits') : (vi ? 'Thoát trò chơi' : 'Quit game')} onClick={event => event.stopPropagation()}>
