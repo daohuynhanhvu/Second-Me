@@ -73,7 +73,7 @@ $testFiles = @(rg --files src -g '*.test.ts' -g '*.test.tsx')
 node node_modules/tsx/dist/cli.mjs --test $testFiles
 ```
 
-Lần kiểm tra của phiên bản này: **103/103 bài đạt**, TypeScript không lỗi, build thành công. Có cảnh báo Vite về `__dirname` và bundle lớn hơn 500 kB; chưa tối ưu tách bundle.
+Lần kiểm tra của phiên bản này: **131/131 bài đạt**, TypeScript không lỗi, build thành công. Có cảnh báo Vite về `__dirname` và bundle lớn hơn 500 kB; chưa tối ưu tách bundle.
 
 ## Lưu tiến trình
 
@@ -81,7 +81,7 @@ Dữ liệu chiến dịch nằm trong localStorage với khóa `second-me-campa
 
 ## Intro và video
 
-Theo yêu cầu của chủ dự án, các thay đổi **intro mới**, nền intro mới và chỉnh thời điểm voice tương ứng đang được giữ riêng ở local. Repo vẫn giữ intro đã có trước đó. Các video MP4 xuất riêng không nằm trong commit tính năng rune/quái.
+Intro mới, nền minh họa và thời điểm voice tương ứng đã được đưa vào mã nguồn theo yêu cầu của chủ dự án. Các video MP4 xuất riêng vẫn được lưu riêng, không nằm trong repo.
 
 ## Cấu trúc chính
 
@@ -97,3 +97,5 @@ Theo yêu cầu của chủ dự án, các thay đổi **intro mới**, nền in
 ## Phạm vi và điểm còn cần hoàn thiện
 
 Đây là bản có cơ chế chơi và kiểm tra hồi quy; chưa phải bản phát hành đã cân bằng bằng số liệu người chơi diện rộng. Quái dùng AI đuổi/đánh có giới hạn, chưa có tìm đường A*. Cần kiểm thử thêm toàn bộ chiến dịch bằng người chơi, hoàn thiện điều khiển cảm ứng, rà bản quyền/nguồn asset trước phát hành thương mại, và bổ sung voice còn thiếu. Một số nhãn/hướng dẫn cũ vẫn cần rà đồng bộ sau thay đổi luật chơi.
+
+

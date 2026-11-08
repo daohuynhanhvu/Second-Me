@@ -1,24 +1,9 @@
 import { getWizardSheet } from './wizardSprite.ts';
-import { GameRenderer } from './renderer.ts';
-import { LEVELS } from '../logic/levels.ts';
 import { INTRO_VOICE } from '../logic/voice.ts';
-import { INTRO, BOSS_STEPS, KAEL_STEPS, clamp01, lerp, easeOutCubic, easeInCubic, easeInOutCubic, seg } from '../logic/introTimeline.ts';
+import { INTRO, BOSS_STEPS, clamp01, lerp, easeOutCubic, easeInCubic, easeInOutCubic, seg } from '../logic/introTimeline.ts';
 
-/**
- * Cinematic intro director, drawn in 1280x720 logical space onto a canvas whose backing store
- * matches the real screen (the component passes the scale `k`).
- *
- * One pixel density per shot: every scene is rendered into a LOW-RES layer where one layer pixel
- * is one art pixel (Kael's and the Guardian's sprites are drawn 1:1, Aeris's painted frames are
- * converted to pixel art once at load, painted backdrops/foliage are resampled into the grid), then
- * that layer is scaled up with nearest-neighbour. Effects (light, slashes, particles, runes) go to
- * a second low-res layer of the same density, composited additively. Only typography is drawn at
- * full resolution, so text stays sharp.
- *
- *   S1 0-5    forest awakening      S2 5-10   ancient path        S3 10-15  heroes
- *   S4 15-19  boss awakening        S5 19-22  combat showcase     S6 22-28  logo
- *   S7 28-29.4 fade to black, then the component reveals the main menu (never two logos).
- */
+/** Woodland film rendered on one consistent 2px grid. Dedicated scenery keeps
+ * gameplay walls and triggers out of the story; audio timing remains in INTRO. */
 export const W = 1280, H = 720;
 const BASE = import.meta.env?.BASE_URL ?? '/';
 type Lang = 'en' | 'vi';
@@ -27,8 +12,6 @@ type RGB = [number, number, number];
 
 interface Sheet { img: HTMLImageElement; fw: number; fh: number; cols: number; frames: number }
 interface Mote { x: number; y: number; vx: number; vy: number; age: number; max: number; size: number; rgb: RGB; mode: 0 | 1 | 2; seed: number; g: number }
-interface Shot { start: number; end: number; level: number; from: [number, number, number]; to: [number, number, number] }
-interface PixelSprite { c: HTMLCanvasElement; eyes: [number, number][] }
 
 const ready = (i: HTMLImageElement | undefined | null): i is HTMLImageElement => !!i && i.complete && i.naturalWidth > 0;
 const load = (src: string) => { const i = new Image(); i.src = `${BASE}${src}`; return i; };
@@ -42,19 +25,7 @@ const TEXT = {
 } as const;
 
 /** Screen pixels per art pixel, per scene. Changes only behind a black dip or the whiteout. */
-const pxAt = (t: number) => (t < INTRO.s3 ? 4 : t < INTRO.s4 ? 7 : t < INTRO.s6 ? 5 : 4);
-
-// Backdrops are the game's own levels; overlapping windows dissolve into each other.
-const FADE = 0.6;
-const SHOTS: Shot[] = [
-  { start: 0, end: 5.6, level: 0, from: [640, 380, 1.0], to: [660, 340, 1.28] },
-  { start: 5, end: 8.0, level: 2, from: [420, 420, 1.45], to: [860, 380, 1.45] },
-  { start: 7.4, end: 10.4, level: 4, from: [860, 260, 1.35], to: [540, 460, 1.55] },
-  { start: 10, end: 15.4, level: 3, from: [640, 360, 1.08], to: [640, 350, 1.16] },
-  { start: 15, end: 22.4, level: 5, from: [640, 360, 1.04], to: [640, 360, 1.04] },
-];
-// Ground runes in the opening shot (world coordinates of level 0) and the cue each one answers.
-const RUNES: [number, number, number][] = [[330, 560, C.rune1], [1010, 540, C.rune2], [700, 610, C.rune3]];
+const pxAt = (_t: number) => 2;
 
 const COL = {
   mote: [196, 236, 170] as RGB, cyan: [120, 230, 255] as RGB, ice: [190, 245, 255] as RGB, warm: [255, 206, 128] as RGB,
@@ -74,15 +45,11 @@ class PixelLayer {
 }
 
 export class CinematicIntro {
-  private renderer: InstanceType<typeof GameRenderer> | null = null;
-  private worlds = [makeCanvas(W, H), makeCanvas(W, H), makeCanvas(W, H)];
-  private worldByShot = new Map<number, HTMLCanvasElement>();
-  private frameNo = 0;
+  private backdrop = load('assets/intro/woodland-story.png');
   private scene = new PixelLayer();
   private fx = new PixelLayer();
   private vignette = makeCanvas(160, 90);
   private mist = makeCanvas(64, 32);
-  private tintC = makeCanvas(192, 128);
   private logo = makeCanvas(1, 1);
   private logoTmp = makeCanvas(1, 1);
   private parts: Mote[] = [];
@@ -91,21 +58,15 @@ export class CinematicIntro {
   private fired = new Set<string>();
   private shakes: { at: number; amp: number; decay: number }[] = [];
   private flash = { at: -99, a: 0, rgb: [235, 250, 255] as RGB };
-  private wiz: { frames: PixelSprite[]; w: number; h: number } | null = null;
   private sold: Record<'Idle' | 'Walk' | 'Attack01', Sheet>;
-  private boss: Sheet;
-  private bossCore: Map<string, [number, number]> | null = null;
+  private cleanSoldiers = new Map<string, HTMLCanvasElement>();
   private runeSheet: Sheet;
-  private plants: Sheet[];
-  private plantsDark: HTMLCanvasElement[] | null = null;
 
   constructor(private lang: Lang, private reduced: boolean) {
-    try { this.renderer = new GameRenderer(); } catch { this.renderer = null; }
+    getWizardSheet();
     const sheet = (src: string, fw: number, fh: number, cols: number, frames: number): Sheet => ({ img: load(src), fw, fh, cols, frames });
-    this.sold = { Idle: sheet('assets/soldier/Soldier_Idle.png', 100, 100, 6, 6), Walk: sheet('assets/soldier/Soldier_Walk.png', 100, 100, 8, 8), Attack01: sheet('assets/soldier/Soldier_Attack01.png', 100, 100, 6, 6) };
-    this.boss = sheet('assets/frost-guardian/sheet.png', 192, 128, 16, 16);
+    this.sold = { Idle: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Walk: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Attack01: sheet('assets/soldier/Kael_Attack.png', 256, 256, 8, 8) };
     this.runeSheet = sheet('assets/magic-effects/rune.png', 32, 32, 18, 18);
-    this.plants = [sheet('assets/nature/glowPlant.png', 128, 128, 10, 30), sheet('assets/nature/blueFlower.png', 128, 128, 10, 20)];
     this.buildVignette(); this.buildMist(); this.buildLogo();
   }
 
@@ -124,7 +85,7 @@ export class CinematicIntro {
   }
   /** Same lockup as the main menu: SECOND / ME on two lines, ME in sage. Light, not glowing. */
   private buildLogo() {
-    const font = this.lang === 'vi' ? '300 120px "Segoe UI", Arial, sans-serif' : '300 120px Georgia, "Times New Roman", serif';
+    const font = '500 108px "Second Me Serif", Georgia, serif';
     const spacing = 14;
     const probe = this.logo.getContext('2d')!;
     probe.font = font; (probe as unknown as { letterSpacing: string }).letterSpacing = `${spacing}px`;
@@ -140,45 +101,6 @@ export class CinematicIntro {
     draw('SECOND', 150, '#edf3dc');
     draw('ME', 276, '#a5c89b');
   }
-  /** Reuse Aeris's in-game sprite in the cinematic. */
-  private buildWizard() {
-    if (this.wiz) return;
-    const sheet = getWizardSheet(); if (!sheet) return;
-    const size = 28;
-    const frames = Array.from({length: 8}, (_, frame) => {
-      const c = makeCanvas(size, size), g = c.getContext('2d')!;
-      g.imageSmoothingEnabled = false;
-      g.drawImage(sheet, frame * 256, 512, 256, 256, 0, 0, size, size);
-      return {c, eyes: [] as [number, number][]};
-    });
-    this.wiz = {frames, w: size, h: size};
-  }
-  /** Where the Guardian's glowing core sits in every frame (art pixels inside the 192x128 cell). */
-  private buildBossCore() {
-    if (this.bossCore || !ready(this.boss.img)) return;
-    const s = this.boss, c = makeCanvas(s.img.naturalWidth, s.img.naturalHeight), g = c.getContext('2d', { willReadFrequently: true })!;
-    g.drawImage(s.img, 0, 0);
-    const d = g.getImageData(0, 0, c.width, c.height).data, map = new Map<string, [number, number]>();
-    for (let row = 0; row < 5; row++) for (let fr = 0; fr < 16; fr++) {
-      let sx = 0, sy = 0, n = 0;
-      for (let y = 20; y < 80; y++) for (let x = 40; x < 150; x++) {
-        const i = ((row * 128 + y) * c.width + fr * 192 + x) * 4;
-        const hex = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
-        if (d[i + 3] > 200 && (hex === 0x3f102a || hex === 0x713440)) { sx += x; sy += y; n++; }
-      }
-      map.set(`${row}:${fr}`, n > 3 ? [sx / n, sy / n] : [95, 50]);
-    }
-    this.bossCore = map;
-  }
-  private buildPlantsDark() {
-    if (this.plantsDark || !this.plants.every(p => ready(p.img))) return;
-    this.plantsDark = this.plants.map(p => {
-      const c = makeCanvas(p.img.naturalWidth, p.img.naturalHeight), g = c.getContext('2d')!;
-      g.drawImage(p.img, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(3,10,8,.86)'; g.fillRect(0, 0, c.width, c.height);
-      return c;
-    });
-  }
-
   // ---------- helpers ----------
   private once(key: string, at: number, t: number, fn: () => void) { if (t >= at && !this.fired.has(key)) { this.fired.add(key); fn(); } }
   private shake(t: number, amp: number, decay = 5) { if (!this.reduced) this.shakes.push({ at: t, amp, decay }); }
@@ -232,37 +154,19 @@ export class CinematicIntro {
   }
 
   // ---------- backdrop ----------
-  private shotCam(s: Shot, t: number) {
-    const u = easeInOutCubic(seg(t, s.start, s.end)), m = this.reduced ? 0.3 : 1;
-    const z = lerp(s.from[2], lerp(s.from[2], s.to[2], u), m);
-    const cx = lerp(s.from[0], lerp(s.from[0], s.to[0], u), m), cy = lerp(s.from[1], lerp(s.from[1], s.to[1], u), m);
-    return { z, cx: Math.min(W - W / (2 * z), Math.max(W / (2 * z), cx)), cy: Math.min(H - H / (2 * z), Math.max(H / (2 * z), cy)) };
-  }
   private drawBackdrop(g: Ctx, t: number, dt: number, px: number) {
-    this.frameNo++;
-    const live = SHOTS.filter(s => t >= s.start && t <= s.end + FADE).slice(-2);
-    for (const s of live) {
-      const idx = SHOTS.indexOf(s);
-      let world = this.worldByShot.get(idx);
-      const fresh = !world;
-      if (!world) { world = this.worlds.find(c => ![...this.worldByShot.values()].includes(c)) ?? makeCanvas(W, H); this.worldByShot.set(idx, world); }
-      if (fresh || this.frameNo % 2 === idx % 2) this.renderWorld(world, s.level, t);
-      const a = s.start === 0 ? 1 : easeInOutCubic(seg(t, s.start, s.start + FADE));
-      const { z, cx, cy } = this.shotCam(s, t);
-      // Resample the painted map into the pixel grid (area-filtered on the way down).
-      g.save(); g.globalAlpha = a; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      g.setTransform(z / px, 0, 0, z / px, (W / 2 - cx * z) / px, (H / 2 - cy * z) / px);
-      g.drawImage(world, 0, 0); g.restore();
-    }
-    for (const k of [...this.worldByShot.keys()]) if (!live.includes(SHOTS[k])) this.worldByShot.delete(k);
-    this.renderer?.update(dt, false);
-  }
-  private renderWorld(world: HTMLCanvasElement, level: number, t: number) {
-    const wc = world.getContext('2d')!;
-    if (this.renderer) {
-      try { this.renderer.render(wc, W, H, LEVELS[level] ?? LEVELS[0], { x: -999, y: -999, direction: 'right', isMoving: false }, null, false, 0, [], t); return; } catch { /* plain backdrop */ }
-    }
-    wc.fillStyle = '#0b1a14'; wc.fillRect(0, 0, W, H);
+    if (!ready(this.backdrop)) return;
+    const sw=this.backdrop.naturalWidth/2,sh=this.backdrop.naturalHeight/2;
+    const panel=(idx:number,alpha:number)=>{
+      const progress=this.reduced?0:seg(t,idx===0?0:idx===1?5:idx===2?15:22,idx===0?5:idx===1?15:idx===2?22:28);
+      const zoom=1.06+progress*.035,w=W/px*zoom,h=H/px*zoom;
+      g.save();g.globalAlpha=alpha;g.imageSmoothingEnabled=false;
+      g.drawImage(this.backdrop,(idx%2)*sw,Math.floor(idx/2)*sh,sw,sh,(W/px-w)/2,(H/px-h)/2,w,h);g.restore();
+    };
+    const idx=t<5?0:t<15?1:t<22?2:3;
+    const start=idx===0?0:idx===1?5:idx===2?15:22;
+    if(idx>0&&t<start+.8)panel(idx-1,1);
+    panel(idx,idx===0?1:easeInOutCubic(seg(t,start,start+.8)));
   }
   private drawMist(g: Ctx, t: number, px: number, strength: number) {
     if (strength <= 0) return;
@@ -273,67 +177,12 @@ export class CinematicIntro {
     }
     g.restore();
   }
-  /** Foliage resampled into the pixel grid. dark = foreground silhouette. */
-  private drawPlant(g: Ctx, which: number, frame: number, x: number, yBottom: number, size: number, px: number, alpha: number, dark: boolean, flip = false) {
-    const s = this.plants[which]; if (!ready(s.img) || alpha <= 0) return;
-    const src = dark && this.plantsDark ? this.plantsDark[which] : s.img;
-    const f = frame % s.frames, w = size / px;
-    g.save(); g.globalAlpha = alpha; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-    g.translate(Math.round(x / px), Math.round(yBottom / px)); if (flip) g.scale(-1, 1);
-    g.drawImage(src, (f % s.cols) * s.fw, Math.floor(f / s.cols) * s.fh, s.fw, s.fh, -w / 2, -w, w, w);
-    g.restore();
-  }
-
   // ---------- sprites (layer coordinates = art pixels) ----------
-  private tinted(img: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, color: string) {
-    const c = this.tintC, g = c.getContext('2d')!;
-    if (c.width < sw || c.height < sh) { c.width = Math.max(c.width, sw); c.height = Math.max(c.height, sh); }
-    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, c.width, c.height);
-    g.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    g.globalCompositeOperation = 'source-in'; g.fillStyle = color; g.fillRect(0, 0, sw, sh);
-    return c;
-  }
   private shadow(g: Ctx, x: number, y: number, w: number, a: number) {
     if (a <= 0) return;
     g.save(); g.globalAlpha = a * 0.45; g.fillStyle = '#000'; g.fillRect(Math.round(x - w), Math.round(y), Math.round(w * 2), 1);
     g.globalAlpha = a * 0.3; g.fillRect(Math.round(x - w + 1), Math.round(y + 1), Math.max(1, Math.round(w * 2 - 2)), 1); g.restore();
   }
-  private soldier(g: Ctx, clip: 'Idle' | 'Walk' | 'Attack01', frame: number, x: number, y: number, a: number, tint?: string) {
-    const s = this.sold[clip]; if (a <= 0 || !ready(s.img)) return;
-    const sx = (frame % s.frames) * s.fw;
-    if (!tint) this.shadow(g, x, y + 1, 6, a);
-    g.save(); g.globalAlpha = a;
-    // Feet sit at (50,60) inside the 100px cell.
-    g.drawImage(tint ? this.tinted(s.img, sx, 0, s.fw, s.fh, tint) : s.img, tint ? 0 : sx, 0, s.fw, s.fh, Math.round(x) - 50, Math.round(y) - 60, s.fw, s.fh);
-    g.restore();
-  }
-  private bossSprite(g: Ctx, row: number, frame: number, x: number, y: number, a: number, tint?: string) {
-    const s = this.boss; if (a <= 0 || !ready(s.img)) return;
-    const sx = frame * s.fw, sy = row * s.fh;
-    if (!tint) this.shadow(g, x, y + 1, 22, a);
-    g.save(); g.globalAlpha = a;
-    // Source art faces left (toward the heroes); feet at (95,110).
-    g.drawImage(tint ? this.tinted(s.img, sx, sy, s.fw, s.fh, tint) : s.img, tint ? 0 : sx, tint ? 0 : sy, s.fw, s.fh, Math.round(x) - 95, Math.round(y) - 110, s.fw, s.fh);
-    g.restore();
-  }
-  private coreAt(row: number, frame: number, x: number, y: number): [number, number] {
-    const c = this.bossCore?.get(`${row}:${frame}`) ?? [95, 50];
-    return [Math.round(x) - 95 + c[0], Math.round(y) - 110 + c[1]];
-  }
-  /** Feet-anchored pixel Aeris; `reveal` < 1 materialises it from the feet up. Returns eye pixels. */
-  private wizard(g: Ctx, ta: number, x: number, y: number, a: number, reveal = 1, tint?: string): [number, number][] {
-    const wz = this.wiz; if (!wz || a <= 0 || reveal <= 0) return [];
-    const fr = wz.frames[Math.floor(ta * 14) % wz.frames.length];
-    const left = Math.round(x - wz.w / 2), top = Math.round(y) - wz.h;
-    if (!tint && reveal >= 1) this.shadow(g, x, y + 1, 6, a);
-    const rows = Math.max(1, Math.ceil(wz.h * clamp01(reveal)));
-    g.save(); g.globalAlpha = a;
-    const src = tint ? this.tinted(fr.c, 0, 0, wz.w, wz.h, tint) : fr.c;
-    g.drawImage(src, 0, wz.h - rows, wz.w, rows, left, top + wz.h - rows, wz.w, rows);
-    g.restore();
-    return fr.eyes.filter(([, ey]) => ey >= wz.h - rows).map(([ex, ey]) => [left + ex, top + ey]);
-  }
-
   // ---------- typography (full resolution) ----------
   private serif() { return this.lang === 'vi' ? '"Segoe UI", Arial, sans-serif' : 'Georgia, "Times New Roman", serif'; }
   private text(ctx: Ctx, str: string, x: number, y: number, o: { size: number; font?: string; color?: string; alpha: number; spacing?: number; align?: CanvasTextAlign; weight?: string; style?: string }) {
@@ -350,19 +199,18 @@ export class CinematicIntro {
     const out = 1 - seg(t, t1 - 0.45, t1);
     if (t < t0 || out <= 0) return;
     ctx.save();
-    const font = `300 56px ${this.serif()}`, spacing = 14;
+    const font = `500 48px ${this.serif()}`, spacing = 6;
     ctx.font = font; (ctx as unknown as { letterSpacing: string }).letterSpacing = `${spacing}px`;
     let cx = x;
     [...name].forEach((ch, i) => {
       const p = easeOutCubic(seg(t, t0 + i * 0.07, t0 + i * 0.07 + 0.45));
-      this.text(ctx, ch, cx, y + (1 - p) * 14, { size: 56, font: this.serif(), weight: '300', spacing, alpha: p * out, align: 'left' });
+      this.text(ctx, ch, cx, y + (1 - p) * 14, { size: 48, font: this.serif(), weight: '300', spacing, alpha: p * out, align: 'left' });
       cx += ctx.measureText(ch).width;
     });
     const rule = easeInOutCubic(seg(t, t0 + 0.35, t0 + 0.95));
     ctx.globalAlpha = 0.8 * out; ctx.fillStyle = accent; ctx.fillRect(x + 2, y + 14, Math.round((cx - x - spacing) * rule), 2);
     ctx.restore();
-    const n = Math.floor(sub.length * seg(t, t0 + 0.6, t0 + 0.6 + sub.length * 0.035));
-    this.text(ctx, sub.slice(0, n), x + 4, y + 44, { size: 14, font: 'ui-monospace, Consolas, monospace', spacing: 5, alpha: out, align: 'left', color: accent });
+    this.text(ctx, sub, x + 4, y + 44, { size: 14, font: 'ui-monospace, Consolas, monospace', spacing: 2, alpha: out, align: 'left', color: accent });
   }
   /** Subtitles live inside the bottom letterbox bar: always readable, never over the art. */
   private caption(ctx: Ctx, str: string, t: number, a: number, b: number, quote: boolean) {
@@ -371,248 +219,162 @@ export class CinematicIntro {
   }
 
   // ---------- scenes ----------
-  private sceneForest(g: Ctx, f: Ctx, t: number, px: number) {
-    const s1 = SHOTS[0], cam = this.shotCam(s1, Math.min(t, s1.end));
-    // God rays through the canopy, breathing slowly.
-    const rays = easeOutCubic(seg(t, 0.8, 3.4)) * (1 - seg(t, 9.4, 10.1));
-    if (rays > 0) {
-      f.save(); f.fillStyle = 'rgb(190,232,170)';
-      for (let i = 0; i < 5; i++) {
-        const x0 = 150 + i * 250 + Math.sin(t * 0.2 + i) * 30, w0 = 30 + (i % 3) * 18, w1 = 130 + (i % 2) * 70, sk = 230;
-        f.globalAlpha = rays * 0.075 * (0.65 + 0.35 * Math.sin(t * 0.55 + i * 1.7));
-        f.beginPath(); f.moveTo(x0 / px, 0); f.lineTo((x0 + w0) / px, 0); f.lineTo((x0 + w0 + sk + w1) / px, (H * 0.92) / px); f.lineTo((x0 + sk) / px, (H * 0.92) / px); f.closePath(); f.fill();
+  /** Match visible silhouette height, not sprite-cell size, for both introductions. */
+  private heroPortrait(g:Ctx,kind:'aeris'|'kael',x:number,y:number,height:number,alpha:number) {
+    const source=kind==='aeris'?getWizardSheet():this.sold.Idle.img;
+    if(!source || (source instanceof HTMLImageElement&&!ready(source)))return;
+    let portrait=this.cleanSoldiers.get(`portrait-${kind}`);
+    if(!portrait){
+      const cell=makeCanvas(256,256),c=cell.getContext('2d')!;
+      c.drawImage(source,0,512,256,256,0,0,256,256);
+      const pixels=c.getImageData(0,0,256,256);let x0=256,y0=256,x1=0,y1=0;
+      for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+        const i=(y*256+x)*4;pixels.data[i+3]=pixels.data[i+3]>=180?255:0;
+        if(pixels.data[i+3]){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}
       }
-      f.restore();
+      if(x1<x0)return;c.putImageData(pixels,0,0);
+      portrait=makeCanvas(x1-x0+1,y1-y0+1);
+      portrait.getContext('2d')!.drawImage(cell,x0,y0,portrait.width,portrait.height,0,0,portrait.width,portrait.height);
+      this.cleanSoldiers.set(`portrait-${kind}`,portrait);
     }
-    // Ancient runes pulse on the forest floor, one after another (scene 1, fading in scene 2).
-    const runeA = seg(t, 0.6, 1.6) * (1 - seg(t, 5.6, 6.4));
-    if (runeA > 0 && ready(this.runeSheet.img)) {
-      for (const [wx, wy, cue] of RUNES) {
-        const sx = W / 2 + (wx - cam.cx) * cam.z, sy = H / 2 + (wy - cam.cy) * cam.z;
-        const kick = t >= cue ? Math.exp(-(t - cue) * 1.8) : 0;
-        const a = runeA * (0.22 + 0.12 * Math.sin(t * 2.2 + wx) + 0.66 * kick);
-        const fr = Math.floor(t * 10 + wx) % this.runeSheet.frames;
-        f.save(); f.globalAlpha = clamp01(a);
-        f.drawImage(this.runeSheet.img, fr * 32, 0, 32, 32, Math.round(sx / px) - 16, Math.round(sy / px) - 16, 32, 32); f.restore();
-        this.glow(f, sx / px, sy / px, 18 + 10 * kick, COL.cyan, a * 0.5, 0.45);
-        this.once(`rune${cue}`, cue, t, () => this.burst(sx, sy - 10, 8, 50, COL.cyan, 1.4, -10));
-      }
-    }
-    // "...when the Emberforge still burned": a warm flare and rising embers.
-    const em = t >= C.ember ? Math.sin(Math.PI * seg(t, C.ember, C.ember + 2.4)) : 0;
-    this.glow(f, 640 / px, 250 / px, 95 / px * 4, COL.ember, 0.55 * em, 0.8);
-    this.once('ember', C.ember, t, () => { for (let i = 0; i < 26; i++) this.spawn({ x: 520 + Math.random() * 240, y: 330 + Math.random() * 80, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, max: 2.4 + Math.random() * 1.6, rgb: Math.random() < 0.5 ? COL.ember : COL.warm, size: 1, mode: 0 }); });
+    const width=height*portrait.width/portrait.height;
+    g.save();g.globalAlpha=alpha;g.imageSmoothingEnabled=false;
+    this.shadow(g,x,y+2,width*.38,.7);
+    g.drawImage(portrait,Math.round(x-width/2),Math.round(y-height),width,height);g.restore();
+  }
 
-    // Foliage parallax. S1: dark foreground framing that opens up as the camera pushes in.
-    const s1a = 1 - seg(t, 5.0, 5.8);
-    if (s1a > 0) {
-      const push = (cam.z - 1) * 2.4, fr = Math.floor(t * 8);
-      this.drawPlant(g, 0, fr, 90 - push * 260, H + 30, 470 + push * 260, px, s1a, true);
-      this.drawPlant(g, 1, fr + 7, 1210 + push * 260, H + 40, 520 + push * 260, px, s1a, true, true);
-      this.drawPlant(g, 1, fr + 3, 300 - push * 120, H - 10, 230, px, 0.75 * s1a, false);
-      this.drawPlant(g, 0, fr + 11, 960 + push * 120, H - 20, 250, px, 0.75 * s1a, false, true);
-    }
-    // S2: two layers drift sideways at different speeds.
-    const s2a = seg(t, 5.0, 5.7) * (1 - seg(t, 9.6, 10.2));
-    if (s2a > 0) {
-      const scroll = (t - 5) * 60;
-      [{ k: 0.5, size: 270, y: H - 34, a: 0.8, n: 6, dark: false }, { k: 1.6, size: 470, y: H + 50, a: 1, n: 4, dark: true }].forEach((L, li) => {
-        const span = (W + 400) / L.n;
-        for (let i = 0; i < L.n + 1; i++) {
-          const x = (((i * span - scroll * L.k) % (span * (L.n + 1))) + span * (L.n + 1)) % (span * (L.n + 1)) - span / 2;
-          this.drawPlant(g, (i + li) % 2, Math.floor(t * 8 + i * 3), x, L.y, L.size, px, s2a * L.a, L.dark, i % 2 === 1);
-        }
-      });
+  private sceneHeroes(g: Ctx, f: Ctx, t: number, _ta: number, px: number) {
+    const start=t<12.5?10.3:12.5,end=start+2.2;
+    if(t<start||t>end)return;
+    const mage=t<12.5,alpha=Math.min(easeOutCubic(seg(t,start,start+.35)),1-seg(t,end-.3,end));
+    const x=430/px,y=530/px,height=210/px;
+    // Identical scale, staging and reveal for both heroes; only their signature light differs.
+    const accent=mage?COL.cyan:COL.warm;
+    this.glow(f,x,y-height*.45,height*.8,accent,alpha*.22,.8);
+    this.ring(f,x,y+2,44,12,accent,alpha*.35);
+    this.heroPortrait(g,mage?'aeris':'kael',x,y,height,alpha);
+    for(let i=0;i<7;i++){
+      const an=i*2.4+t*.45;
+      this.star(f,x+Math.cos(an)*43,y-24-i*10,0,accent,alpha*(.4+.3*Math.sin(t*2+i)));
     }
   }
 
-  private sceneHeroes(g: Ctx, f: Ctx, t: number, ta: number, px: number) {
-    if (t < C.wizard - 0.2 || t > INTRO.s4 + 0.1) return;
-    const out = 1 - seg(t, 14.7, 15.05);
-    const wx = 880, wy = 600, kxEnd = 420, ky = 600;
-    const WX = wx / px, WY = wy / px;
-    // Summoning circle: rune ring opens, a column of light, then Aeris materialises bottom-up.
-    const open = easeOutCubic(seg(t, C.wizard, C.wizard + 0.6)) * out;
-    const ringA = open * (1 - 0.6 * seg(t, C.wizardIn + 0.8, C.wizardIn + 1.6));
-    this.ring(f, WX, WY + 1, 24 * open, 7 * open, COL.cyan, 0.85 * ringA);
-    this.ring(f, WX, WY + 1, 17 * open, 5 * open, COL.ice, 0.5 * ringA);
-    for (let i = 0; i < 8; i++) {
-      const an = t * 0.9 + (i / 8) * Math.PI * 2;
-      this.star(f, WX + Math.cos(an) * 24 * open, WY + 1 + Math.sin(an) * 7 * open, 1, COL.ice, ringA * 0.9);
+  /** Side-facing action frames share a fixed cell anchor, so attacks do not jump. */
+  private actor(g:Ctx,kind:'aeris'|'kael',x:number,y:number,time:number,clip:'idle'|'walk'|'attack',alpha=1,echo=false) {
+    const source=kind==='aeris'?getWizardSheet():clip==='attack'?this.sold.Attack01.img:this.sold.Walk.img;
+    if(!source || (source instanceof HTMLImageElement&&!ready(source)))return;
+    const key=kind==='aeris'?'aeris-action':clip==='attack'?'kael-attack':'kael-walk';
+    let clean=this.cleanSoldiers.get(key);
+    if(!clean){
+      clean=makeCanvas(source.width,source.height);const c=clean.getContext('2d')!;c.drawImage(source,0,0);
+      const pixels=c.getImageData(0,0,clean.width,clean.height);
+      for(let i=3;i<pixels.data.length;i+=4)pixels.data[i]=pixels.data[i]>=180?255:0;
+      c.putImageData(pixels,0,0);this.cleanSoldiers.set(key,clean);
     }
-    if (ready(this.runeSheet.img) && open > 0) {
-      f.save(); f.globalAlpha = 0.7 * ringA; f.drawImage(this.runeSheet.img, (Math.floor(t * 12) % 18) * 32, 0, 32, 32, Math.round(WX) - 16, Math.round(WY) - 30, 32, 32); f.restore();
-    }
-    const col = Math.sin(Math.PI * seg(t, C.wizard + 0.2, C.wizardIn + 0.9));
-    if (col > 0) {
-      f.save(); f.fillStyle = rgba(COL.ice, 1);
-      [[9, 0.12], [6, 0.2], [3, 0.4]].forEach(([hw, a]) => { f.globalAlpha = col * a * out; f.fillRect(Math.round(WX - hw), 0, hw * 2, Math.round(WY + 1)); });
-      f.restore();
-    }
-    this.glow(f, WX, WY - 16, 46, COL.cyan, 0.5 * open, 1);
-    this.once('wiz', C.wizardIn, t, () => { this.burst(wx, wy - 120, 26, 140, COL.ice, 1.2, -20); this.doFlash(t, 0.22); });
-    const reveal = easeInOutCubic(seg(t, C.wizardIn, C.wizardIn + 0.6));
-    const bob = reveal >= 1 ? Math.round(Math.sin(ta * 2.1)) : 0;
-    const eyes = this.wizard(g, ta, WX, WY + bob, out, reveal);
-    if (reveal > 0 && reveal < 1 && this.wiz) {
-      const yLine = Math.round(WY) - Math.ceil(this.wiz.h * reveal);
-      f.save(); f.globalAlpha = 0.9 * out; f.fillStyle = rgba(COL.ice, 1); f.fillRect(Math.round(WX - this.wiz.w / 2) - 1, yLine, this.wiz.w + 2, 1); f.restore();
-    }
-    // Golden eyes kindle, and small stars orbit the mage at their own speeds.
-    const eyeA = easeOutCubic(seg(t, C.wizardIn + 0.5, C.wizardIn + 1.0)) * out * (0.75 + 0.25 * Math.sin(t * 3.1));
-    for (const [ex, ey] of eyes) { this.glow(f, ex + 0.5, ey + 0.5, 3, [255, 220, 90], eyeA); f.save(); f.globalAlpha = eyeA; f.fillStyle = '#fff6b0'; f.fillRect(ex, ey, 1, 1); f.restore(); }
-    const orbitA = easeOutCubic(seg(t, C.wizardIn + 0.4, C.wizardIn + 1.2)) * out;
-    [[16, 1.4, 0, 1], [21, -0.9, 2, 1], [12, 2.1, 4, 0], [25, 0.6, 1, 0]].forEach(([r, sp, ph, arm], i) => {
-      const an = t * sp + ph, depth = Math.sin(an);
-      this.star(f, WX + Math.cos(an) * r, WY - 15 + depth * r * 0.32 - i, arm, i % 2 ? COL.warm : COL.ice, orbitA * (0.55 + 0.45 * depth) * (0.7 + 0.3 * Math.sin(t * 7 + i)));
-    });
-
-    // Kael strides in from the left, plants his feet, the blade catches the light.
-    const walk = seg(t, C.kael, C.kaelStop);
-    const kx = lerp(-60, kxEnd, walk < 1 ? walk * (1 - 0.35 * walk * walk) / 0.65 : 1);
-    const KX = Math.min(kxEnd, kx) / px, KY = ky / px;
-    this.glow(f, KX, KY - 10, 40, COL.warm, 0.42 * easeOutCubic(seg(t, C.kaelStop - 0.3, C.kaelStop + 0.7)) * out, 1);
-    if (t >= C.kael) {
-      if (walk < 1) this.soldier(g, 'Walk', Math.floor((ta - C.kael) * 11), KX, KY, out);
-      else this.soldier(g, 'Idle', Math.floor(ta * 7), KX, KY, out);
-    }
-    KAEL_STEPS.forEach((st, i) => this.once(`kstep${i}`, st, t, () => { const sx = lerp(-60, kxEnd, seg(st, C.kael, C.kaelStop)); for (let j = 0; j < 4; j++) this.spawn({ x: sx + (Math.random() - 0.5) * 30, y: ky - 2, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 20, max: 0.5, rgb: COL.dust, mode: 1, g: 90 }); }));
-    const glint = Math.sin(Math.PI * seg(t, C.draw, C.draw + 0.4));
-    this.star(f, KX + 8, KY - 13, 2 + Math.round(glint), COL.white, glint * out);
+    const frame=clip==='idle'?0:clip==='attack'?Math.min(7,Math.floor(Math.max(0,time)*22)):Math.floor(Math.max(0,time)*10)%8;
+    const row=clip==='attack'?2:1;
+    g.save();g.globalAlpha=alpha;
+    if(echo)g.filter='brightness(1.5) sepia(1) saturate(3) hue-rotate(120deg)';
+    else this.shadow(g,x,y+1,16,.7);
+    g.imageSmoothingEnabled=false;g.drawImage(clean,frame*256,row*256,256,256,Math.round(x)-45,Math.round(y)-72,90,90);g.restore();
   }
 
-  private sceneBoss(g: Ctx, f: Ctx, t: number, ta: number, px: number) {
-    if (t < INTRO.s4 - 0.05 || t > 22.2) return;
-    const fadeEnd = 1 - seg(t, 21.9, 22.2);
-    const by = 620 / px;
-    // Where the Guardian stands: deep in the dark, then stepping forward into the light.
-    const walkU = easeInOutCubic(seg(t, C.step, C.step + 1.0));
-    let bx = lerp(1120, 1000, walkU) / px;
-    // Recoil when struck.
-    const rec = (at: number, amt: number) => t >= at ? amt * Math.exp(-(t - at) * 7) * Math.min(1, (t - at) * 30) : 0;
-    bx += Math.round(rec(C.impact, 4) + rec(C.clash, 7));
-
-    let row = 0, frame = Math.floor(ta * 6) % 6;
-    if (t >= C.step && t < C.step + 1.0) { row = 1; frame = Math.floor((ta - C.step) * 10) % 10; }
-    else if (t >= C.roar && t < C.roar + 0.9) {
-      row = 4; const u = ta - C.roar;
-      frame = u < 0.3 ? 2 + Math.floor(u / 0.1) : u < 0.75 ? 5 + (Math.floor(u / 0.08) % 2) : 4 - Math.min(1, Math.floor((u - 0.75) / 0.08));
-    } else if (t >= C.impact && t < C.impact + 0.5) { row = 3; frame = Math.min(6, Math.floor((ta - C.impact) * 14)); }
-    else if (t >= C.clash && t < C.clash + 0.7) { row = 3; frame = Math.min(6, Math.floor((ta - C.clash) * 10)); }
-
-    // Cold light pool the Guardian walks into.
-    const pool = easeOutCubic(seg(t, C.step - 0.2, C.step + 1.0)) * fadeEnd;
-    this.glow(f, 1000 / px, by, 55, COL.cyan, 0.32 * pool, 0.28);
-    const sil = easeOutCubic(seg(t, C.silhouette, C.silhouette + 0.7)) * fadeEnd;
-    const lit = seg(t, C.step, C.step + 0.9);
-    if (sil > 0) {
-      if (lit > 0) this.bossSprite(g, row, frame, bx, by, lit * fadeEnd);
-      if (lit < 1) this.bossSprite(g, row, frame, bx, by, sil * (1 - lit), '#06090f');
-      // Hit flash: the sprite turns white for a couple of frames.
-      const hf = Math.max(1 - seg(t, C.impact, C.impact + 0.09), 1 - seg(t, C.clash, C.clash + 0.1)) * (t >= C.impact ? 1 : 0);
-      if (hf > 0 && t < C.clash + 0.1) this.bossSprite(g, row, frame, bx, by, hf * 0.9, '#ffffff');
-      // Core / eye glows: breathing in the dark, blazing on the roar.
-      const [cx, cy] = this.coreAt(row, frame, bx, by);
-      const breathe = 0.6 + 0.4 * Math.sin(t * 2.6);
-      const roarK = Math.sin(Math.PI * seg(t, C.roar, C.roar + 0.9));
-      const coreA = sil * (0.5 * breathe + 0.6 * roarK) * fadeEnd;
-      this.glow(f, cx, cy, 8 + 7 * roarK, COL.core, coreA);
-      f.save(); f.globalAlpha = clamp01(coreA); f.fillStyle = '#ffd2a0'; f.fillRect(Math.round(cx) - 1, Math.round(cy), 2, 1); f.restore();
-      this.once('roar', C.roar + 0.05, t, () => {
-        this.shake(t, 16, 3.2); this.doFlash(t, 0.2, [170, 220, 255]);
-        const [sx, sy] = [cx * px, cy * px];
-        for (const p of this.parts) if (p.mode === 0) { const dx = p.x - sx, dy = p.y - sy, d = Math.hypot(dx, dy) || 1; p.vx += dx / d * 160; p.vy += dy / d * 100; }
-        this.burst(sx, sy, 20, 220, COL.ice, 0.9, 120);
-      });
-      const sw = seg(t, C.roar + 0.05, C.roar + 0.75);
-      if (sw > 0 && sw < 1) { this.ring(f, cx, cy + 10, 10 + 120 * easeOutCubic(sw), 4 + 30 * easeOutCubic(sw), COL.ice, 0.7 * (1 - sw), 1); this.ring(f, cx, cy + 10, 6 + 80 * easeOutCubic(sw), 3 + 20 * easeOutCubic(sw), COL.cyan, 0.5 * (1 - sw), 1); }
-    }
-    BOSS_STEPS.forEach((st, i) => this.once(`bstep${i}`, st, t, () => {
-      this.shake(t, 7, 6);
-      const sx = lerp(1120, 1000, easeInOutCubic(seg(st, C.step, C.step + 1.0)));
-      for (let j = 0; j < 10; j++) this.spawn({ x: sx + (Math.random() - 0.5) * 140, y: 616, vx: (Math.random() - 0.5) * 120, vy: -30 - Math.random() * 50, max: 0.7, rgb: COL.dust, mode: 1, g: 160 });
-    }));
-
-    // Heroes take position in the half-light.
-    const heroA = easeOutCubic(seg(t, 15.6, 16.4)) * fadeEnd;
-    const WX = 230 / px, HY = 620 / px;
-    // Aeris charges, then fires a jagged bolt at the core.
-    const eyes = this.wizard(g, ta, WX, HY + (Math.round(Math.sin(ta * 2.1))), heroA);
-    for (const [ex, ey] of eyes) { this.glow(f, ex + 0.5, ey + 0.5, 2, [255, 220, 90], heroA * 0.8); f.save(); f.globalAlpha = heroA; f.fillStyle = '#fff6b0'; f.fillRect(ex, ey, 1, 1); f.restore(); }
-    const charge = seg(t, C.cast, C.bolt) * (1 - seg(t, C.clash, C.clash + 0.2));
-    if (charge > 0) {
-      this.ring(f, WX, HY + 1, 14 * easeOutCubic(charge), 4 * easeOutCubic(charge), COL.cyan, 0.8 * charge);
-      this.glow(f, WX + 6, HY - 16, 4 + 8 * charge, COL.ice, 0.8 * charge);
-    }
-    const [tcx, tcy] = this.coreAt(0, 0, 1000 / px, by);
-    const bolt = seg(t, C.bolt, C.clash);
-    if (bolt > 0 && t < C.clash + 0.12) {
-      const x0 = WX + 6, y0 = HY - 16, x1 = lerp(x0, tcx, easeInCubic(bolt) * 0.5 + bolt * 0.5), y1 = lerp(y0, tcy, bolt);
-      const rnd = (i: number) => Math.sin(Math.floor(t * 30) * 12.9898 + i * 78.233) * 43758.5453 % 1;
-      f.save(); f.lineCap = 'butt'; f.lineJoin = 'miter';
-      [[COL.cyan, 3, 0.55], [COL.ice, 1, 1]].forEach(([rgb, lw, a]) => {
-        f.strokeStyle = rgba(rgb as RGB, 1); f.lineWidth = lw as number; f.globalAlpha = a as number;
-        f.beginPath(); f.moveTo(Math.round(x0), Math.round(y0));
-        const n = 7; for (let i = 1; i <= n; i++) { const u = i / n; f.lineTo(Math.round(lerp(x0, x1, u) + (i < n ? rnd(i) * 3 : 0)), Math.round(lerp(y0, y1, u) + (i < n ? rnd(i + 9) * 5 : 0))); }
-        f.stroke();
-      });
-      f.restore();
-      this.glow(f, x1, y1, 7, COL.ice, 0.9);
-    }
-
-    // Kael: anticipation, dash, slash, hit-stop, leap back.
-    let kx = 360 / px, clip: 'Idle' | 'Walk' | 'Attack01' = 'Idle', kf = Math.floor(ta * 7), ky = HY;
-    const strikeX = 790 / px;
-    if (t >= C.antic && t < C.dash) { clip = 'Attack01'; kf = 0; kx -= Math.round(3 * easeOutCubic(seg(t, C.antic, C.antic + 0.15))); }
-    else if (t >= C.dash && t < C.slash) {
-      const u = seg(t, C.dash, C.slash); clip = 'Walk'; kf = 3; kx = lerp(360 / px - 3, strikeX, u * u);
-      for (const [dt, a] of [[0.035, 0.45], [0.07, 0.22]] as [number, number][]) { const ug = seg(t - dt, C.dash, C.slash); this.soldier(g, 'Walk', 3, lerp(360 / px - 3, strikeX, ug * ug), HY, a * heroA, '#bfeaff'); }
-    } else if (t >= C.slash && t < C.back) { clip = 'Attack01'; kx = strikeX; kf = 1 + Math.min(4, Math.floor((ta - C.slash) * 14)); }
-    else if (t >= C.back && t < C.back + 0.3) { const u = easeOutCubic(seg(t, C.back, C.back + 0.3)); kx = lerp(strikeX, 520 / px, u); ky = HY - Math.round(Math.sin(Math.PI * u) * 8); clip = 'Idle'; kf = 2; }
-    else if (t >= C.back + 0.3) kx = 520 / px;
-    this.soldier(g, clip, kf, kx, ky, heroA);
-    this.star(f, 360 / px + 5, HY - 14, 2, COL.white, Math.sin(Math.PI * seg(t, C.antic + 0.05, C.antic + 0.3)) * heroA);
-    // Pixel sword trail: a crescent that thins as it sweeps.
-    const sl = seg(t, C.slash + 0.02, C.impact + 0.12);
-    if (sl > 0 && sl < 1) {
-      const cx = strikeX + 6, cy = HY - 12, r = 15, a0 = -2.1, a1 = lerp(a0, 0.9, easeOutCubic(sl * 1.3));
-      f.save(); f.lineCap = 'butt';
-      for (const [lw, rgb, a] of [[3, COL.warm, 0.55], [1, COL.white, 1]] as [number, RGB, number][]) {
-        f.strokeStyle = rgba(rgb, 1); f.lineWidth = lw; f.globalAlpha = a * (1 - sl);
-        f.beginPath(); f.arc(Math.round(cx), Math.round(cy), r, Math.max(a0, a1 - 1.6), a1); f.stroke();
+  private sceneWoodland(g:Ctx,f:Ctx,t:number,px:number) {
+    if(t<.8||t>=10)return;
+    if(t<5){
+      const x=750/px,y=355/px,open=seg(t,.9,2.2),out=1-seg(t,4.6,5);
+      this.glow(f,x,y,70,COL.warm,.35*open*out,.45);
+      if(ready(this.runeSheet.img)){
+        f.save();f.globalAlpha=.55*open*out;
+        f.drawImage(this.runeSheet.img,Math.floor(t*8)%18*32,0,32,32,x-30,y-16,60,32);f.restore();
       }
-      f.restore();
-    }
-    // Impact: hit-stop, white flash, sparks, an impact star and a short shake.
-    const [icx, icy] = this.coreAt(3, 0, 1000 / px, by);
-    const imp = 1 - seg(t, C.impact, C.impact + 0.16);
-    if (t >= C.impact && imp > 0) { this.star(f, icx - 6, icy + 6, 8, COL.white, imp); this.star(f, icx - 6, icy + 6, 4, COL.warm, imp); this.glow(f, icx - 6, icy + 6, 14, COL.warm, 0.7 * imp); }
-    this.once('impact', C.impact, t, () => { this.shake(t, 12, 7); this.doFlash(t, 0.35, [255, 245, 220]); this.burst((icx - 6) * px, (icy + 6) * px, 26, 300, COL.warm, 0.7, 520); this.burst((icx - 6) * px, (icy + 6) * px, 10, 200, COL.white, 0.5, 300); });
-    this.once('clash', C.clash, t, () => {
-      this.shake(t, 26, 3.5); this.doFlash(t, 1, [240, 252, 255]);
-      // These motes later gather into the title.
-      for (let i = 0; i < 70; i++) { const a = Math.random() * Math.PI * 2, s = 120 + Math.random() * 380; this.spawn({ x: tcx * px, y: tcy * px, vx: Math.cos(a) * s, vy: Math.sin(a) * s, max: 2.6 + Math.random() * 0.8, rgb: i % 3 ? COL.ice : COL.warm, size: Math.random() < 0.3 ? 2 : 1, mode: 2 }); }
-    });
-    if (t >= C.clash && t < C.clash + 0.5 && ready(this.runeSheet.img)) {
-      f.save(); f.globalAlpha = 1 - seg(t, C.clash + 0.2, C.clash + 0.5);
-      f.drawImage(this.runeSheet.img, Math.min(17, Math.floor((t - C.clash) * 36)) * 32, 0, 32, 32, Math.round(tcx) - 16, Math.round(tcy) - 16, 32, 32); f.restore();
+      for(let i=0;i<20;i++){
+        const phase=(t*.17+i*.073)%1,an=i*2.4;
+        this.star(f,x+Math.cos(an)*(24+phase*24),y-phase*65+Math.sin(an)*9,0,i%3?COL.warm:COL.cyan,Math.sin(phase*Math.PI)*open*out*.8);
+      }
+      this.once('shrine-wakes',C.rune2,t,()=>this.burst(750,350,18,55,COL.warm,1.5,-10));
+    }else{
+      const progress=seg(t,5.4,9.5),alpha=seg(t,5.2,5.9)*(1-seg(t,9.3,10));
+      // A remembered traveller follows the path, leaving footsteps that wake the ruins.
+      for(let i=0;i<8;i++){
+        const u=i/9,seen=seg(progress,u,u+.15)*(1-seg(progress,u+.35,u+.6));
+        const x=lerp(440,820,u)/px,y=lerp(540,310,u)/px;
+        f.save();f.globalAlpha=seen*alpha*.6;f.fillStyle='#a3e9de';f.fillRect(x+(i%2?3:-3),y,2,4);f.restore();
+      }
+      this.actor(g,'aeris',lerp(440,820,progress)/px,lerp(540,310,progress)/px,t-5,'walk',alpha*.5,true);
+      for(let i=0;i<3;i++){
+        const pulse=seg(t,6+i*.7,6.5+i*.7)*alpha,x=(560+i*150)/px,y=(330-i*42)/px;
+        this.glow(f,x,y,20,COL.cyan,.35*pulse,.6);
+        this.star(f,x,y,1,COL.cyan,.7*pulse);
+      }
     }
   }
 
-  private sceneLogoBg(f: Ctx, t: number, px: number) {
-    if (t < C.gather - 0.1) return;
-    // A rune circle forms behind the wordmark from the gathered light.
-    const R = easeOutCubic(seg(t, C.logo - 0.2, C.logo + 0.9)), out = 1 - seg(t, INTRO.s7, INTRO.s7 + 0.5);
-    const cx = 640 / px, cy = 345 / px, rx = 78 * R, ry = 50 * R;
-    const a = R * out * (0.42 + 0.08 * Math.sin(t * 1.6));
-    this.ring(f, cx, cy, rx, ry, COL.warm, a * 0.8);
-    this.ring(f, cx, cy, rx - 5, ry - 4, COL.mote, a * 0.45);
-    for (let i = 0; i < 12; i++) {
-      const an = t * 0.18 + (i / 12) * Math.PI * 2;
-      this.star(f, cx + Math.cos(an) * (rx - 2.5), cy + Math.sin(an) * (ry - 2), i % 3 === 0 ? 1 : 0, i % 2 ? COL.warm : COL.mote, a);
+  private sceneCombat(g:Ctx,f:Ctx,t:number,px:number) {
+    if(t<17.8||t>=22)return;
+    const alpha=seg(t,17.8,18.4)*(1-seg(t,21.7,22));
+    const mageX=550/px,y=510/px;
+    let kaelX=690/px,clip:'idle'|'walk'|'attack'='idle',clock=t;
+    if(t<C.antic){kaelX=lerp(610,690,seg(t,17.8,19.1))/px;clip='walk';}
+    else if(t<C.dash){clip='attack';clock=0;}
+    else if(t<C.slash){kaelX=lerp(690,920,easeInCubic(seg(t,C.dash,C.slash)))/px;clip='walk';}
+    else if(t<C.back){kaelX=920/px;clip='attack';clock=t-C.slash;}
+    else {kaelX=lerp(920,740,easeOutCubic(seg(t,C.back,20.5)))/px;}
+    this.actor(g,'aeris',mageX,y,0,'idle',alpha);
+    this.actor(g,'kael',kaelX,y,clock,clip,alpha);
+    const slash=seg(t,C.slash,C.impact+.2);
+    if(slash>0&&slash<1){
+      f.save();f.globalAlpha=alpha*(1-slash);f.strokeStyle='#fff0bd';f.lineWidth=3;
+      f.beginPath();f.arc(kaelX+12,y-28,34,-1.8,-1.8+slash*3);f.stroke();f.restore();
     }
-    this.glow(f, cx, cy, 60, COL.warm, 0.22 * R * out, 0.7);
-    this.once('logo', C.logo, t, () => this.burst(640, 345, 34, 240, COL.warm, 1.8, -10));
+    this.once('mist-impact',C.impact,t,()=>{this.burst(995,455,28,150,COL.ice,.6,160);this.shake(t,3,7);});
+    const charge=seg(t,C.cast,C.bolt)*(1-seg(t,C.bolt,C.clash));
+    this.glow(f,mageX+22,y-35,18,COL.cyan,.8*charge*alpha);
+    const bolt=seg(t,C.bolt,C.clash);
+    if(t>=C.bolt&&t<C.clash+.12){
+      const x=lerp(mageX+22,1040/px,bolt),by=lerp(y-35,400/px,bolt);
+      f.save();f.globalAlpha=alpha;f.strokeStyle='#88dfff';f.lineWidth=3;
+      f.beginPath();f.moveTo(x-40,by+5);f.lineTo(x-24,by-4);f.lineTo(x-9,by+2);f.lineTo(x,by);f.stroke();f.restore();
+      this.star(f,x,by,3,COL.ice,alpha);this.glow(f,x,by,17,COL.cyan,.6*alpha);
+    }
+    this.once('mist-clash',C.clash,t,()=>{this.burst(1040,400,35,190,COL.ice,.8,60);this.shake(t,4,6);});
+    // The unseen enemy retaliates. Kael guards while an Echo catches the returning frost.
+    const wave=seg(t,21.12,21.65);
+    if(t>=21.12){
+      const x=lerp(1120,790,wave)/px;
+      for(let i=0;i<6;i++){
+        const sx=x+i*8,sy=y-30+Math.sin(i*2.4)*16;
+        f.save();f.globalAlpha=alpha*(1-wave*.6);f.fillStyle=i%2?'#c2f0fa':'#74bdd9';
+        f.beginPath();f.moveTo(sx-4,sy);f.lineTo(sx+3,sy-2);f.lineTo(sx+5,sy);f.lineTo(sx+1,sy+2);f.closePath();f.fill();f.restore();
+      }
+      this.actor(g,'aeris',650/px,y,0,'idle',alpha*.4,true);
+      f.save();f.globalAlpha=alpha*wave;f.strokeStyle='#b7e9f5';f.lineWidth=2;
+      f.beginPath();f.arc(kaelX+18,y-30,26,-1.05,1.05);f.stroke();f.restore();
+      for(let i=0;i<5;i++)this.star(f,kaelX+44+i*3,y-30+Math.sin(i*3)*13,0,COL.ice,alpha*wave*.8);
+    }
+  }
+
+  private sceneBoss(g: Ctx, f: Ctx, t: number, _ta: number, px: number) {
+    if(t<INTRO.s4||t>=INTRO.s6)return;
+    const enter=seg(t,15,16.4),out=1-seg(t,21.4,22);
+    // No boss art, anatomy or name: the forest itself reacts to an unseen presence.
+    const veil=g.createLinearGradient(250/px,0,W/px,0);
+    veil.addColorStop(0,'rgba(2,8,15,0)');veil.addColorStop(.5,'rgba(2,8,15,.6)');veil.addColorStop(1,'rgba(1,5,12,.97)');
+    g.save();g.globalAlpha=enter;g.fillStyle=veil;g.fillRect(0,0,W/px,H/px);g.restore();
+    // Frost spreads in irregular pixel clusters, rather than long geometric wire lines.
+    for(let i=0;i<35;i++){
+      const u=seg(t,16+(i%7)*.28,18.5+(i%7)*.25),x=(880+(i*43)%350)/px,y=(440+(i*31)%130)/px;
+      f.save();f.globalAlpha=.23*u*out;f.fillStyle=i%3?'#83b8c6':'#c9e8eb';
+      f.fillRect(Math.round(x),Math.round(y),2+i%3,1);f.fillRect(Math.round(x)+1,Math.round(y)-1,1,3);f.restore();
+    }
+    const pulse=Math.max(0,1-Math.abs(t-C.roar)/.55);
+    this.glow(f,1060/px,400/px,110,COL.ice,.15*pulse*out,.6);
+    for(let i=0;i<28;i++){
+      const x=((i*83+t*(18+i%4*5))%W)/px,y=(110+(i*67+t*13)%480)/px;
+      this.star(f,x,y,0,COL.ice,.3*enter*out);
+    }
+    BOSS_STEPS.forEach((at,i)=>this.once(`unseen-step-${i}`,at,t,()=>this.shake(t,2,6)));
+    this.once('unseen-roar',C.roar,t,()=>this.shake(t,3,5));
   }
 
   // ---------- particles (fx layer) ----------
@@ -656,24 +418,21 @@ export class CinematicIntro {
   /** `k` = backing pixels per logical pixel; `fadeOut` 0..1 = extra fade to black (skip). */
   draw(ctx: Ctx, t: number, k = 1, fadeOut = 0) {
     const dt = Math.min(0.1, Math.max(0, t - this.lastT)); this.lastT = t;
-    this.buildWizard(); this.buildBossCore(); this.buildPlantsDark();
+
     const L = TEXT[this.lang], px = pxAt(t), ta = this.animT(t);
     const g = this.scene.begin(px, '#020605'), f = this.fx.begin(px, null);
 
     // --- scene layer: backdrop, grade, mist, foliage, characters ---
-    if (t < INTRO.s6 + 0.3) this.drawBackdrop(g, t, dt, px);
-    const light = easeInOutCubic(seg(t, 0.4, 3.6));
-    let dark = t < INTRO.s2 ? 0.95 - 0.6 * light : t < INTRO.s3 ? 0.32 : t < INTRO.s4 ? 0.5 : t < INTRO.s5 ? 0.45 : t < INTRO.s6 ? 0.55 : 1;
-    if (t >= INTRO.s4 && t < INTRO.s5) dark = lerp(lerp(0.45, 0.84, easeInOutCubic(seg(t, C.dim, C.dim + 0.9))), 0.6, easeInOutCubic(seg(t, C.step, C.step + 1.0)));
-    if (t >= INTRO.s5 && t < INTRO.s6) dark = lerp(0.6, 0.55, seg(t, INTRO.s5, INTRO.s5 + 0.5));
-    if (t >= INTRO.s6) { g.fillStyle = '#03100b'; g.fillRect(0, 0, this.scene.w, this.scene.h); dark = 0; }
-    if (dark > 0) { g.fillStyle = `rgba(3,9,8,${dark})`; g.fillRect(0, 0, this.scene.w, this.scene.h); }
-    g.fillStyle = `rgba(22,70,66,${t < INTRO.s4 ? 0.12 : 0.2})`; g.fillRect(0, 0, this.scene.w, this.scene.h);
+    this.drawBackdrop(g, t, dt, px);
+    const dark=t<INTRO.s4?.12:t<INTRO.s6?.24:.34;
+    g.fillStyle=`rgba(3,9,8,${dark})`;g.fillRect(0,0,this.scene.w,this.scene.h);
     this.drawMist(g, t, px, t < INTRO.s2 ? 1.6 : t < INTRO.s3 ? 1.1 : t < INTRO.s6 ? 0.8 : 0.5);
-    if (t < INTRO.s3 + 0.3) this.sceneForest(g, f, t, px);
+    // Dedicated painted woodland: no gameplay gates, oversized plants or UI in the film.
+    this.sceneWoodland(g, f, t, px);
     this.sceneHeroes(g, f, t, ta, px);
     this.sceneBoss(g, f, t, ta, px);
-    this.sceneLogoBg(f, t, px);
+    this.sceneCombat(g, f, t, px);
+
     g.save(); g.imageSmoothingEnabled = true; g.drawImage(this.vignette, 0, 0, this.scene.w, this.scene.h); g.restore();
     this.particles(f, t, dt, px);
 
@@ -682,24 +441,23 @@ export class CinematicIntro {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
     const [sx, sy] = this.shakeOffset(t);
     const focus = easeInOutCubic(seg(t, C.step, C.roar + 0.3)) * (1 - easeInOutCubic(seg(t, C.roar + 0.9, INTRO.s5 + 0.3)));
-    const heroPush = easeInOutCubic(seg(t, INTRO.s3, INTRO.s4)) * 0.05 * (t < INTRO.s4 ? 1 : 0);
-    const z = this.reduced ? 1 : 1 + 0.14 * focus + heroPush, fx = lerp(640, 990, focus), fy = lerp(360, 420, focus);
+    const z = this.reduced ? 1 : 1 + 0.035 * focus, fx = lerp(640, 990, focus), fy = lerp(360, 420, focus);
     ctx.save(); ctx.translate(fx + sx, fy + sy); ctx.scale(z, z); ctx.translate(-fx, -fy);
     ctx.drawImage(this.scene.c, 0, 0, this.scene.w * px, this.scene.h * px);
-    ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(this.fx.c, 0, 0, this.fx.w * px, this.fx.h * px);
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha=.65; ctx.drawImage(this.fx.c, 0, 0, this.fx.w * px, this.fx.h * px);
     ctx.restore();
 
     // --- screen-space light: flashes, scene dips, whiteout into the title ---
     const fl = this.flash.a * Math.exp(-(t - this.flash.at) * 6);
-    if (fl > 0.01 && t >= this.flash.at) { ctx.fillStyle = rgba(this.flash.rgb, Math.min(1, fl)); ctx.fillRect(0, 0, W, H); }
+    if (fl > 0.01 && t >= this.flash.at) { ctx.fillStyle = rgba(this.flash.rgb, Math.min(.12, fl)); ctx.fillRect(0, 0, W, H); }
     const dip = Math.max(1 - seg(t, 0.1, 1.0), Math.max(0, 1 - Math.abs(t - INTRO.s3) / 0.32), Math.max(0, 1 - Math.abs(t - INTRO.s4) / 0.3) * 0.85);
     if (dip > 0) { ctx.fillStyle = `rgba(0,0,0,${dip})`; ctx.fillRect(0, 0, W, H); }
-    const white = this.reduced ? 0 : seg(t, C.clash, C.clash + 0.3) * (1 - seg(t, C.gather, C.gather + 0.7));
+    const white = this.reduced ? 0 : .12 * seg(t, C.clash, C.clash + 0.1) * (1 - seg(t, C.clash + .1, C.clash + .45));
     if (white > 0) { ctx.fillStyle = `rgba(240,252,255,${white})`; ctx.fillRect(0, 0, W, H); }
 
     // --- typography ---
-    this.nameCard(ctx, L.aeris, L.aerisSub, 975, 350, C.wizardIn + 0.35, 14.75, t, '#8fe3f2');
-    this.nameCard(ctx, L.kael, L.kaelSub, 70, 392, C.kaelStop + 0.15, 15.0, t, '#f0cf8c');
+    this.nameCard(ctx, L.aeris, L.aerisSub, 640, 370, 10.3, 12.5, t, '#8fe3f2');
+    this.nameCard(ctx, L.kael, L.kaelSub, 640, 370, 12.5, 14.7, t, '#f0cf8c');
     this.drawLogo(ctx, t, L);
 
     // --- end: fade to black (the component then reveals the menu) ---
@@ -732,7 +490,6 @@ export class CinematicIntro {
     const sc = lerp(1.05, 1, easeOutCubic(seg(t, C.logo, C.logo + 2.2)));
     ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.translate(W / 2, 345); ctx.scale(sc, sc); ctx.drawImage(this.logoTmp, -lc, -lh / 2); ctx.restore();
-    this.text(ctx, L.eyebrow, W / 2, 165, { size: 14, font: 'ui-monospace, Consolas, monospace', spacing: 7, alpha: easeOutCubic(seg(t, C.logo + 0.8, C.logo + 1.8)), color: '#e0c07a' });
     this.text(ctx, L.tag, W / 2, 548, { size: 15, font: 'ui-monospace, Consolas, monospace', spacing: 10, alpha: easeOutCubic(seg(t, C.logo + 1.6, C.logo + 2.6)), color: '#c6d1b8' });
     this.text(ctx, '◇　✦　◈　✺　◆', W / 2, 590, { size: 14, spacing: 12, alpha: 0.5 * easeOutCubic(seg(t, C.logo + 2.2, C.logo + 3.2)), color: '#9eb28b' });
   }
