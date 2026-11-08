@@ -73,12 +73,15 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   if (boss) {
     drawPillars(ctx, boss, time, game.reducedMotion);
     for (const area of boss.burstAreas) {
-      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion);
+      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion, Math.max(0, -area.timer));
     }
-    if (boss.hp > 0 && boss.mode === 'warning') {
-      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, false, time, game.reducedMotion);
-      ctx.save(); ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
-      ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
+    if (boss.hp > 0 && (boss.mode === 'warning' || boss.mode === 'strike')) {
+      const struck = boss.mode === 'strike';
+      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, struck, time, game.reducedMotion, struck ? Math.max(0, .3 - boss.timer) : 0);
+      if (!struck) {
+        ctx.save(); ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
+        ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
+      }
     }
     for (const shot of boss.projectiles) {
       ctx.beginPath(); ctx.arc(shot.x, shot.y, 7, 0, Math.PI * 2);
