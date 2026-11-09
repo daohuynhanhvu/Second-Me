@@ -1,3 +1,4 @@
+import {SUPPLIES,emptySupplies,type SupplyId} from './supplies.ts';
 import {rollChest, CHEST_POOL, type ChestRewardId} from './chest.ts';
 import { DAMAGE, damagePoints } from './damage.ts';
 import { ECHO_RUNES, rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
@@ -30,6 +31,12 @@ export class Campaign {
   runeLoadout:EchoRuneId[]=[];
   lastRuneDrop:EchoRuneId|null = null;
   pendingRuneChoices:EchoRuneId[]=[];
+  supplies=emptySupplies();
+  chanceUses=0;
+  heroClears:Record<string,number[]>={};
+  supportClaimed=false;
+  buySupply(id:SupplyId){const item=SUPPLIES.find(i=>i.id===id);if(!item||id==='support'||this.coins<item.price||this.supplies[id]>=item.cap)return false;this.coins-=item.price;this.supplies[id]++;this.save();return true;}
+  recordHeroClear(hero:string,level:number){if(!['mage','swordsman'].includes(hero)||level<1||level>6)return;this.heroClears[hero]=[...new Set([...(this.heroClears[hero]??[]),level])];if(!this.supportClaimed&&['mage','swordsman'].every(h=>[1,2,3,4,5,6].every(l=>this.heroClears[h]?.includes(l)))){this.supplies.support=1;this.supportClaimed=true;}this.save();}
   coins = 0;
   timeItems = 0;
   limitRings = 0;
@@ -46,6 +53,11 @@ export class Campaign {
       this.forged = this.canForge && value.forged === true;
       this.bossDefeated = this.forged && value.bossDefeated === true;
       this.mechanicalOwned = value.mechanicalOwned === true;
+      this.supplies=emptySupplies();
+      for(const item of SUPPLIES){const n=value.supplies?.[item.id];this.supplies[item.id]=Number.isSafeInteger(n)&&n>=0?Math.min(item.cap,n):0;}
+      this.chanceUses=this.supplies.chances>0&&Number.isInteger(value.chanceUses)&&value.chanceUses>=0&&value.chanceUses<3?value.chanceUses:0;
+      this.heroClears={};for(const hero of ['mage','swordsman'])this.heroClears[hero]=Array.isArray(value.heroClears?.[hero])?[...new Set<number>(value.heroClears[hero].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=1&&Number(n)<=6))]:[];
+      this.supportClaimed=value.supportClaimed===true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
       this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
@@ -62,7 +74,7 @@ export class Campaign {
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
-      completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
+      supplies:this.supplies,chanceUses:this.chanceUses,heroClears:this.heroClears,supportClaimed:this.supportClaimed,completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
       echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, chestKeys:this.chestKeys,lastChestRewards:this.lastChestRewards, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
@@ -126,7 +138,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
+  reset() { this.supplies=emptySupplies();this.chanceUses=0;this.heroClears={};this.supportClaimed=false; this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {

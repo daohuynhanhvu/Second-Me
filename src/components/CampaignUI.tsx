@@ -264,7 +264,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   const [settings, setSettings] = useState(false);
   const boss = hud.bossHp > 0;
   return localize(<div className="adventure-hud overlay">
-    <div className="hud-top"><div className="level-card"><small>{hud.levelName}{hud.training?' · DEV':' / 06'}</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="player-health" role="meter" aria-label={hud.language==='vi'?'Máu nhân vật':'Player health'} aria-valuenow={hud.health} aria-valuemin={0} aria-valuemax={100}><b style={{width:`${hud.health}%`}}/><strong>{hud.health} / 100 HP</strong></span></span>
+    <div className="hud-top"><div className="level-card"><small>{hud.levelName}{hud.training?' · DEV':' / 06'}</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="player-health" role="meter" aria-label={hud.language==='vi'?'Máu nhân vật':'Player health'} aria-valuenow={hud.health} aria-valuemin={0} aria-valuemax={engine?.maxHealth??100}><b style={{width:`${hud.health/(engine?.maxHealth??100)*100}%`}}/><strong>{hud.health} / {engine?.maxHealth??100} HP</strong></span></span>
       {(hud.enemiesRemaining??0)>0&&<small>{hud.language==='vi'?`QUÁI CANH ĐƯỜNG · ${hud.enemiesRemaining}`:`TRAIL ENEMIES · ${hud.enemiesRemaining}`}</small>}
       {(hud.echoCount>0 || hud.echoDurationMs>0) && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO {hud.echoCount}/{hud.echoLimit} · {hud.echoCharges} {hud.language==='vi'?'lượt':'charges'} · {Math.ceil(hud.echoStability)} {hud.language==='vi'?'ổn định':'stability'}</span>{hud.echoDurationMs>0 && <div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div>}</div>}
     </div>
@@ -345,6 +345,7 @@ function DefeatScreen({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   <div className="defeat-stats"><span>{vi?'THỜI GIAN':'TIME'} <b>{hud.elapsedLevelTime.toFixed(1)}s</b></span><span>{vi?'MÀN CHƠI':'TRAIL'} <b>{String((engine?.currentLevelIdx??0)+1).padStart(2,'0')}</b></span></div>
   <div className="defeat-hint"><span>{vi?'LẦN NÀY, THỬ CÁCH KHÁC':'A DIFFERENT APPROACH'}</span><p>{hint}</p></div>
   <p className="defeat-kept">{vi?'Ấn chưa dùng và tiến trình vẫn được giữ lại.':'Unused runes and campaign progress are safe.'}</p>
+  {engine?.canUseSupply('revive')&&<button className="defeat-retry" onClick={()=>engine.useSupply('revive')}>{vi?'DÙNG TRỤC PHỤC SINH · VỀ PHÁP ĐÀN':'USE SCROLL · REVIVE AT ALTAR'}</button>}
   <button className="defeat-retry" onClick={()=>engine?.restartLevel()}><RotateCcw size={18}/>{vi?'THỬ LẠI':'TRY AGAIN'}<ArrowRight size={17}/></button>
   <button className="defeat-return" onClick={()=>engine?.goToLobby()}><Map size={15}/>{vi?'VỀ SẢNH CHỌN MÀN':'BACK TO THE TRAILS'}</button>
  </section></div>;

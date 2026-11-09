@@ -1,3 +1,5 @@
+import {supportRoute} from './logic/supportPath.ts';
+import type {SupplyId} from './logic/supplies.ts';
 import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logic/damage.ts';
 import { createEnemies, updateEnemies, type Enemy } from './logic/enemies.ts';
 import { ECHO_RUNES, type EchoRuneId, type EchoRuneStock } from './logic/echoRunes.ts';
@@ -188,6 +190,9 @@ export class GameEngine {
     combatAnchor?: { x: number; y: number };
     returnBlockedFor?: number;
     characterClass?: CharacterClass;
+    support?: boolean;
+    supportPath?: {x:number;y:number}[];
+    supportRouteTimer?: number;
   } | null = null;
   public echoes: NonNullable<GameEngine['echoShape']>[] = [];
   public selectedEcho = 0;
@@ -228,6 +233,21 @@ export class GameEngine {
   /** An ultimate's hit waits for its shout so the skill name lands with the impact. */
   private pendingUltimate: { kind: CombatSkill; time: number } | null = null;
   private get voiceRole(): VoiceRole { return this.characterClass === 'swordsman' ? 'kael' : this.characterClass === 'mechanical' ? 'rivet' : 'aeris'; }
+  public maxHealth = PLAYER_MAX_HP;
+  private scrollUsed=false;
+  private chanceRevivals=0;
+  private chanceItemSpent=false;
+  private supportUsed=false;
+  public buySupply(id:SupplyId){if(this.screen!=='shop')return false;const ok=this.campaign.buySupply(id);this.notifyHUD();return ok;}
+  public canUseSupply(id:SupplyId){if(!this.campaign.supplies[id]||this.orientationBlocked||this.runeEditing)return false;if(id==='revive')return this.screen==='defeat'&&this.defeatReason==='damage'&&!this.scrollUsed;if(this.screen!=='playing')return false;if(id==='heal10'||id==='heal50')return this.health>0&&this.health<this.maxHealth;if(id==='support')return !this.supportUsed;return false;}
+  public useSupply(id:SupplyId){if(!this.canUseSupply(id))return false;
+    if(id==='heal10'||id==='heal50')this.health=Math.min(this.maxHealth,this.health+(id==='heal10'?10:50));
+    else if(id==='revive'){this.scrollUsed=true;const p=resolveSpawnPosition(this.currentLevel.playerSpawn.x,this.currentLevel.playerSpawn.y,24,24,getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors));this.player.x=p.x;this.player.y=p.y;this.revivePlayer();}
+    else if(id==='support'){this.supportUsed=true;this.echoes.push({support:true,x:this.player.x,y:this.player.y,direction:this.player.direction,isMoving:false,elapsedMs:0,status:'finished',samples:[],stability:15,attackTimer:0,characterClass:this.characterClass==='mage'?'swordsman':'mage'});}
+    else return false;
+    this.campaign.supplies[id]--;this.campaign.save();this.notifyHUD();return true;
+  }
+  private revivePlayer(){this.health=this.maxHealth;this.screen='playing';document.body.dataset.state='playing';this.invulnerability=2;this.heldKeys.clear();this.combo?.cancel();this.lunge.time=0;this.notifyHUD();}
   public health = PLAYER_MAX_HP;
   public hurtFlash = 0;
   public incomingHits: {x:number;y:number;damage:number;absorbed:number;life:number}[] = [];
@@ -554,6 +574,7 @@ export class GameEngine {
     this.checkpointIndex = 0;
     this.slowed = false;
     this.defeatReason = 'damage';
+    this.maxHealth=PLAYER_MAX_HP;this.scrollUsed=false;this.chanceRevivals=0;this.chanceItemSpent=false;this.supportUsed=false;
     this.health = PLAYER_MAX_HP;
     this.hurtFlash=0;this.incomingHits=[];
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
@@ -677,6 +698,7 @@ export class GameEngine {
     sounds.playPlateActivate();
     if (this.boss.hp <= 0) {
       this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
+    this.campaign.recordHeroClear(this.characterClass,this.currentLevel.id);
       this.campaign.bossDefeated = true;
       this.campaign.save();
       this.bossDeathPending = true;
@@ -1077,7 +1099,7 @@ export class GameEngine {
       if(this.lightCircle.life<=0) this.lightCircle=null;
       else if(this.insideLightCircle) {
         this.lightCircle.heal+=dt;
-        if(this.lightCircle.heal>=2) {this.lightCircle.heal-=2;this.health=Math.min(PLAYER_MAX_HP,this.health+20);this.notifyHUD();}
+        if(this.lightCircle.heal>=2) {this.lightCircle.heal-=2;this.health=Math.min(this.maxHealth,this.health+20);this.notifyHUD();}
       }
     }
   }
@@ -1107,6 +1129,11 @@ export class GameEngine {
     this.invulnerability = 1.3;
     this.combo?.cancel(); this.lunge.time = 0;           // staggered: the combo is lost
     this.renderer.particles.emit(this.player.x, this.player.y, 18, '#fb7185', 75, 4, 0.6);
+    if (this.health === 0 && this.campaign.supplies.chances>0 && !this.chanceItemSpent && this.chanceRevivals<3) {
+      this.maxHealth=PLAYER_MAX_HP*(1-this.campaign.chanceUses*.1);this.chanceRevivals++;this.campaign.chanceUses++;
+      if(this.campaign.chanceUses===3){this.chanceItemSpent=true;this.campaign.supplies.chances--;this.campaign.chanceUses=0;}
+      this.campaign.save();this.revivePlayer();return;
+    }
     if (this.health === 0) {
       this.defeatReason = 'damage';
       this.screen = 'defeat'; this.heldKeys.clear(); document.body.dataset.state = 'gameover';
@@ -1273,7 +1300,7 @@ export class GameEngine {
   public useEchoRune(id:EchoRuneId):boolean {
     if(!ECHO_RUNES.some(r=>r.id===id)||!this.canUseEchoRune(id)||!this.campaign.spendRune(id))return false;
     if(id==='call')this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
-    else if(id==='restore')for(const echo of this.echoes)echo.stability=Math.min(100,(echo.stability??100)+50);
+    else if(id==='restore')for(const echo of this.echoes)echo.stability=Math.min(echo.support?15:100,(echo.stability??100)+50);
     else this.activeEchoRunes.add(id);
     const rune=ECHO_RUNES.find(r=>r.id===id)!;
     this.showBanner(`${rune.glyph} ${this.language==='vi'?rune.vi:rune.en} · ${this.language==='vi'?'Đã dùng 1 ấn':'1 rune consumed'}`);
@@ -1298,7 +1325,7 @@ export class GameEngine {
     let amount=base*(this.activeEchoRunes.has('power')?1.3:1);
     if(this.activeEchoRunes.has('execute')&&target.hp<=target.maxHp*.3)amount*=1.25;
     if(!this.strike(target,amount,false,echo))return false;
-    if(this.activeEchoRunes.has('vamp'))echo.stability=Math.min(100,(echo.stability??100)+4);
+    if(this.activeEchoRunes.has('vamp'))echo.stability=Math.min(echo.support?15:100,(echo.stability??100)+4);
     if(this.activeEchoRunes.has('cleave')){
       const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
       const nearby=this.combatTargets().filter(({t})=>t!==target&&Math.hypot(t.x-target.x,t.y-target.y)<=55&&!walls.some(w=>segmentWall(echo,t,w,0)!==null))
@@ -1316,14 +1343,21 @@ export class GameEngine {
     const walls = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
     const targets: (Enemy | BossState)[] = this.enemies.filter(e => e.hp > 0);
     if (this.boss && this.boss.hp > 0 && !this.bossDeathPending) targets.push(this.boss);
-    const target = targets.filter(t => Math.hypot(t.x-anchor.x, t.y-anchor.y) <= ECHO_COMBAT_RADIUS && !walls.some(w => segmentWall(echo, t, w, 0) !== null))
+    const target = targets.filter(t => (echo.support || Math.hypot(t.x-anchor.x, t.y-anchor.y) <= ECHO_COMBAT_RADIUS) && (echo.support || !walls.some(w => segmentWall(echo, t, w, 0) !== null)))
       .sort((a,b) => Math.hypot(a.x-echo.x, a.y-echo.y) - Math.hypot(b.x-echo.x, b.y-echo.y))[0];
     if (!target && !echo.combatAnchor) return false;
     if (target && !echo.combatAnchor) echo.combatAnchor = anchor;
-    const destination = target ?? anchor;
+    let destination: {x:number;y:number} = target ?? anchor;
+    if(echo.support){
+      if(!target){echo.isMoving=false;echo.combatAnchor=undefined;return true;}
+      echo.supportRouteTimer=(echo.supportRouteTimer??0)-dt;
+      if(echo.supportRouteTimer<=0){echo.supportPath=supportRoute(echo,target,walls);echo.supportRouteTimer=.5;}
+      while((echo.supportPath?.length??0)>1&&Math.hypot(echo.supportPath![0].x-echo.x,echo.supportPath![0].y-echo.y)<5)echo.supportPath!.shift();
+      if(!echo.supportPath?.length){echo.isMoving=false;return true;}destination=echo.supportPath[0];
+    }
     const dx = destination.x-echo.x, dy = destination.y-echo.y, distance = Math.hypot(dx,dy);
     // Aeris can cast from range, which also helps her defend a rune without abandoning it.
-    const reach = target ? (echo.characterClass === 'mage' ? 100 : target === this.boss ? 70 : 42) : 2;
+    const reach = echo.support && (echo.supportPath?.length??0)>1 ? 2 : target ? (echo.characterClass === 'mage' ? 100 : target === this.boss ? 70 : 42) : 2;
     if (!target && distance <= reach) {
       echo.x = anchor.x; echo.y = anchor.y; echo.combatAnchor = undefined; echo.returnBlockedFor = 0;
       echo.isMoving = false;
@@ -1335,7 +1369,7 @@ export class GameEngine {
       const x = echo.x + dx / distance * amount, y = echo.y + dy / distance * amount;
       const resolved = resolveMovement(echo.x, echo.y, x, y, 24, 24, walls);
       // Reject corner-assist nudges outside the original 3m circle.
-      const inBounds = Math.hypot(resolved.x-anchor.x, resolved.y-anchor.y) <= ECHO_COMBAT_RADIUS + .001;
+      const inBounds = echo.support || Math.hypot(resolved.x-anchor.x, resolved.y-anchor.y) <= ECHO_COMBAT_RADIUS + .001;
       const moved = inBounds && Math.hypot(resolved.x-echo.x, resolved.y-echo.y) > .01;
       if (moved) { echo.x=resolved.x; echo.y=resolved.y; echo.direction=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down'); }
       echo.isMoving = moved;
@@ -1344,7 +1378,7 @@ export class GameEngine {
       if ((echo.returnBlockedFor ?? 0) >= 1) { echo.combatAnchor=undefined; echo.returnBlockedFor=0; }
     } else {
       echo.isMoving = false;
-      if (target && echo.attackTimer <= 0) {
+      if (target && echo.attackTimer <= 0 && !walls.some(w=>segmentWall(echo,target,w,0)!==null)) {
         echo.direction = Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');
         echo.attackFlash = .22; echo.attackTarget = {x: target.x, y: target.y};
         this.strikeWithEcho(echo,target,15);
@@ -1805,7 +1839,7 @@ export class GameEngine {
     for(const active of [...this.echoes]) {
     this.selectedEcho=this.echoes.indexOf(active);
     const fighting = this.echo ? this.updateEchoCombat(this.echo, dt) : false;
-    if(this.echo&&!fighting&&this.activeEchoRunes.has('regen'))this.echo.stability=Math.min(100,(this.echo.stability??100)+2*dt);
+    if(this.echo&&!this.echo.support&&!fighting&&this.activeEchoRunes.has('regen'))this.echo.stability=Math.min(100,(this.echo.stability??100)+2*dt);
     if (this.echo && !fighting && this.echo.status === 'replaying') {
       this.echo.elapsedMs += dt * 1000;
       while(this.echo && (this.echo.events?.[this.echo.nextEvent??0]?.time??Infinity)<=this.echo.elapsedMs) {
@@ -1881,7 +1915,7 @@ export class GameEngine {
     const plateUpdates = updatePressurePlates(
       this.currentLevel.plates,
       this.player,
-      this.echoes,
+      this.echoes.filter(e=>!e.support),
       dt
     );
     if (plateUpdates.activatedIds.length > 0) {
@@ -1965,6 +1999,7 @@ export class GameEngine {
     if(this.screen!=='playing')return;
     if(this.isTraining){this.goToLobby();return;}   // no rating, reward or progress
     this.lastRating = this.campaign.completeLevel(this.currentLevel.id, this.elapsedLevelTime);
+    this.campaign.recordHeroClear(this.characterClass,this.currentLevel.id);
     this.lastRuneReward=this.campaign.lastRuneDrop;
     this.lastReward = this.campaign.award(this.currentLevel.id) ? this.currentLevel.id : null;
     this.screen = 'victory';
