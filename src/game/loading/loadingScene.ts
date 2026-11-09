@@ -76,6 +76,21 @@ const FLASH = '#effffa';
 // the painted arch; the streak frames play slowly forward and back (1→15→1, a seamless loop),
 // each cross-fading into the next, so the band of light rises and falls without a jump.
 const VORTEX_FPS = 10;
+// The arch turns as one rigid slab about the vertical axis through its opening's centre, in
+// perspective. TURN_FROM/CAMERA_D fit the painted three-quarter view (near pillar, opening and
+// far pillar 115/133/66 px against the painting's 113/138/60); heights follow the perspective
+// only partly (TURN_V), so the near side grows a little and the far side shrinks a little.
+const TURN_FROM = 0.72;                   // rad, the painting's angle
+const CAMERA_D = 680;                     // painting px from the camera to the turning axis
+const TURN_V = 0.35;
+const SLAB = 22;                          // the arch's thickness: its near side face shows while turned
+const SLICE = 3;                          // painting px per drawn column
+/**
+ * The painted swirl sprite is cut along the painted oval, but it turns about the vortex eye,
+ * which sits off its centre: scaled by this it still fills the whole opening at any angle (the
+ * eye's offset, in the unsquashed disc, plus the sprite's soft edge).
+ */
+const SWIRL_COVER = 1.1 + Math.hypot((layout.portal.cx - layout.portal.eyeX) * layout.portal.ry / layout.portal.rx, layout.portal.cy - layout.portal.eyeY) / layout.portal.ry;
 const FLOW_FPS = 4;
 const STONE_FADE_IN = 0.15;               // s: portalMove fades in at the start of `move`
 const STONE_FADE_OUT = 0.03;              // s: …and cut the moment the arch faces the camera (no click)
@@ -783,35 +798,63 @@ export class LoadingScene {
   }
 
   /**
-   * The arch as a slab turning about its vertical axis (orthographic, column bands scaled
-   * horizontally with nearest-neighbour, never rotated in the screen plane). `turn` 0 is the
-   * painting's angle: near pillar in full, opening and far pillar foreshortened to their
-   * painted widths, the pillar's side face showing, the far pillar in shade. At 1 every band
-   * has its front-on width (portal-front.png): pillars equal, the opening an even oval.
-   * The opening's centre stays fixed on (portalX, portalY).
+   * Where a point of the turned arch lands: `xl` across the front face from the opening's centre,
+   * `zl` back into the stone, at angle `a` (0 = facing the camera). Returns the screen offset
+   * from portalX (painting px) and the height scale, in one reused array.
+   */
+  private turnPoint(xl: number, zl: number, a: number) {
+    const c = Math.cos(a), sn = Math.sin(a);
+    const k = CAMERA_D / (CAMERA_D + xl * sn + zl * c);
+    this.tpt[0] = (xl * c - zl * sn) * k;
+    this.tpt[1] = 1 + (k - 1) * TURN_V;
+    return this.tpt;
+  }
+  private tpt = [0, 1];
+
+  /**
+   * The arch (portal-front.png, its front view) as one rigid slab turning about the vertical
+   * axis through its opening's centre, in perspective: `turn` 0 is the painting's three-quarter
+   * angle (near side face showing, far pillar in shade), 1 faces the camera. Drawn as thin
+   * columns, each placed and scaled by the same turn, so its outline stays whole. The opening's
+   * centre stays on (portalX, portalY).
    */
   private drawArchModel(turn: number) {
     const ctx = this.ctx, f = layout.front, img = images.front;
     if (!ready(img)) return;
-    const alpha = ctx.globalAlpha;
-    const wOpen = lerp(f.paintedOpen, f.open, turn), wFar = lerp(f.paintedFar, f.pillar, turn);
-    const top = this.portalY - f.cy, x0 = this.portalX - wOpen / 2 - f.pillar;
-    const side = 12 * (1 - turn);
-    if (side > 0.5) ctx.drawImage(img, f.w, 0, f.sideW, f.h, x0 - side, top, side, f.h);
-    ctx.drawImage(img, 0, 0, f.pillar, f.h, x0, top, f.pillar, f.h);
-    ctx.drawImage(img, f.pillar, 0, f.open, f.h, x0 + f.pillar, top, wOpen, f.h);
-    ctx.drawImage(img, f.pillar + f.open, 0, f.pillar, f.h, x0 + f.pillar + wOpen, top, wFar, f.h);
+    const alpha = ctx.globalAlpha, a = TURN_FROM * (1 - turn), half = f.w / 2;
+    const column = (sx: number, sw: number, x0: number, z0: number, x1: number, z1: number) => {
+      const p0 = this.turnPoint(x0, z0, a), X0 = p0[0], v0 = p0[1];
+      const p1 = this.turnPoint(x1, z1, a), X1 = p1[0], v = (v0 + p1[1]) / 2;
+      const l = Math.min(X0, X1), w = Math.abs(X1 - X0);
+      if (w < 0.05) return;
+      ctx.drawImage(img, sx, 0, sw, f.h, this.portalX + l - 0.3, this.portalY - f.cy * v, w + 0.6, f.h * v);
+    };
+    // The near pillar's side face, seen while the arch is turned away.
+    if (a > 0.02) for (let i = 0; i < 4; i++) column(f.w, f.sideW, -half, SLAB * (i + 1) / 4, -half, SLAB * i / 4);
+    for (let u = 0; u < f.w; u += SLICE) { const sw = Math.min(SLICE, f.w - u); column(u, sw, u - half, 0, u + sw - half, 0); }
     // The far pillar comes out of shade as it turns toward the light of the camera.
     ctx.globalAlpha = alpha * (1 - turn) * 0.85;
-    if (ctx.globalAlpha > 0.01) ctx.drawImage(img, f.w + f.sideW, 0, f.pillar, f.h, x0 + f.pillar + wOpen, top, wFar, f.h);
+    if (ctx.globalAlpha > 0.01) {
+      const farX = f.pillar + f.open;
+      for (let u = farX; u < f.w; u += SLICE) { const sw = Math.min(SLICE, f.w - u); column(f.w + f.sideW + (u - farX), sw, u - half, 0, u + sw - half, 0); }
+    }
     ctx.globalAlpha = alpha;
   }
 
+  /** The turned opening's left and right edges, as offsets from portalX. */
+  private openSpan(turn: number) {
+    const a = TURN_FROM * (1 - turn), o = layout.front.open / 2;
+    this.span[0] = this.turnPoint(-o, 0, a)[0];
+    this.span[1] = this.turnPoint(o, 0, a)[0];
+    return this.span;
+  }
+  private span = [0, 0];
+
   /** A soft band of light sweeping across the stone while the arch turns. */
   private drawTurnLight(turn: number) {
-    const ctx = this.ctx, f = layout.front;
-    const w = lerp(f.paintedOpen, f.open, turn) + f.pillar + lerp(f.paintedFar, f.pillar, turn);
-    const x = this.portalX - lerp(f.paintedOpen, f.open, turn) / 2 - f.pillar + w * turn;
+    const ctx = this.ctx, f = layout.front, a = TURN_FROM * (1 - turn), half = f.w / 2;
+    const l = this.turnPoint(-half, 0, a)[0], r = this.turnPoint(half, 0, a)[0];
+    const x = this.portalX + l + (r - l) * turn;
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.22 * Math.sin(Math.PI * turn);
     ctx.drawImage(this.glowTeal, x - 45, this.portalY - f.cy, 90, f.h);
@@ -828,21 +871,24 @@ export class LoadingScene {
   private drawEnergy(t: number, turn: number, cover: number, wake: number) {
     const ctx = this.ctx, p = layout.portal, swirl = images.swirl;
     if (!ready(swirl)) return;
-    const rx = lerp(p.rx, layout.front.open / 2, turn), ry = p.ry;
-    const ex = this.portalX + (1 - turn) * (p.eyeX - p.cx), ey = this.portalY + (1 - turn) * (p.eyeY - p.cy);
+    // The oval sits in the turned opening: its edges where the slab puts them (blended in from
+    // the painted oval while the model fades in during the move).
+    const sp = this.openSpan(turn), m = this.phase === 'move' ? cover : 1;
+    const ox = this.portalX + lerp(0, (sp[0] + sp[1]) / 2, m), rx = lerp(p.rx, (sp[1] - sp[0]) / 2, m), ry = p.ry;
+    const ex = ox + (1 - turn) * (p.eyeX - p.cx), ey = this.portalY + (1 - turn) * (p.eyeY - p.cy);
     const sx = rx / ry;
     ctx.save();
-    ctx.beginPath(); ctx.ellipse(this.portalX, this.portalY, rx - 5, ry - 8, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.beginPath(); ctx.ellipse(ox, this.portalY, rx - 5, ry - 8, 0, 0, Math.PI * 2); ctx.clip();
     if (cover > 0) {
       ctx.globalAlpha = cover; ctx.fillStyle = '#0c5a4f';
-      ctx.fillRect(this.portalX - rx, this.portalY - ry, rx * 2, ry * 2);
+      ctx.fillRect(ox - rx, this.portalY - ry, rx * 2, ry * 2);
       ctx.globalAlpha = 1;
     }
-    this.drawSwirl(swirl, ex, ey, sx, this.spin * 0.6, 1);
+    this.drawSwirl(swirl, ex, ey, sx, this.spin * 0.6, SWIRL_COVER);
     // The hand-drawn vortex is painted in the three-quarter view: it carries the portal while it
     // travels and hands over to the turning swirl (eye centred) as the arch faces the camera.
     const drawn = 1 - smooth(0.15, 0.85, turn);
-    if (drawn > 0) { ctx.globalAlpha = drawn; this.drawVortex(t, this.portalX, this.portalY, rx / p.rx); ctx.globalAlpha = 1; }
+    if (drawn > 0) { ctx.globalAlpha = drawn; this.drawVortex(t, ox, this.portalY, rx / p.rx); ctx.globalAlpha = 1; }
     ctx.globalCompositeOperation = 'lighter';
     const scales = [0.82, 0.6, 0.38], speeds = [1, 1.6, 2.4];
     for (let i = 0; i < 3; i++) {
@@ -858,7 +904,7 @@ export class LoadingScene {
     ctx.strokeStyle = '#9ff7dd';
     ctx.lineWidth = 5;
     ctx.globalAlpha = 0.12 + 0.5 * wake;
-    ctx.beginPath(); ctx.ellipse(this.portalX, this.portalY, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(ox, this.portalY, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
 

@@ -38,9 +38,11 @@ over to the next screen, where `AdventureApp` fades it out. With reduced motion 
 transition art has not loaded) it is a plain fade.
 
 There is no painted front view of the arch: `portal-front.png` is built from the painting by
-mirroring the near pillar and the near half of the opening. The turn is a pseudo-3D slab:
-pillar, opening and far pillar are column bands whose widths go from their painted
-(foreshortened) widths to their front-on ones. The spiral is a WebGL fragment shader
+mirroring the near pillar and the near half of the opening. The turn is one rigid slab
+turning in perspective about the vertical axis through the opening's centre, drawn as thin
+columns that all follow the same angle (so its top and bottom edges stay whole): from the
+painting's angle (0.72 rad, fitted to the painted pillar and opening widths), near side face
+showing, to facing the camera. The spiral is a WebGL fragment shader
 (`src/game/loading/portalTwist.ts`) that warps the front-facing arch and vortex, redrawn into a
 560 px layer each frame, along a counter-clockwise spiral, sampled nearest-neighbour so the
 stones stay blocks of pixels. Without WebGL the arch just turns and shrinks in 2D. From 2x zoom
