@@ -1,7 +1,7 @@
 export const CHEST_POOL = [
-  {id:'coins5', weight:60, tier:'gold', vi:'5 xu', en:'5 coins'},
+  {id:'coins5', weight:72, tier:'gold', vi:'5 xu', en:'5 coins'},
   {id:'coins15', weight:25, tier:'gold', vi:'15 xu', en:'15 coins'},
-  {id:'time', weight:12, tier:'gold', vi:'Bình thời gian', en:'Time potion'},
+  {id:'time', weight:0, tier:'gold', vi:'Thêm một chút', en:'A Little More'},
   {id:'ring', weight:3, tier:'fire', vi:'Nhẫn tăng giới hạn', en:'Echo limit ring'},
 ] as const;
 export type ChestRewardId = typeof CHEST_POOL[number]['id'];

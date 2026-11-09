@@ -1,4 +1,6 @@
 .tanuki-shop{position:absolute;inset:0;z-index:40;overflow:auto;background:#100b0d;color:#fbe0b3;font-family:Georgia,serif;isolation:isolate}
+.tanuki-time-art{height:90px}
+@media(max-width:760px){.tanuki-time-art{height:65px}}
 .tanuki-scene,.tanuki-scene-controls{position:absolute;inset:0 auto 0 0;width:46%;overflow:hidden}.tanuki-scene{z-index:-1}.tanuki-scene img{position:absolute;width:217.4%;height:100%;max-width:none;object-fit:fill;image-rendering:pixelated}.tanuki-scene-controls{pointer-events:none}.tanuki-scene-controls button{pointer-events:auto}
 .tanuki-scene:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 75%,#100b0d);pointer-events:none}
 .tanuki-flame{position:absolute;z-index:1;width:6%;height:9%;border-radius:50%;background:radial-gradient(ellipse,#fff5a4aa 0%,#ffb33155 25%,transparent 70%);mix-blend-mode:screen;animation:tanuki-flicker .65s steps(3,end) infinite alternate;pointer-events:none}.tanuki-flame-lantern{left:63%;top:29%}.tanuki-flame-lamp{left:63%;top:47%;animation-delay:.3s}

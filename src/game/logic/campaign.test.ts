@@ -34,14 +34,22 @@ test('star thresholds pay the correct coins and time items are single use', () =
   assert.equal(campaign.coins, 12);
   assert.equal(campaign.buyTimeItem(), true);
   assert.equal(campaign.buyTimeItem(), true);
+  assert.equal(campaign.buyTimeItem(), true);
   assert.equal(campaign.buyTimeItem(), false);
-  assert.equal(campaign.coins, 2);
-  assert.equal(campaign.timeItems, 2);
+  assert.equal(campaign.coins, 0);
+  assert.equal(campaign.timeItems, 3);
+  assert.equal(campaign.useTimeItem(), true);
   assert.equal(campaign.useTimeItem(), true);
   assert.equal(campaign.useTimeItem(), true);
   assert.equal(campaign.useTimeItem(), false);
   campaign.completeLevel(1, 24);
   assert.equal(campaign.bestStars[1], 3);
+});
+
+test('time items cost four coins and purchases stop at 99 without charging',()=>{
+  const campaign=new Campaign();campaign.coins=10;campaign.timeItems=98;
+  assert.equal(campaign.buyTimeItem(),true);assert.equal(campaign.coins,6);assert.equal(campaign.timeItems,99);
+  assert.equal(campaign.buyTimeItem(),false);assert.equal(campaign.coins,6);
 });
 
 test('mage magic and class skill damage the boss, while the class fixes the weapon', t => {

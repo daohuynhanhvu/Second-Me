@@ -29,7 +29,7 @@ export function drawWizardSprite(ctx: CanvasRenderingContext2D, x: number, y: nu
   if (!image) return false;
   const row = direction === 'up' ? 0 : direction === 'down' ? 2 : 1;
   const frame = moving ? Math.floor(time * 10) % 8 : 0;
-  ctx.save(); ctx.translate(Math.round(x), Math.round(y));
+  ctx.save(); ctx.translate(x, y);
   if (direction === 'left') ctx.scale(-1, 1);
   if (echo) { ctx.globalAlpha *= .65; ctx.filter = 'brightness(1.65) sepia(1) saturate(4) hue-rotate(135deg)'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 8; }
   ctx.imageSmoothingEnabled = false;

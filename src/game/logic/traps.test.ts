@@ -113,9 +113,13 @@ test('a crusher hit roots the player for a quarter second',t=>{
   advance(.1);assert.ok(game.player.x>x);
 });
 
-test('only one time potion can be spent per leg, and the next rune resets the allowance',t=>{
-  const {game,checkpoint}=setup(t);game.campaign.timeItems=2;
-  assert.equal(game.useTimeItem(),true);assert.equal(game.useTimeItem(),false);
-  assert.equal(game.campaign.timeItems,1);
-  checkpoint(0);assert.equal(game.useTimeItem(),true);assert.equal(game.campaign.timeItems,0);
+test('time items stack up to five per level, including across checkpoints, and reset on retry',t=>{
+  const {game,checkpoint}=setup(t);game.campaign.timeItems=7;
+  const initial=game.legTimeRemaining!;
+  for(let i=0;i<3;i++)assert.equal(game.useTimeItem(),true);
+  assert.equal(game.legTimeRemaining,initial+6);
+  checkpoint(0);
+  for(let i=0;i<2;i++)assert.equal(game.useTimeItem(),true);
+  assert.equal(game.useTimeItem(),false);assert.equal(game.campaign.timeItems,2);
+  game.restartLevel();assert.equal(game.useTimeItem(),true);assert.equal(game.campaign.timeItems,1);
 });

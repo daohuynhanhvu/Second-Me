@@ -253,7 +253,7 @@ export class GameEngine {
   public timePickup: { x: number; y: number } | null = null;
   public pickupSpawnTimer = 5;
   private shardClaimedThisLeg = false;
-  private timeItemUsedThisLeg = false;
+  private timeItemsUsedThisLevel = 0;
   public trappedTime = 0;
   public checkpointIndex = 0;
   public slowed = false;
@@ -464,7 +464,7 @@ export class GameEngine {
   }
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
   public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
-  public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
+  public buyTimeItem() { if (this.screen !== 'shop') return false; const bought=this.campaign.buyTimeItem(); if (bought) this.showBanner(this.language==='vi'?'Đã mua Thêm một chút':'A Little More purchased'); else this.showBanner(this.language==='vi'?'Không thể mua vật phẩm':'Unable to purchase item'); this.notifyHUD(); return bought; }
   public openChest(count:1|10) { if(this.screen!=='shop')return null;const rewards=this.campaign.openChest(count);this.notifyHUD();return rewards; }
   public buyLimitRing() { if (this.screen !== 'shop') return; if (this.campaign.buyLimitRing()) this.showBanner(this.language==='vi'?'Đã mua nhẫn tăng giới hạn.':'Limit ring purchased.'); else this.showBanner(this.language==='vi'?'Không đủ xu.':'Not enough coins.'); this.notifyHUD(); }
   public useLimitRing() {
@@ -475,8 +475,8 @@ export class GameEngine {
   }
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
-  public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&!this.timeItemUsedThisLeg&&this.campaign.timeItems>0&&!this.runeEditing;}
-  public useTimeItem() { if (!this.canUseTimeItem() || !this.campaign.useTimeItem()) return false; this.timeItemUsedThisLeg = true; this.legTimeRemaining = (this.legTimeRemaining??0)+2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
+  public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&this.timeItemsUsedThisLevel<5&&this.campaign.timeItems>0&&!this.runeEditing;}
+  public useTimeItem() { if (!this.canUseTimeItem() || !this.campaign.useTimeItem()) return false; this.timeItemsUsedThisLevel++; this.legTimeRemaining = (this.legTimeRemaining??0)+2; this.showBanner(this.language==='vi'?`+2 giây · Thêm một chút (${this.timeItemsUsedThisLevel}/5)`:`+2s · A Little More (${this.timeItemsUsedThisLevel}/5)`); this.notifyHUD(); return true; }
 
   public stop() {
     if (this.animFrameId !== null) {
@@ -549,7 +549,7 @@ export class GameEngine {
     this.training.reset();
     this.timePickup = null;
     this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
-    this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false;
+    this.shardClaimedThisLeg = false; this.timeItemsUsedThisLevel = 0;
     this.trappedTime = 0;
     this.checkpointIndex = 0;
     this.slowed = false;
@@ -728,7 +728,7 @@ export class GameEngine {
       const result=applyDamage(enemy.hp,amount);const dealt=result.dealt;enemy.hp=result.hp;enemy.hitFlash=.18;
       this.combatHits.push({x:enemy.x,y:enemy.y-30,damage:Math.round(dealt*10)/10,life:.7,broken:enemy.hp===0});this.combatHits=this.combatHits.slice(-24);
       this.renderer.emitMagic('sparkle',enemy.x,enemy.y,heavy?48:24);sounds.playIceHit(false);
-      if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3);this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
+      if(enemy.hp===0){enemy.deathAge=0;if(this.legTimeRemaining!==null)this.legTimeRemaining=Math.max(this.legTimeRemaining,Math.min(puzzleBalance(this.currentLevel.id).legSeconds,this.legTimeRemaining+3));this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);this.showBanner(this.language==='vi'?'Hạ quái · +3 giây · +1 lượt Echo':'Enemy defeated · +3s · +1 Echo charge');}
       this.notifyHUD();return true;
     }
     if (!this.boss || this.bossDeathPending || this.boss.hp<=0) return false;
@@ -1872,7 +1872,7 @@ export class GameEngine {
       this.checkpointIndex++;
       this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
       this.legTimeRemaining = this.devUnlocked ? null : puzzleBalance(this.currentLevel.id).legSeconds;
-      this.shardClaimedThisLeg = false; this.timeItemUsedThisLeg = false; this.timePickup = null;
+      this.shardClaimedThisLeg = false; this.timePickup = null;
       this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
       this.showBanner(this.devUnlocked ? (this.language==='vi'?'Đã kích hoạt ấn thạch · Không giới hạn thời gian':'Rune activated · No time limit') : this.checkpointIndex < this.currentLevel.plates.length
         ? (this.language==='vi'?`Chặng mới ${puzzleBalance(this.currentLevel.id).legSeconds}s · Đến rune ${this.checkpointIndex+1}!`:`New leg · ${puzzleBalance(this.currentLevel.id).legSeconds}s · Reach rune ${this.checkpointIndex + 1}!`)

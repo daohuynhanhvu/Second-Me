@@ -1,0 +1,3 @@
+.time-item-art{position:relative;display:block;width:100%;height:100%;overflow:hidden;background:#fff;border-radius:3px}
+.time-item-art img{position:absolute;max-width:none!important;width:auto!important;height:112%!important;left:50%;top:50%;transform:translate(-50%,-50%);image-rendering:pixelated}
+.supply-icon.time{height:43px}

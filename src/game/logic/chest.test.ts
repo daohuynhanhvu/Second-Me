@@ -10,9 +10,9 @@ test('100 equally spaced rolls yield the published probabilities',()=>{
 test('x1 and x10 charge keys once and credit every reward once',()=>{
  const c=new Campaign();c.chestKeys=55;c.coins=100;
  assert.deepEqual(c.openChest(1,()=>.99),['ring']);assert.equal(c.limitRings,1);assert.equal(c.chestKeys,50);assert.equal(c.coins,100);
- const sequence=[0,.61,.9,.99,0,.61,.9,.99,0,.61];let i=0;
+ const sequence=[0,.75,.9,.99,0,.75,.9,.99,0,.75];let i=0;
  assert.equal(c.openChest(10,()=>sequence[i++])?.length,10);
- assert.equal(c.chestKeys,0);assert.equal(c.coins,160);assert.equal(c.timeItems,2);assert.equal(c.limitRings,3);
+ assert.equal(c.chestKeys,0);assert.equal(c.coins,190);assert.equal(c.timeItems,0);assert.equal(c.limitRings,3);
  const before=JSON.stringify(c);assert.equal(c.openChest(1),null);assert.equal(JSON.stringify(c),before);
 });
 test('keys and awarded rewards survive reload; old saves start with zero keys',t=>{

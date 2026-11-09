@@ -30,7 +30,7 @@ export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: n
   if (!image) return;
   const row = attacking ? 2 : direction === 'up' ? 0 : direction === 'down' ? 2 : 1;
   const frame = attacking ? Math.min(7, Math.max(0, Math.floor(attackProgress * 8))) : moving ? Math.floor(time * 10) % 8 : 0;
-  ctx.save(); ctx.translate(Math.round(x), Math.round(y));
+  ctx.save(); ctx.translate(x, y);
   if (direction === 'left') ctx.scale(-1, 1);
   if (echo) { ctx.globalAlpha *= .7; ctx.filter = 'brightness(1.6) sepia(1) saturate(4) hue-rotate(135deg)'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 12; }
   ctx.imageSmoothingEnabled = false;

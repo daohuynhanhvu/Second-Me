@@ -21,7 +21,7 @@
 @keyframes plasma-core{0%,100%{transform:scale(.72);opacity:.28}45%{opacity:.48}78%{transform:scale(1.08);opacity:.7}}
 @keyframes portal-mote-inward{0%{transform:translate(0,0) scale(.9);opacity:0}20%{opacity:.75}72%{opacity:.55}100%{transform:translate(var(--mote-x),var(--mote-y)) scale(.4);opacity:0}}
 @keyframes portal-breathe{50%{opacity:.5}}
-@keyframes rune-pulse{0%,100%{opacity:.18;filter:drop-shadow(0 0 4px #49f9e6)}50%{opacity:.76;filter:drop-shadow(0 0 13px #65fff0)}}
+@keyframes rune-pulse{0%,100%{opacity:.18}50%{opacity:.76}}
 @keyframes firefly-float{0%,100%{transform:translate(0,0)}26%{transform:translate(var(--fly-x1),var(--fly-y1))}57%{transform:translate(var(--fly-x2),var(--fly-y2))}81%{transform:translate(var(--fly-x3),var(--fly-y3))}}
 @keyframes firefly-twinkle{0%,100%{opacity:.12}22%{opacity:.88}49%{opacity:.26}72%{opacity:1}88%{opacity:.2}}
 body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:none}

@@ -9,8 +9,18 @@ export function ChestSprite({tier=null, reducedMotion=false}: {tier?:ChestTier|n
     setAge(0);
     if(!tier || reducedMotion)return;
     const started=performance.now();
-    const timer=window.setInterval(()=>setAge((performance.now()-started)/1000),50);
-    return ()=>window.clearInterval(timer);
+    let timer = 0;
+    const advance = () => {
+      const elapsed = (performance.now()-started)/1000;
+      setAge(elapsed);
+      // Wake at the next actual sprite frame instead of re-rendering between frames.
+      const next = elapsed < .8
+        ? (Math.floor(elapsed * 10) + 1) / 10
+        : .8 + (Math.floor((elapsed - .8) * 8) + 1) / 8;
+      timer = window.setTimeout(advance, Math.max(1, (next - elapsed) * 1000 + 1));
+    };
+    timer = window.setTimeout(advance, 101);
+    return ()=>window.clearTimeout(timer);
   },[tier,reducedMotion]);
   const opening=!!tier && age<.8 && !reducedMotion;
   const count=opening?8:12;

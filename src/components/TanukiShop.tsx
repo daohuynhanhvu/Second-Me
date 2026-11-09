@@ -1,7 +1,8 @@
 import {ChestGacha} from './ChestGacha.tsx';
 import React, {useEffect, useState} from 'react';
 import type {GameEngine, HUDState} from '../game/GameEngine.ts';
-import {MECHANICAL_ENABLED} from '../game/logic/campaign.ts';
+import {MECHANICAL_ENABLED,TIME_ITEM_CAP,TIME_ITEM_PRICE} from '../game/logic/campaign.ts';
+import {TimeItemArt} from './TimeItemArt.tsx';
 import './tanukiShop.css';
 
 const asset = (path: string) => `${import.meta.env.BASE_URL}assets/${path}`;
@@ -33,8 +34,9 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
   },[wave,hud.reducedMotion]);
   const purchase = (kind: 'time'|'ring') => {
     if (!engine) return;
-    if(hud.coins < (kind==='time'?5:30)){talk(vi?'Chưa đủ xu rồi… Hẹn bạn lần sau nhé!':'Not enough coins… Come back soon!');return;}
-    if (kind === 'time') engine.buyTimeItem(); else engine.buyLimitRing();
+    if (kind==='time' && hud.timeItems>=TIME_ITEM_CAP){talk(vi?'Túi đã đủ 99 vật phẩm rồi!':'You already have 99 of this item!');return;}
+    if(hud.coins < (kind==='time'?TIME_ITEM_PRICE:30)){talk(vi?'Chưa đủ xu rồi… Hẹn bạn lần sau nhé!':'Not enough coins… Come back soon!');return;}
+    if (kind === 'time') {if(!engine.buyTimeItem())return;} else engine.buyLimitRing();
     setMessage(vi?'Cảm ơn bạn đã mua hàng!':'Thank you for your purchase!');
     talk(vi?'Cảm ơn bạn! Chúc hành trình thuận lợi!':'Thank you! Have a safe journey!',true);
   };
@@ -56,7 +58,7 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
       </div>
       <div className="tanuki-stock" role="tabpanel">
         {tab === 'outfits' ? <div className="tanuki-empty"><span>✧</span><p>{vi?'Đang nhập hàng, hãy chờ nha!':'New outfits are on their way. Please wait!'}</p></div> : <>
-          <article className="tanuki-product"><div className="tanuki-product-art tanuki-clock" aria-hidden="true"><svg viewBox="0 0 32 40" aria-hidden="true" shapeRendering="crispEdges"><path fill="#4d291b" d="M6 2h20v4h-2v4h-2v4h-2v4h-2v4h2v4h2v4h2v4h2v4H6v-4h2v-4h2v-4h2v-4h2v-4h-2v-4h-2v-4H8V6H6z"/><path fill="#e3aa57" d="M8 3h16v3H8zm0 31h16v3H8z"/><path fill="#a2dbea" d="M10 7h12v4h-2v4h-2v3h-4v-3h-2v-4h-2zm4 16h4v3h2v4h2v3H10v-3h2v-4h2z"/><path fill="#ffc650" d="M11 11h10v2h-2v3h-6v-3h-2zm3 17h4v2h2v3h-8v-3h2z"/></svg><b>+2s</b></div><div className="tanuki-product-copy"><h3>{vi?'Bình thời gian':'Time potion'}</h3><p>{vi?'Dùng một lần để cộng 2 giây cho chặng hiện tại. Nhấn F trong màn chơi.':'Use once to add 2 seconds to the current leg. Press F while playing.'}</p><small>{vi?'Đang có':'Owned'}: {hud.timeItems}</small><div className="tanuki-product-bottom"><b><Coin/> 5 {vi?'xu':'coins'}</b><button disabled={hud.coins<5} onClick={()=>purchase('time')}>{vi?'MUA':'BUY'}</button></div></div></article>
+          <article className="tanuki-product"><div className="tanuki-product-art tanuki-time-art"><TimeItemArt/></div><div className="tanuki-product-copy"><h3>{vi?'Thêm một chút':'A Little More'}</h3><p>{vi?'Cộng 2 giây cho chặng hiện tại, tối đa 5 lần mỗi màn. Nhấn F để dùng.':'Add 2 seconds to the current leg, up to 5 times per level. Press F to use.'}</p><small>{vi?'Thường · Đang có':'Common · Owned'}: {hud.timeItems}/{TIME_ITEM_CAP}</small><div className="tanuki-product-bottom"><b><Coin/> {TIME_ITEM_PRICE} {vi?'xu':'coins'}</b><button disabled={hud.coins<TIME_ITEM_PRICE||hud.timeItems>=TIME_ITEM_CAP} onClick={()=>purchase('time')}>{hud.timeItems>=TIME_ITEM_CAP?(vi?'ĐÃ ĐẦY':'FULL'):(vi?'MUA':'BUY')}</button></div></div></article>
           <article className="tanuki-product"><div className="tanuki-product-art"><img src={asset('effects/echo-limit-ring.png')} alt=""/></div><div className="tanuki-product-copy"><h3>{vi?'Nhẫn tăng giới hạn':'Echo limit ring'}</h3><p>{vi?'Dùng một nhẫn để tăng giới hạn từ 4 lên 6 Echo trong màn hiện tại. Không cộng dồn.':'Use one ring to raise the Echo limit from 4 to 6 for this level. Does not stack.'}</p><small>{vi?'Đang có':'Owned'}: {hud.limitRings}</small><div className="tanuki-product-bottom"><b><Coin/> 30 {vi?'xu':'coins'}</b><button disabled={hud.coins<30} onClick={()=>purchase('ring')}>{vi?'MUA':'BUY'}</button></div></div></article>
           {MECHANICAL_ENABLED && <article className="tanuki-product"><div className="tanuki-product-copy"><h3>Rivet-07</h3><div className="tanuki-product-bottom"><b><Coin/> 100 {vi?'xu':'coins'}</b><button disabled={hud.mechanicalOwned||hud.coins<100} onClick={()=>engine?.buyMechanical()}>{hud.mechanicalOwned?(vi?'ĐÃ SỞ HỮU':'OWNED'):(vi?'MUA':'BUY')}</button></div></div></article>}
         </>}

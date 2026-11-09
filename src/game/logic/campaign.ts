@@ -4,6 +4,8 @@ import { ECHO_RUNES, rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneS
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
 export const MECHANICAL_ENABLED = false;
+export const TIME_ITEM_PRICE = 4;
+export const TIME_ITEM_CAP = 99;
 export const MATERIALS = [
   { id: 'iron', name: 'Mảnh sắt cổ', detail: 'Kim loại còn ấm dưới lớp rêu.', icon: '◆', color: '#bbc8cf' },
   { id: 'wood', name: 'Gỗ linh mộc', detail: 'Lõi gỗ dùng để rèn vũ khí Echo.', icon: '✦', color: '#b5c987' },
@@ -112,7 +114,7 @@ export class Campaign {
     this.lastChestRewards=rewards;this.save();return [...rewards];
   }
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
-  buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
+  buyTimeItem() { if (this.coins < TIME_ITEM_PRICE || this.timeItems >= TIME_ITEM_CAP) return false; this.coins -= TIME_ITEM_PRICE; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
   buyLimitRing() { if (this.coins < 30) return false; this.coins -= 30; this.limitRings++; this.save(); return true; }
   useLimitRing() { if (this.limitRings < 1) return false; this.limitRings--; this.save(); return true; }
