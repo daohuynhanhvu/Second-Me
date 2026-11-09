@@ -4,7 +4,7 @@ import {ShopItemIcon} from './ShopItemIcon.tsx';
 import {SHOP_ITEMS,type ShopItemId} from '../game/logic/shopItems.ts';
 import type {GameEngine,HUDState} from '../game/GameEngine.ts';
 import './tanukiTradingPost.css';
-const displayItems=[...SHOP_ITEMS.filter(i=>i.id==='time'||i.id==='ring'),...SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring')];
+const displayItems=[...SHOP_ITEMS.filter(i=>i.id==='time'||i.id==='ring'),...SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring'&&i.id!=='aid')];
 const poseOffsets=[[0,0],[18,-2],[7,6],[18,6]];
 const asset=(name:string)=>`${import.meta.env.BASE_URL}assets/ui/${name}`;
 export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
@@ -43,8 +43,8 @@ export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   <div className="trading-wallet"><img src={asset('raccoon-coin.png')} alt=""/><span>{vi?'XU':'GOLD'}: <b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></span></div>
   <section className="trading-catalogue" aria-label={vi?'Quầy hàng Tanuki':'Tanuki’s shop'}>
    <div className="trading-tabs" role="tablist"><button role="tab" aria-selected={tab==='items'} onClick={()=>setTab('items')}>{vi?'VẬT PHẨM':'ITEMS'} <ShopItemIcon id="healSmall"/></button><button role="tab" aria-selected={tab==='outfits'} onClick={()=>setTab('outfits')}>{vi?'TRANG PHỤC':'OUTFITS'} <span aria-hidden="true">♜</span></button></div>
-   <div className="trading-hint">{vi?'7 VẬT PHẨM · CUỘN ĐỂ XEM TẤT CẢ':'7 ITEMS · SCROLL TO SEE ALL'}</div>
-   {tab==='items'?<><div className="trading-items" role="tabpanel" aria-label={vi?'Vật phẩm':'Items'}>{displayItems.map(product=><button key={product.id} aria-pressed={selected===product.id} onClick={()=>select(product.id)} className={selected===product.id?'selected':''}><ShopItemIcon id={product.id}/><span>{vi?product.vi:product.en}<small>{vi?'Đang có':'Owned'}: {stock(product.id).toLocaleString(vi?'vi-VN':'en-US')}</small></span><b>{product.id==='aid'&&!hud.aidUnlocked?(vi?'KHÓA':'LOCKED'):`${product.price} ${vi?'xu':'coins'}`}</b></button>)}</div>
+   <div className="trading-hint">{vi?`${displayItems.length} VẬT PHẨM · CUỘN ĐỂ XEM TẤT CẢ`:`${displayItems.length} ITEMS · SCROLL TO SEE ALL`}</div>
+   {tab==='items'?<><div className="trading-items" role="tabpanel" aria-label={vi?'Vật phẩm':'Items'}>{displayItems.map(product=><button key={product.id} aria-pressed={selected===product.id} onClick={()=>select(product.id)} className={selected===product.id?'selected':''}><ShopItemIcon id={product.id}/><span>{vi?product.vi:product.en}<small>{vi?'Đang có':'Owned'}: {stock(product.id).toLocaleString(vi?'vi-VN':'en-US')}</small></span><b>{`${product.price} ${vi?'xu':'coins'}`}</b></button>)}</div>
    <div className="trading-product-info" aria-live="polite"><header><strong>{vi?item.vi:item.en}</strong><small>{vi?'Trong túi':'Owned'} {stock(selected).toLocaleString()} / {item.cap.toLocaleString()}</small></header><p>{vi?item.detailVi:item.detailEn}</p>{selected==='chances'&&(hud.chanceCharges??0)>0&&<small>{vi?'Món đang dùng còn ':'Opened item has '}{hud.chanceCharges} {vi?'lượt':'charges left'}</small>}</div></>:<div className="trading-outfits" role="tabpanel"><span>♜</span><h2>{vi?'Hàng đang trên đường tới':'More outfits are on the way'}</h2><p>{vi?'Tanuki chưa có trang phục để bán.':'Tanuki has no outfits for sale yet.'}</p></div>}
   </section>
   <div className="trading-actions"><button className="trading-buy" ref={buyButton} disabled={tab!=='items'||selected==='aid'||!unlocked||maxQuantity<1} onClick={()=>{setQuantity(1);setConfirm(true);}}>{selected==='aid'?(vi?'PHẦN THƯỞNG HÀNH TRÌNH':'JOURNEY REWARD'):!unlocked?(vi?'CHƯA MỞ KHÓA':'LOCKED'):room<=0?(vi?'TÚI ĐÃ ĐẦY':'INVENTORY FULL'):affordable<1?(vi?'CHƯA ĐỦ XU':'NOT ENOUGH COINS'):vi?'MUA':'BUY'}</button><button className="trading-leave" onClick={()=>engine?.goToLobby()}>{vi?'THOÁT':'LEAVE'} ↩</button></div>
