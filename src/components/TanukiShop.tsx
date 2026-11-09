@@ -10,8 +10,6 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
   const vi = hud.language === 'vi';
   const [tab, setTab] = useState<'items'|'outfits'>('items');
   const [speech, setSpeech] = useState<'welcome'|'shop'|'bye'>('welcome');
-  const [chestOpen, setChestOpen] = useState(true);
-  const [chestDialog, setChestDialog] = useState(false);
   const [message, setMessage] = useState('');
   const [greeting, setGreeting] = useState({text: vi?'Kính chào!':'Welcome!', id:0});
   const [visible, setVisible] = useState(true);
@@ -32,12 +30,6 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
     },1000/12);
     return ()=>window.clearInterval(timer);
   },[wave,hud.reducedMotion]);
-  useEffect(() => {
-    if (!chestDialog) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setChestDialog(false); } };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [chestDialog]);
   const purchase = (kind: 'time'|'ring') => {
     if (!engine) return;
     if(hud.coins < (kind==='time'?5:30)){talk(vi?'Chưa đủ xu rồi… Hẹn bạn lần sau nhé!':'Not enough coins… Come back soon!');return;}
@@ -50,10 +42,7 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
     <div className="tanuki-scene-controls">
       <div className="tanuki-speech" aria-live="polite" hidden={!visible}>{greeting.text}</div>
       <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');talk(vi?(speech==='shop'?'Hôm nay bạn muốn tìm món gì?':'Mời mua hàng!'):(speech==='shop'?'What are you looking for today?':'Have a look!'),true);}}/>
-      <button className={`tanuki-chest ${chestOpen?'':'is-closed'}`} aria-label={vi?'Mở rương thưởng':'Open reward chest'} onClick={()=>{setChestOpen(false);setChestDialog(true);}}>
-        {!chestOpen && <span className="tanuki-closed-chest" aria-hidden="true"><i/></span>}
-        <span className="tanuki-chest-label">{vi?'RƯƠNG THƯỞNG':'REWARD CHEST'}</span>
-      </button>
+
     </div>
     <header className="tanuki-header"><h1>{vi?'KHO BÁU THỜI GIAN':'TIME TREASURES'}</h1><div className="tanuki-wallet"><Coin/> <strong>{hud.coins.toLocaleString()}</strong> {vi?'xu':'coins'}</div></header>
     <button className="tanuki-back" onMouseEnter={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onFocus={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onClick={()=>engine?.goToLobby()}>‹ {vi?'VỀ SẢNH':'BACK TO LOBBY'}</button>
@@ -72,6 +61,5 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
       </div>
       <p className="tanuki-purchase-message" role="status">{message}</p>
     </main>
-    {chestDialog && <div className="tanuki-dialog-backdrop" onClick={()=>setChestDialog(false)}><section className="tanuki-dialog" role="dialog" aria-modal="true" aria-labelledby="tanuki-chest-title" onClick={e=>e.stopPropagation()}><span className="tanuki-dialog-icon">✦</span><h2 id="tanuki-chest-title">{vi?'RƯƠNG THƯỞNG':'REWARD CHEST'}</h2><p>{vi?'Rương thưởng đang được chuẩn bị. Hẹn gặp bạn khi rương mở nhé!':'The reward chest is being prepared. Come back when it opens!'}</p><button autoFocus onClick={()=>setChestDialog(false)}>{vi?'QUAY LẠI CỬA HÀNG':'BACK TO SHOP'}</button></section></div>}
   </div>;
 }

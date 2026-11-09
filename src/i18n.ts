@@ -50,7 +50,7 @@ const pairs: [string, string][] = [
   ['Tanuki’s animated stall', 'Quầy Tanuki chuyển động'],
   ['Tanuki and the stall now turn in a new pixel-art animation when you talk.', 'Tanuki và quầy hàng có chuyển động xoay mới theo phong cách pixel khi bạn trò chuyện.'],
   ['The new Tanuki shop', 'Cửa hàng Tanuki mới'],
-  ['Visit Tanuki to buy items, chat and discover the reward chest in preparation.', 'Ghé quầy Tanuki để mua vật phẩm, trò chuyện và khám phá rương thưởng đang chuẩn bị.'],
+  ['Visit Tanuki to buy items and chat.', 'Ghé quầy Tanuki để mua vật phẩm và trò chuyện.'],
   ['A new look for coins', 'Diện mạo mới cho xu'],
   ['Pixel raccoon coins now appear in the shop, inventory and game rewards.', 'Xu gấu mèo pixel đã xuất hiện trong cửa hàng, túi đồ và phần thưởng của game.'],
   ['Echo limit ring', 'Nhẫn tăng giới hạn'],

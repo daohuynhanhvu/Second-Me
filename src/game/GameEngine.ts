@@ -473,7 +473,8 @@ export class GameEngine {
   }
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
-  public useTimeItem() { if (this.screen !== 'playing' || this.legTimeRemaining === null || this.timeItemUsedThisLeg || !this.campaign.useTimeItem()) return false; this.timeItemUsedThisLeg = true; this.legTimeRemaining += 2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
+  public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&!this.timeItemUsedThisLeg&&this.campaign.timeItems>0&&!this.runeEditing;}
+  public useTimeItem() { if (!this.canUseTimeItem() || !this.campaign.useTimeItem()) return false; this.timeItemUsedThisLeg = true; this.legTimeRemaining = (this.legTimeRemaining??0)+2; this.showBanner('+2s · Time potion used'); this.notifyHUD(); return true; }
 
   public stop() {
     if (this.animFrameId !== null) {
@@ -894,6 +895,7 @@ export class GameEngine {
   private get comboSpeed() { return this.hasteTime > 0 || this.overdrive > 0 ? 2 : 1; }
 
   public attack(target?: { x: number; y: number }) {
+    if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0) return;
     const combo = this.comboFor();
     if (combo) {
@@ -1034,6 +1036,7 @@ export class GameEngine {
   }
 
   public useSkill(_target?: { x: number; y: number }) {
+    if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
     if (this.characterClass === 'mage') {
       if(this.orbitOrbs.length >= 3) return;
@@ -1078,6 +1081,7 @@ export class GameEngine {
   }
 
   public dodge() {
+    if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || (!this.boss&&!this.enemies.some(e=>e.hp>0)) || this.dodgeCooldown > 0) return;
     this.combo?.cancel(); this.lunge.time = 0;           // a dodge breaks the combo
     this.dodgeTime = 0.16;
@@ -1130,6 +1134,7 @@ export class GameEngine {
   // --- Core Gameplay Actions ---
 
   public toggleRecording() {
+    if(this.orientationBlocked)return;
     if (this.screen !== 'playing') return;
 
     if (this.recorder.getStatus() === 'recording') {
@@ -1164,6 +1169,7 @@ export class GameEngine {
   }
 
   public spawnEcho() {
+    if(this.orientationBlocked)return;
     if (this.screen !== 'playing') return;
     if(this.echoes.length>=this.echoLimit){this.showBanner(this.language==='vi'?`Tối đa ${this.echoLimit} Echo. Thu hồi một Echo trước khi gọi thêm.`:`Maximum ${this.echoLimit} Echoes. Recall one before summoning another.`);return;}
 
@@ -1241,6 +1247,10 @@ export class GameEngine {
     }
   }
 
+  public orientationBlocked=false;
+  public setOrientationBlocked(blocked:boolean){this.orientationBlocked=blocked;this.heldKeys.clear();if(blocked)this.player.isMoving=false;}
+  public inventoryOpen=false;
+  public setInventoryOpen(open:boolean){this.inventoryOpen=open;this.heldKeys.clear();}
   public runeEditing=false;
   public setRuneEditing(open:boolean){this.runeEditing=open;this.heldKeys.clear();}
   public setRuneSlot(slot:number,id:EchoRuneId|null):boolean{
@@ -1253,7 +1263,7 @@ export class GameEngine {
     this.lastRuneReward=id;this.notifyHUD();return true;
   }
   public canUseEchoRune(id:EchoRuneId):boolean {
-    if(this.runeEditing||this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
+    if(this.orientationBlocked||this.runeEditing||this.screen!=='playing'||this.currentLevel.id<2||(this.boss&&this.boss.hp<=0)||this.bossDeathPending||this.exitTravelRemaining>0||this.guides.blocking||!((this.campaign.echoRunes[id]??0)>0))return false;
     if(id==='call')return this.echoCharges+(this.echoFreeSummon?1:0)<this.echoLimit;
     if(id==='restore')return this.echoes.some(e=>(e.stability??100)<100);
     return !this.activeEchoRunes.has(id);
@@ -1359,6 +1369,7 @@ export class GameEngine {
   }
 
   public swapEcho() {
+    if(this.orientationBlocked)return;
     const cost=this.activeEchoRunes.has('swap')?15:30;
     if(this.screen!=='playing'||!this.echo||this.swapCooldown>0||(this.echo.stability??100)<cost)return;
     const obstacles=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);
@@ -1383,7 +1394,7 @@ export class GameEngine {
   // --- Input Handling ---
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if(this.runeEditing)return;
+    if(this.orientationBlocked||this.runeEditing||this.inventoryOpen)return;
     // Prevent default browser scroll on arrow keys / space
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
       e.preventDefault();
@@ -1593,7 +1604,7 @@ export class GameEngine {
   }
 
   private update(dt: number) {
-    if (this.screen !== 'playing' || this.runeEditing) return;
+    if (this.screen !== 'playing' || this.orientationBlocked || this.runeEditing || this.inventoryOpen) return;
     if(this.tutorialEnabled){
       const previousTopic=this.guides.active;
       if(!this.guides.blocking)this.discoverMechanics();

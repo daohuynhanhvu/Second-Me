@@ -1,3 +1,6 @@
+import './components/ForestDialogs.css';
+import {LandscapeGate} from './components/LandscapeGate.tsx';
+import {readLandscapeRequirement} from './game/logic/orientation.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, type HUDState } from './game/GameEngine.ts';
 import { Intro, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
@@ -10,6 +13,7 @@ const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:
   recordingTimeRemaining:8000, echoStatus:'none', echoCount:0, isMuted:false, bannerMessage:'', elapsedLevelTime:0,
   completed:[], forged:false, lastReward:null, health:100, bossHp:0, bossPhase:0, attackCooldown:0, dodgeCooldown:0, legTimeRemaining:null, checkpointIndex:0, checkpointCount:0, slowed:false, defeatReason:'damage', volume:.25, voiceVolume:1, reducedMotion:false, showHints:true, devUnlocked:false, language:'en', characterClass:'mage', weapon:'staff', coins:0, timeItems:0, limitRings:0, echoLimit:4, limitRingActive:false, bestStars:{}, lastRating:null, skillCooldown:0, bossArmor:0, pillarsRemaining:0, activeBuff:'', skillDrop:null, mechanicalOwned:false };
 export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngine) => void } = {}) {
+  const [portraitBlocked,setPortraitBlocked]=useState(readLandscapeRequirement);
   const canvas = useRef<HTMLCanvasElement>(null);
   const ref = useRef<GameEngine | null>(null);
   const [hud, setHud] = useState(initial);
@@ -20,17 +24,23 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     engine.tutorialEnabled = true;
     engine.levelLoading = true;   // levels open through the loading screen
     if (import.meta.env.DEV) (window as unknown as { __engine?: GameEngine }).__engine = engine;   // console checks
+    engine.setOrientationBlocked(readLandscapeRequirement());
     engine.setCanvas(canvas.current); engine.onHUDChange = state => setHud({ ...state }); engine.start();
     prepare?.(engine);
     return () => engine.stop();
   }, []);
+  useEffect(()=>{
+    const update=()=>{const blocked=readLandscapeRequirement();ref.current?.setOrientationBlocked(blocked);setPortraitBlocked(blocked);};update();
+    const media=window.matchMedia('(pointer: coarse)');window.addEventListener('resize',update);window.addEventListener('orientationchange',update);media.addEventListener('change',update);
+    return()=>{window.removeEventListener('resize',update);window.removeEventListener('orientationchange',update);media.removeEventListener('change',update);};
+  },[]);
   const filmPlaying = hud.screen === 'intro' && introRun > 0;
   useEffect(() => { if (ref.current) ref.current.suspendVisuals = filmPlaying; }, [filmPlaying]);
   const engine = ref.current;
   const lang = hud.language === 'vi' ? 'vi' : 'en';
-  return localize(<main className="adventure-app" lang={hud.language} translate="no"><div className="game-stage" data-screen={hud.screen}><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
+  return localize(<main className="adventure-app" lang={hud.language} translate="no">{portraitBlocked&&<LandscapeGate vi={hud.language==='vi'}/>}<div className="game-stage" data-screen={hud.screen} inert={portraitBlocked}><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
     {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
-    {hud.screen === 'intro' && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} onDone={() => setIntroRun(0)}/>}
+    {hud.screen === 'intro' && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} paused={portraitBlocked} onDone={() => setIntroRun(0)}/>}
     {hud.screen === 'loading' && <LoadingScreen key={hud.loadingLevel ?? 'lobby'} language={lang} reducedMotion={hud.reducedMotion}
       level={hud.loadingLevel == null ? null : { levelId: hud.loadingLevel, character: hud.characterClass, lang }} portal={!!hud.loadingFromMenu}
       onReveal={() => ref.current?.revealLoadedLevel()} onDone={flash => { if (flash) setPortalFlash(n => n + 1); ref.current?.finishLoading(); }}/>}

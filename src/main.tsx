@@ -3,5 +3,6 @@ import App from './App.tsx';
 import './index.css';
 import './adventure.css';
 import './mainMenu.css';
+import './vietnameseTypography.css';
 
 createRoot(document.getElementById('root')!).render(<App />);
