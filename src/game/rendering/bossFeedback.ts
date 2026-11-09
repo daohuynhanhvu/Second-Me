@@ -33,7 +33,10 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
       }
       ctx.fillStyle = '#102b3a';ctx.fillRect(-25, 31, 50, 5);
       ctx.fillStyle = flash > 0 ? '#fff6c9' : '#a0e7f5';ctx.fillRect(-25,31,50*pillar.hp/pillar.maxHp,5);
-      ctx.fillStyle='#071b29';ctx.fillRect(-38,39,76,25);ctx.font = '20px "Second Me Pixel", monospace';ctx.textAlign = 'center';ctx.fillStyle = '#d8f8ff';ctx.fillText(`${Math.round(pillar.hp*10)/10}/${pillar.maxHp}`,0,58);
+      // Integer pixel glyphs remain readable when the game canvas is scaled.
+      ctx.fillStyle='#041521';ctx.fillRect(-47,39,94,27);
+      ctx.strokeStyle='#8ddbeb';ctx.lineWidth=1;ctx.strokeRect(-46.5,39.5,93,26);
+      drawBossNumbers(ctx,`${Math.ceil(pillar.hp)}/${pillar.maxHp}`,0,46,2,'#effcff');
     }
     ctx.restore();
   }
@@ -61,4 +64,17 @@ export function drawCombatHits(ctx: CanvasRenderingContext2D, hits: { x:number;y
     ctx.fillText(`−${Math.round(hit.damage*10)/10}`,0,-30-(reduced?0:progress*26));
     ctx.restore();
   }
+}
+
+const DIGITS:Record<string,string[]>={
+ '0':['111','101','101','101','111'],'1':['010','110','010','010','111'],
+ '2':['111','001','111','100','111'],'3':['111','001','111','001','111'],
+ '4':['101','101','111','001','001'],'5':['111','100','111','001','111'],
+ '6':['111','100','111','101','111'],'7':['111','001','010','010','010'],
+ '8':['111','101','111','101','111'],'9':['111','101','111','001','111'],
+ '/':['001','001','010','100','100']
+};
+function drawBossNumbers(ctx:CanvasRenderingContext2D,text:string,cx:number,y:number,scale:number,color:string){
+ const width=(text.length*4-1)*scale,left=Math.round(cx-width/2);ctx.fillStyle=color;
+ [...text].forEach((char,i)=>DIGITS[char]?.forEach((row,dy)=>[...row].forEach((bit,dx)=>{if(bit==='1')ctx.fillRect(left+(i*4+dx)*scale,Math.round(y)+dy*scale,scale,scale);})));
 }

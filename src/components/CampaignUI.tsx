@@ -1,4 +1,6 @@
 import './JourneyFinale.css';
+import './CombatActionBar.css';
+import { CombatActionBar } from './CombatActionBar.tsx';
 import { TrailInventory } from './TrailInventory.tsx';
 import { TanukiShop } from './TanukiShop.tsx';
 import { puzzleBalance } from '../game/logic/balance.ts';
@@ -266,6 +268,13 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   const [settings, setSettings] = useState(false);
   const boss = hud.bossHp > 0;
   return localize(<div className="adventure-hud overlay">
+    {hud.bossIntroduction&&<div className="boss-introduction" role="dialog" aria-modal="true" aria-labelledby="boss-intro-name"><section>
+      <span className="boss-intro-eyebrow">{hud.language==='vi'?'ĐẤU TRƯỜNG CUỐI · VI':'FINAL ENCOUNTER · VI'}</span>
+      <h2 id="boss-intro-name">FROST GUARDIAN</h2><p className="boss-intro-story">{hud.language==='vi'?'Kẻ canh giữ ngủ yên đã thức giấc. Bốn trụ băng đang bảo vệ hắn.':'The sleeping guardian has awakened. Four frost pillars make it invulnerable.'}</p>
+      <ol><li><b>{hud.language==='vi'?'PHÁ BỐN TRỤ':'BREAK FOUR PILLARS'}</b><span>{hud.language==='vi'?'Mỗi trụ 60 HP. Còn bất kỳ trụ nào, boss miễn sát thương.':'60 HP each. The boss takes no damage while any pillar remains.'}</span></li><li><b>{hud.language==='vi'?'PHỐI HỢP VỚI ECHO':'FIGHT WITH YOUR ECHOES'}</b><span>{hud.language==='vi'?'Echo hút sự chú ý của boss. Giữ rune giữa sân để làm chậm hắn.':'Echoes draw the boss’s attention. Hold the central rune to slow its pursuit.'}</span></li><li><b>{hud.language==='vi'?'NÉ ĐÒN, RỒI PHẢN CÔNG':'DODGE, THEN STRIKE'}</b><span>{hud.language==='vi'?'Rời vùng báo đòn. Tấn công khi hắn vừa đập xuống và đang hồi sức.':'Leave marked attack zones. Counterattack during recovery after each slam.'}</span></li></ol>
+      <div className="boss-intro-stats">240 HP · {hud.language==='vi'?'3 GIAI ĐOẠN':'3 PHASES'}</div><button autoFocus className="primary" onClick={()=>engine?.beginBossFight()}>{hud.language==='vi'?'BẮT ĐẦU TRẬN ĐẤU':'FACE THE GUARDIAN'} <ArrowRight size={20}/></button>
+    </section></div>}
+
     <div className="hud-top"><div className="level-card"><small>{hud.levelName}{hud.training?' · DEV':' / 06'}</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="player-health" role="meter" aria-label={hud.language==='vi'?'Máu nhân vật':'Player health'} aria-valuenow={hud.health} aria-valuemin={0} aria-valuemax={hud.maxHealth??100}><b style={{width:`${hud.health/(hud.maxHealth??100)*100}%`}}/><strong>{hud.health} / {hud.maxHealth??100} HP</strong></span></span>
       {(hud.enemiesRemaining??0)>0&&<small>{hud.language==='vi'?`QUÁI CANH ĐƯỜNG · ${hud.enemiesRemaining}`:`TRAIL ENEMIES · ${hud.enemiesRemaining}`}</small>}
       {(hud.echoCount>0 || hud.echoDurationMs>0) && <div className="echo-timeline" aria-label="Echo timeline"><span>ECHO {hud.echoCount}/{hud.echoLimit} · {hud.echoCharges} {hud.language==='vi'?'lượt':'charges'} · {Math.ceil(hud.echoStability)} {hud.language==='vi'?'ổn định':'stability'}</span>{hud.echoDurationMs>0 && <div className="echo-timeline-track"><i style={{left:`${Math.min(100,hud.echoElapsedMs/hud.echoDurationMs*100)}%`}}/>{hud.echoEvents.map((event,index)=><b key={index} style={{left:`${Math.min(100,event.time/hud.echoDurationMs*100)}%`}} title={`${event.kind} · ${(event.time/1000).toFixed(1)}s`}>{event.kind==='attack'?'✦':'◆'}</b>)}</div>}</div>}
@@ -277,6 +286,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
     {hud.bannerMessage && <div className={'hud-banner ' + (boss ? 'boss-banner' : 'trail-banner')}>{hud.bannerMessage}</div>}
     {hud.activeBuff && <div className="combat-buff">{hud.activeBuff}</div>}
     {hud.dissonanceSeconds>0 && <div className="combat-buff" role="status">RẠN VỠ {hud.dissonanceSeconds.toFixed(1)} / 5s · Gọi Echo để bảo hộ</div>}
+    {!bag&&!settings&&!hud.bossIntroduction&&<CombatActionBar engine={engine} hud={hud}/>}
     {/* Selected runes are managed and activated inside Inventory. */}
     {bag && <div className="modal-backdrop inventory-backdrop" onClick={()=>document.dispatchEvent(new Event('close-trail-inventory'))}><div className="panel inventory-modal forest-dialog" onClick={e=>e.stopPropagation()}><Inventory engine={engine} hud={hud} close={()=>setBag(false)}/></div></div>}
     {settings && <SettingsPanel engine={engine} hud={hud} close={()=>setSettings(false)}/>} 

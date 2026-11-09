@@ -374,7 +374,7 @@ test('heroes face their movement in every level, including the boss arena, and E
       const {engine, controls, advance} = setup();
       engine.currentLevelIdx = level;
       engine.characterClass = character;
-      engine.restartLevel();
+      engine.restartLevel();engine.beginBossFight();
       engine.enemies = [];
       if (engine.boss) { engine.boss.x = engine.player.x + 300; engine.boss.y = engine.player.y; }
       engine.recorder.startRecording(engine.player.x, engine.player.y, engine.player.direction);
@@ -399,7 +399,7 @@ test('moving during combat keeps the movement-facing sprite while attacks remain
   mockDocument(t);
   for (const character of ['mage', 'swordsman'] as const) {
     const {engine, controls, advance} = setup();
-    engine.currentLevelIdx = 5; engine.characterClass = character; engine.restartLevel();
+    engine.currentLevelIdx = 5; engine.characterClass = character; engine.restartLevel();engine.beginBossFight();
     engine.attack({x: engine.player.x + 200, y: engine.player.y});
     assert.ok(engine.combo?.active, `${character} starts an attack`);
     controls.heldKeys.add('KeyW'); advance(.05);
@@ -407,4 +407,14 @@ test('moving during combat keeps the movement-facing sprite while attacks remain
     assert.equal(comboPose(engine), null, 'movement uses the directional sprite instead of the side-facing attack sprite');
     assert.ok(engine.combo?.active, 'the attack continues while moving');
   }
+});
+
+test('boss introduction freezes combat and the clock until explicitly started', t=>{
+ mockDocument(t);
+ const {engine,advance}=setup();engine.currentLevelIdx=5;engine.restartLevel();
+ assert.equal(engine.bossIntroduction,true);
+ const x=engine.boss!.x,y=engine.boss!.y;
+ engine.attack();engine.useSkill();advance(1);
+ assert.equal((engine as unknown as {elapsedLevelTime:number}).elapsedLevelTime,0);assert.equal(engine.boss!.x,x);assert.equal(engine.boss!.y,y);assert.equal(engine.mana.value,100);
+ engine.beginBossFight();advance(.1);assert.equal(engine.bossIntroduction,false);assert.ok((engine as unknown as {elapsedLevelTime:number}).elapsedLevelTime>0);
 });

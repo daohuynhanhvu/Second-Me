@@ -5,6 +5,7 @@ import { LEVELS } from '../game/logic/levels.ts';
 import { RuneLoadoutEditor, RuneStone } from './EchoRunes.tsx';
 import './JourneyCamp.css';
 import './JourneyCampV2.css';
+import './JourneyCampScene.css';
 import { JourneyAmbience } from './JourneyAmbience.tsx';
 
 // Traced in the painting's native 1536x1024 coordinates, including each bend.
@@ -33,15 +34,18 @@ export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:G
       <button className="camp-prepare-option" onClick={()=>{setPreparing(false);setRuneEditor(true);}}><span className="prepare-rune"><RuneStone id={hud.runeLoadout?.[0]??'call'}/></span><div><small>{vi?'5 Ô RUNE':'FIVE RUNE SLOTS'}</small><strong>{vi?'Ấn nâng Echo':'Echo runes'}</strong><p>{hud.runeLoadout?.length??0} / 5 {vi?'ô đã chọn · Thay đổi bộ rune':'slots filled · Change your rune set'}</p></div><ArrowRight size={18}/></button>
       <div className="camp-prepare-tools"><button onClick={()=>{setPreparing(false);onNews?.();}}><Bell size={14}/>{vi?'Tin mới':'News'}</button><button onClick={()=>{setPreparing(false);engine?.goToMainMenu();}}>{vi?'Menu chính':'Main menu'}</button><button onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
     </section></div>}
-    <aside className="journey-camp">
-      <div className="camp-overline"><Flame size={15}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</div>
-      <h1>{complete?(vi?'Khu rừng thức giấc.':'The forest awakens.'):(vi?'Khu rừng vẫn nhớ.':'The forest remembers.')}</h1>
-      <p className="camp-intro">{vi?'Một ký ức mới đang chờ bạn.':'Your next memory awaits.'}</p>
-      <div className="camp-next-trail"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><span>{LEVELS[complete?0:next].subtitle}</span></div>
-      <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={21} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC':'CONTINUE JOURNEY'):(vi?'BẮT ĐẦU HÀNH TRÌNH':'BEGIN JOURNEY')}</span><ArrowRight size={18}/></button>
-      <div className="camp-ready-row"><button className="camp-traveler" onClick={()=>engine?.openCharacters()} aria-label={vi?'Đổi nhân vật':'Change character'}><span className="camp-traveler-art">{traveler??<Users size={30}/>}</span><span><b>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</b><em>{hud.characterClass==='swordsman'?(vi?'Kiếm sĩ':'Swordsman'):hud.characterClass==='mechanical'?(vi?'Kỹ sư':'Engineer'):(vi?'Pháp sư':'Mage')}</em></span></button><button className="camp-prepare-button" onClick={()=>setPreparing(true)}><Backpack size={17}/>{vi?'CHUẨN BỊ':'PREPARE'}</button></div>
-      <div className="camp-campsite" aria-hidden="true"><i/><i/><i/></div>
-      <div className="camp-bottom"><div className="camp-journey-count"><span>{count} / 6 {vi?'lối mòn đã khám phá':'trails explored'}</span><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}>{Array.from({length:6},(_,i)=><i key={i} className={i<count?'explored':i===next?'next':''}/>)}</div></div><p className="camp-footnote"><span/>{vi?'Tiến độ lưu trên thiết bị này.':'Saved on this device.'}</p></div>
+    <aside className="journey-camp integrated-camp">
+      <header className="rest-heading"><span><Flame size={17}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</span><span>{count} / 6</span></header>
+      <div className={`rest-scene${hud.reducedMotion?' rest-still':''}`}>
+        <div className="rest-firelight" aria-hidden="true"/><div className="rest-embers" aria-hidden="true"><i/><i/><i/></div>
+        <button className="rest-hero" onClick={()=>engine?.openCharacters()} aria-label={vi?'Đổi nhân vật':'Change character'}><span>{traveler??<Users size={50}/>}</span></button>
+        <div className="rest-scene-caption"><span>{vi?'BÊN ÁNH LỬA TRẠI':'BY THE CAMPFIRE'}</span><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><button onClick={()=>engine?.openCharacters()}>{vi?'Đổi nhân vật':'Change hero'} <ArrowRight size={14}/></button></div>
+      </div>
+      <div className="rest-kit"><div><span>{vi?'SẴN SÀNG LÊN ĐƯỜNG':'READY FOR THE TRAIL'}</span><p>{hud.runeLoadout?.length??0} / 5 {vi?'rune đã chọn':'runes equipped'}</p></div><button className="rest-prepare" onClick={()=>setPreparing(true)}><Backpack size={18}/>{vi?'Chuẩn bị':'Prepare'}</button></div>
+      <div className="rest-departure"><span>{complete?(vi?'HÀNH TRÌNH MỚI':'ANOTHER JOURNEY'):(vi?'ĐIỂM ĐẾN TIẾP THEO':'NEXT DESTINATION')}</span><div className="rest-destination"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><strong>{LEVELS[complete?0:next].subtitle}</strong></div>
+        <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={19} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'LÊN ĐƯỜNG':'BEGIN JOURNEY')}</span><ArrowRight size={18}/></button>
+      </div>
+      <footer className="rest-progress"><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}>{Array.from({length:6},(_,i)=><i key={i} className={i<count?'explored':i===next?'next':''}/>)}</div><span>{vi?'Đã lưu hành trình':'Journey saved'}</span></footer>
     </aside>
     <section className="journey-chart" aria-label={vi?'Bản đồ hành trình':'Journey map'}>
       <div className={`journey-world${hud.reducedMotion?' map-still':''}`}>

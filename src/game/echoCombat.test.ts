@@ -10,7 +10,7 @@ function setup(t: TestContext, level = 1) {
   const old = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis, 'document', { configurable:true, value:{body:{dataset:{}}} });
   t.after(() => old ? Object.defineProperty(globalThis, 'document', old) : Reflect.deleteProperty(globalThis, 'document'));
-  const game = new GameEngine(); game.currentLevelIdx = level; game.restartLevel();
+  const game = new GameEngine(); game.currentLevelIdx = level; game.restartLevel();game.beginBossFight();
   game.currentLevel = structuredClone(game.currentLevel); game.currentLevel.walls=[]; game.currentLevel.doors=[]; game.currentLevel.traps=[];
   game.enemies=[]; game.legTimeRemaining=null; game.player.x=100; game.player.y=600;
   const update = (dt=.05) => (game as unknown as {update(dt:number):void}).update(dt);

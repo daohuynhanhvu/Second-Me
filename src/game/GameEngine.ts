@@ -1,3 +1,5 @@
+import { SKILL_PICKUPS } from './logic/skillPickups.ts';
+import { ManaPool, MAX_MP, COMBO_MP, skillManaCost } from './logic/mana.ts';
 import {SHOP_ITEMS,type ShopItemId,type SupplyId,type Supplies} from './logic/shopItems.ts';
 import {enemyWaypoint} from './logic/enemyNavigation.ts';
 import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logic/damage.ts';
@@ -102,7 +104,9 @@ export interface HUDState {
   health: number;
   maxHealth?:number;supplies?:Supplies;chanceCharges?:number;aidUnlocked?:boolean;usedSupplies?:SupplyId[];
   bossHp: number;
+  mana?:number;maxMana?:number;skillManaCost?:number;
   bossPhase: number;
+  bossIntroduction?: boolean;
   attackCooldown: number;
   dodgeCooldown: number;
   legTimeRemaining: number | null;
@@ -283,6 +287,7 @@ export class GameEngine {
   public language: Language = 'en';
   public characterClass: CharacterClass = 'mage';
   public lastRating: { stars: number; coins: number; keys?:number } | null = null;
+  public mana=new ManaPool();
   public skillCooldown = 0;
   public orbitOrbs: { angle:number; life:number; tick:number }[] = [];
   public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
@@ -302,6 +307,8 @@ export class GameEngine {
   public skillDrop: { kind: CombatSkill; x: number; y: number; fall: number } | null = null;
   public skillDropTimer = 5;
   public stoneShield = 0;
+  public bossIntroduction = false;
+  public beginBossFight() { this.bossIntroduction=false;this.heldKeys.clear();this.notifyHUD(); }
   public armorShield = 0;
   public hasteTime = 0;
   public fireBurnTime = 0;
@@ -580,6 +587,7 @@ export class GameEngine {
     this.combatHits = [];
     this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
+    this.bossIntroduction = !!this.boss;
     this.enemies=createEnemies(this.currentLevel);
     this.magicShots = [];
     this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
@@ -588,7 +596,7 @@ export class GameEngine {
     this.skillDrop = null; this.skillDropTimer = 5;
     this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
     this.combatFlash = null;
-    this.skillCooldown = 0;
+    this.skillCooldown = 0;this.mana.reset();
     this.lastRating = null;
     this.bossDeathElapsed = 0;
     this.bossDeathPending = false;
@@ -932,7 +940,8 @@ export class GameEngine {
     const x=Math.max(80,Math.min(1200,this.player.x+Math.cos(angle)*105));
     const y=Math.max(85,Math.min(630,this.player.y+Math.sin(angle)*105));
     this.skillDrop={kind,x,y,fall:0};
-    this.showBanner(this.language==='vi'?'Ấn kỹ năng đã xuất hiện trên mặt đất.':'A skill rune has appeared on the ground.');
+    const info=SKILL_PICKUPS[kind];
+    this.showBanner(this.language==='vi'?`${info.vi} · ${info.effectVi} · Đến gần để nhặt`:`${info.en} · ${info.effectEn} · Walk over to collect`);
   }
 
   private collectCombatSkill(kind:CombatSkill) {
@@ -990,7 +999,7 @@ export class GameEngine {
   private get comboSpeed() { return this.hasteTime > 0 || this.overdrive > 0 ? 2 : 1; }
 
   public attack(target?: { x: number; y: number }) {
-    if(this.orientationBlocked)return;
+    if(this.orientationBlocked||this.bossIntroduction||this.inventoryOpen||this.runeEditing||this.guides.blocking)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0) return;
     const combo = this.comboFor();
     if (combo) {
@@ -1035,6 +1044,7 @@ export class GameEngine {
   private startComboHit(step: number) {
     const hero = this.comboHero();
     if (!hero) return;
+    if(!this.spendMana(COMBO_MP[step]??0)){this.combo?.cancel();this.attackCooldown=0;return;}
     const hit = COMBO_HITS[hero][step];
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:this.comboAim.x,targetY:this.comboAim.y});
     voice.say(this.voiceRole, 'attack');
@@ -1130,11 +1140,17 @@ export class GameEngine {
     this.damageTexts = this.damageTexts.filter(t => t.life > 0);
   }
 
+  private spendMana(cost:number){
+    if(this.mana.spend(cost))return true;
+    this.showBanner(this.language==='vi'?`Không đủ MP · Cần ${cost} MP`:`Not enough MP · Requires ${cost} MP`);this.notifyHUD();return false;
+  }
   public useSkill(_target?: { x: number; y: number }) {
     if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
+    if(this.bossIntroduction||this.inventoryOpen||this.runeEditing||this.guides.blocking)return;
+    if(this.characterClass==='mage'&&this.orbitOrbs.length>=3)return;
+    if(!this.spendMana(skillManaCost(this.characterClass)))return;
     if (this.characterClass === 'mage') {
-      if(this.orbitOrbs.length >= 3) return;
       const aim = _target ?? this.combatAim() ?? this.player;
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:aim.x,targetY:aim.y});
       this.orbitOrbs.push({angle: this.orbitOrbs.length*Math.PI*2/3, life:6, tick:0});
@@ -1490,6 +1506,8 @@ export class GameEngine {
   // --- Input Handling ---
 
   private handleKeyDown = (e: KeyboardEvent) => {
+    if(this.bossIntroduction&&this.screen==='playing'){if(e.key==='Enter'){e.preventDefault();this.beginBossFight();}return;}
+
     // Dev replenishment also works while inspecting inventory or editing runes.
     if(!this.orientationBlocked&&!e.repeat&&(e.code==='KeyY'||e.key.toLowerCase()==='y')) {
       const now=performance.now();
@@ -1693,6 +1711,7 @@ export class GameEngine {
     if(this.currentLevel.id>=2&&Object.values(this.campaign.echoRunes).some(n=>n>0))this.guides.offer('upgradeRunes');
     const offer=(id:GuideTopic)=>this.guides.offer(id);
     if(this.boss){
+      if(this.skillDrop)offer('skillPickups');
       offer('shield');
       if(this.echoes.length)offer('decoy');
       if(this.boss.armor===0)offer('vulnerable');
@@ -1706,7 +1725,7 @@ export class GameEngine {
   }
 
   private update(dt: number) {
-    if (this.screen !== 'playing' || this.orientationBlocked || this.runeEditing || this.inventoryOpen) return;
+    if (this.screen !== 'playing' || this.bossIntroduction || this.orientationBlocked || this.runeEditing || this.inventoryOpen) return;
     if(this.tutorialEnabled){
       const previousTopic=this.guides.active;
       if(!this.guides.blocking)this.discoverMechanics();
@@ -1730,6 +1749,7 @@ export class GameEngine {
       }
       return;
     }
+    this.mana.update(dt);
     // Expire before accepting a checkpoint: arriving after zero cannot rescue a run.
     if (this.legTimeRemaining !== null) {
       this.legTimeRemaining = Math.max(0, this.legTimeRemaining - dt);
@@ -2152,6 +2172,7 @@ export class GameEngine {
         health: this.health,maxHealth:this.maxHealth,supplies:{...this.campaign.supplies},chanceCharges:this.campaign.chanceCharges,aidUnlocked:this.campaign.aidUnlocked,usedSupplies:[...this.usedSupplies],
         bossHp: this.boss?.hp ?? 0,
         bossPhase: this.boss?.phase ?? 0,
+        bossIntroduction:this.bossIntroduction,
         attackCooldown: this.attackCooldown,
         dodgeCooldown: this.dodgeCooldown,
         legTimeRemaining: this.legTimeRemaining,
@@ -2178,7 +2199,7 @@ export class GameEngine {
         limitRingActive: this.limitRingActive,
         bestStars: { ...this.campaign.bestStars },
         lastRating: this.lastRating,
-        skillCooldown: this.skillCooldown,
+        skillCooldown: this.skillCooldown,mana:this.mana.value,maxMana:MAX_MP,skillManaCost:skillManaCost(this.characterClass),
         mechanicalOwned: this.campaign.mechanicalOwned,
         loadingLevel: this.pendingLevel ? levelAt(this.pendingLevel.idx).id : null,
         loadingFromMenu: this.loadingFromMenu,

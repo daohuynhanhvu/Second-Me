@@ -59,7 +59,7 @@ test('mage magic and class skill damage the boss, while the class fixes the weap
   const game = new GameEngine();
   assert.equal(game.weapon, 'staff');
   for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
   const update = (game as unknown as {update(dt:number):void}).update.bind(game);
   game.player.x=game.boss!.x-200;game.player.y=game.boss!.y;
@@ -96,11 +96,11 @@ test('all five wins unlock the forge, forging gates the boss, and the boss gates
     game.nextLevel();
   }
   assert.equal(game.screen, 'forge');
-  game.enterBoss();
+  game.enterBoss();game.beginBossFight();
   assert.equal(game.screen, 'forge');
   game.forgeWeapon();
   assert.equal(game.campaign.forged, true);
-  game.enterBoss();
+  game.enterBoss();game.beginBossFight();
   assert.equal(game.currentLevelIdx, 5);
   assert.equal(game.screen, 'playing');
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
@@ -141,7 +141,7 @@ test('four pillars shield the boss until destroyed, then damage reaches its heal
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   const hit=game as unknown as {damageCombatTarget(x:number,y:number,amount:number,radius?:number):boolean};
   assert.equal(game.boss!.pillars.length,4);
   assert.equal(game.boss!.armor,100);
@@ -158,7 +158,7 @@ test('skill drops are class-specific and Echo cannot collect one',t=>{
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.timer=100;game.boss!.burstCooldown=100;
   const update=(game as unknown as {update(dt:number):void}).update.bind(game);
   for(let i=0;i<101;i++)update(.05);
@@ -176,7 +176,7 @@ test('Echo draws boss attention and spends stability to absorb a hit',t=>{
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.toggleRecording();game.toggleRecording();game.spawnEcho();
   assert.equal(game.echo?.aggroTime,3);game.player.x=600;game.player.y=350;
   game.boss!.mode='warning';game.boss!.timer=.01;game.boss!.targetX=game.echo!.x;game.boss!.targetY=game.echo!.y;
@@ -206,7 +206,7 @@ test('combat Echo pursues and automatically damages an exposed boss',t=>{
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;game.boss!.timer=100;game.boss!.burstCooldown=100;
   game.echo={x:game.boss!.x-80,y:game.boss!.y,direction:'right',isMoving:false,elapsedMs:0,status:'replaying',samples:[{time:0,x:game.boss!.x-80,y:game.boss!.y,direction:'right'},{time:100,x:game.boss!.x-80,y:game.boss!.y,direction:'right'}],events:[{time:40,kind:'attack',x:game.boss!.x-80,y:game.boss!.y,targetX:game.boss!.x,targetY:game.boss!.y}],nextEvent:0,stability:100,aggroTime:3,characterClass:'mage'};
   for (let i=0;i<5;i++) (game as unknown as {update(dt:number):void}).update(.05);
@@ -218,7 +218,7 @@ test('all six class pickups apply their distinct damage or defense',t=>{
   Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
   const internal=game as unknown as {collectCombatSkill(kind:import('../GameEngine.ts').CombatSkill):void;takeDamage():void};
   internal.collectCombatSkill('fire');assert.equal(game.boss!.hp,205);assert.equal(game.fireBurnTime,3);
@@ -262,7 +262,7 @@ test('attack cooldown prevents duplicate hits and a dodge prevents immediate dam
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
   game.screen='lobby';game.selectClass('swordsman');
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
   game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;
   game.attack();game.attack();                     // the second press is too early to count
@@ -280,7 +280,7 @@ test('losing and retrying a boss fight keeps sword and restores health and boss'
   t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
   const game=new GameEngine();
   for(let i=1;i<=5;i++)game.campaign.award(i);
-  game.screen='forge';game.forgeWeapon();game.enterBoss();
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   const internal=game as unknown as {takeDamage():void};
   for(let i=0;i<5;i++){game.invulnerability=0;internal.takeDamage();}
   assert.equal(game.screen,'defeat');game.restartLevel();
