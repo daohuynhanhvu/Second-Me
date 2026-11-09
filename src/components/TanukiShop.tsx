@@ -42,7 +42,7 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
     talk(vi?'Cảm ơn bạn! Chúc hành trình thuận lợi!':'Thank you! Have a safe journey!',true);
   };
   return <div className={`tanuki-shop${hud.reducedMotion?' reduced-motion':''}`} onPointerDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}} onKeyDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}}>
-    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><div className="tanuki-turn-sprite" style={{backgroundImage:`url(${asset('ui/tanuki-greeting.png')})`,backgroundPosition:`${(frame%9)*100/8}% ${Math.floor(frame/9)*100/4}%`}}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
+    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><div className="tanuki-turn-sprite" style={{backgroundImage:`url(${asset('ui/tanuki-brown-greeting.png')})`,backgroundPosition:`${(frame%9)*100/8}% ${Math.floor(frame/9)*100/4}%`}}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
     <div className="tanuki-scene-controls">
       <div className="tanuki-speech" aria-live="polite" hidden={!visible}>{greeting.text}</div>
       <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');talk(vi?(speech==='shop'?'Hôm nay bạn muốn tìm món gì?':'Mời mua hàng!'):(speech==='shop'?'What are you looking for today?':'Have a look!'),true);}}/>
