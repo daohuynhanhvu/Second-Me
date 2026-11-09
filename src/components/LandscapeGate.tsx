@@ -1,0 +1,8 @@
+import {useEffect,useRef} from 'react';
+import {createPortal} from 'react-dom';
+import './LandscapeGate.css';
+export function LandscapeGate({vi}:{vi:boolean}){
+ const root=useRef<HTMLDivElement>(null);
+ useEffect(()=>{const before=document.activeElement as HTMLElement|null;root.current?.focus();const key=(e:KeyboardEvent)=>{if(e.ctrlKey||e.metaKey||e.altKey||/^F[0-9]+$/.test(e.key))return;e.preventDefault();e.stopImmediatePropagation();};window.addEventListener('keydown',key,true);return()=>{window.removeEventListener('keydown',key,true);if(before?.isConnected)before.focus();};},[]);
+ return createPortal(<div className="landscape-gate" ref={root} tabIndex={-1} role="alertdialog" aria-modal="true" aria-labelledby="landscape-heading"><div className="landscape-message"><span className="landscape-eyebrow">SECOND ME · ECHOES OF THE WILD</span><div className="landscape-phone" aria-hidden="true"><svg viewBox="0 0 140 140" shapeRendering="crispEdges"><path d="M46 18H94V24H100V116H94V122H46V116H40V24H46Z" fill="#263d29" stroke="#d4bb7a" strokeWidth="4"/><path d="M48 29H92V105H48Z" fill="#0b2015"/><path d="M66 112H74" stroke="#d4bb7a" strokeWidth="4"/><path d="M57 64L69 47L83 64L69 83Z" fill="none" stroke="#9ab67b" strokeWidth="3"/></svg><i>↻</i></div><h1 id="landscape-heading">{vi?'Xoay ngang để chơi':'Rotate to landscape'}</h1><p>{vi?'Second Me cần màn hình ngang để hiển thị trọn bản đồ và các nút điều khiển.':'Second Me needs a landscape screen to show the full map and controls.'}</p><small>{vi?'Trận đấu và đồng hồ đang tạm dừng. Xoay máy để tiếp tục.':'Combat and the timer are paused. Rotate your device to continue.'}</small></div></div>,document.body);
+}

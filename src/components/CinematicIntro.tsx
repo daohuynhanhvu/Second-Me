@@ -15,7 +15,8 @@ const SKIP_KEYS = new Set(['Enter', 'Space', 'Escape']);
  * Plays the cinematic on its own canvas above the game, then dissolves into the existing
  * main menu (the `Intro` screen underneath). Enter / Space / Esc or the button skips it.
  */
-export function CinematicIntro({ lang, reducedMotion, onDone }: { lang: 'en' | 'vi'; reducedMotion: boolean; onDone: () => void }) {
+export function CinematicIntro({ lang, reducedMotion, onDone, paused=false }: { lang: 'en' | 'vi'; reducedMotion: boolean; onDone: () => void; paused?:boolean }) {
+  const pausedRef=useRef(paused);pausedRef.current=paused;
   const canvas = useRef<HTMLCanvasElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const skipRef = useRef<(() => void) | null>(null);
@@ -32,7 +33,8 @@ export function CinematicIntro({ lang, reducedMotion, onDone }: { lang: 'en' | '
 
     // Dev-only: ?introAt=18 starts the film at 18s, for checking a scene quickly.
     const devAt = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('introAt')) || 0 : 0;
-    const start = performance.now() - devAt * 1000;
+    let start = performance.now() - devAt * 1000;
+    let pausedAt:number|null=null;
     let raf = 0, skipAt: number | null = null, frozenT = 0, gestured = false, stopScore: (() => void) | null = null, stopVoice: (() => void) | null = null, finished = false;
     const now = () => (performance.now() - start) / 1000;
 
@@ -61,18 +63,21 @@ export function CinematicIntro({ lang, reducedMotion, onDone }: { lang: 'en' | '
     skipRef.current = skip;
     // Capture phase on window so the engine's own Enter/Space handler never fires mid-film.
     const onKey = (e: KeyboardEvent) => {
+      if(pausedRef.current)return;
       if (SKIP_KEYS.has(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); skip(); return; }
       gestured = true;
     };
-    const onPointer = () => { gestured = true; };
+    const onPointer = () => { if(!pausedRef.current)gestured = true; };
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('pointerdown', onPointer, true);
 
     music.preload();
-    if (!sounds.getMuted()) { tryAudio(0); if (!sounds.isAudioRunning()) setNeedsSound(true); }
+    if (!pausedRef.current&&!sounds.getMuted()) { tryAudio(0); if (!sounds.isAudioRunning()) setNeedsSound(true); }
     const skipTimer = window.setTimeout(() => setShowSkip(true), 700);
 
     const frame = () => {
+      if(pausedRef.current){if(pausedAt===null){pausedAt=performance.now();stopScore?.();stopScore=null;stopVoice?.();stopVoice=null;}raf=requestAnimationFrame(frame);return;}
+      if(pausedAt!==null){const elapsed=performance.now()-pausedAt;start+=elapsed;pausedAt=null;}
       const t = skipAt !== null ? frozenT : now();
       if (!stopScore && (gestured || sounds.isAudioRunning())) tryAudio(t);
       director!.draw(ctx, t);

@@ -1,0 +1,22 @@
+/* Vietnamese uses complete glyph families so accents never switch typeface. */
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi) {
+  --font-vietnamese-body: 'Segoe UI', Arial, sans-serif;
+  --font-vietnamese-title: 'Second Me Serif', Georgia, serif;
+}
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi),
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi) :where(button, p, span, small, strong, b, em, label, a, li, dt, dd, input, select, textarea) {
+  font-family: var(--font-vietnamese-body) !important;
+}
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi) :is(h1, h2, h3, h4) {
+  font-family: var(--font-vietnamese-title) !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  overflow: visible;
+}
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi) :is(p, button, small, label) {
+  line-height: 1.5;
+}
+:where(.adventure-app, .rune-loadout-backdrop, .landscape-gate):lang(vi) .eyebrow {
+  letter-spacing: .08em;
+  line-height: 1.6;
+}
