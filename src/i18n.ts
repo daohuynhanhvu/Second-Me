@@ -51,6 +51,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Tanuki’s new look', 'Diện mạo Tanuki mới'],
+  ['The shopkeeper now has brown fur, a light muzzle and a green leaf on its head. Its greeting animations have been updated to match.', 'Chủ quầy có bộ lông nâu, mõm sáng và chiếc lá xanh trên đầu. Các động tác chào khách cũng được cập nhật đồng bộ.'],
   ['The red chest is here', 'Rương đỏ đã mở'],
   ['Use 5 keys for one draw or 50 keys for ten. Reward probabilities are shown in the chest.', 'Dùng 5 chìa khóa mở một lượt hoặc 50 chìa khóa mở 10 lượt. Xem tỉ lệ thưởng ngay trong rương.'],
   ['Tanuki’s animated stall', 'Quầy Tanuki chuyển động'],
