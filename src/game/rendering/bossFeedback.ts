@@ -33,7 +33,7 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
       }
       ctx.fillStyle = '#102b3a';ctx.fillRect(-25, 31, 50, 5);
       ctx.fillStyle = flash > 0 ? '#fff6c9' : '#a0e7f5';ctx.fillRect(-25,31,50*pillar.hp/pillar.maxHp,5);
-      ctx.font = '600 10px sans-serif';ctx.textAlign = 'center';ctx.fillStyle = '#d8f8ff';ctx.fillText(`${Math.round(pillar.hp*10)/10}/${pillar.maxHp}`,0,49);
+      ctx.fillStyle='#071b29';ctx.fillRect(-38,39,76,25);ctx.font = '20px "Second Me Pixel", monospace';ctx.textAlign = 'center';ctx.fillStyle = '#d8f8ff';ctx.fillText(`${Math.round(pillar.hp*10)/10}/${pillar.maxHp}`,0,58);
     }
     ctx.restore();
   }
@@ -41,7 +41,7 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
     const t = 1 - boss.shieldBreak!;
     ctx.save();ctx.globalAlpha = boss.shieldBreak!;ctx.strokeStyle = '#c1faff';ctx.lineWidth = 4 * boss.shieldBreak!;
     ctx.beginPath();ctx.arc(boss.x,boss.y,64 + (reduced ? 10 : t * 110),0,Math.PI*2);ctx.stroke();
-    ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e8fcff';ctx.fillText('SHIELD BROKEN',boss.x,boss.y-90);ctx.restore();
+    ctx.font='bold 16px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.fillStyle='#e8fcff';ctx.fillText('SHIELD BROKEN',boss.x,boss.y-90);ctx.restore();
   }
 }
 
@@ -57,7 +57,7 @@ export function drawCombatHits(ctx: CanvasRenderingContext2D, hits: { x:number;y
       }
     }
     ctx.shadowColor='#102339';ctx.shadowBlur=4;ctx.fillStyle=hit.broken?'#e6fbff':'#fff1bf';
-    ctx.font=`bold ${hit.broken?21:17}px sans-serif`;ctx.textAlign='center';
+    ctx.font=`bold ${hit.broken?21:17}px "Second Me Pixel", monospace`;ctx.textAlign='center';
     ctx.fillText(`−${Math.round(hit.damage*10)/10}`,0,-30-(reduced?0:progress*26));
     ctx.restore();
   }

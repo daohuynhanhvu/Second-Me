@@ -4,5 +4,6 @@ import './index.css';
 import './adventure.css';
 import './mainMenu.css';
 import './vietnameseTypography.css';
+import './pixelTypography.css';
 
 createRoot(document.getElementById('root')!).render(<App />);

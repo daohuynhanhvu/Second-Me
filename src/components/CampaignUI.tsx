@@ -273,7 +273,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
     {hud.bannerMessage && <div className={'hud-banner ' + (boss ? 'boss-banner' : 'trail-banner')}>{hud.bannerMessage}</div>}
     {hud.activeBuff && <div className="combat-buff">{hud.activeBuff}</div>}
     {hud.dissonanceSeconds>0 && <div className="combat-buff" role="status">RẠN VỠ {hud.dissonanceSeconds.toFixed(1)} / 5s · Gọi Echo để bảo hộ</div>}
-    {(engine?.currentLevel.id??1)>=2&&<EchoRuneStock engine={engine} hud={hud} compact/>}
+    {/* Selected runes are managed and activated inside Inventory. */}
     {bag && <div className="modal-backdrop inventory-backdrop" onClick={()=>document.dispatchEvent(new Event('close-trail-inventory'))}><div className="panel inventory-modal forest-dialog" onClick={e=>e.stopPropagation()}><Inventory engine={engine} hud={hud} close={()=>setBag(false)}/></div></div>}
     {settings && <SettingsPanel engine={engine} hud={hud} close={()=>setSettings(false)}/>} 
   </div>);

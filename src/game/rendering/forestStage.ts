@@ -94,19 +94,7 @@ export function installForestStage(scene: LegacyScene, state: StageState) {
   scene.drawGateThresholds = (ctx, lvl) => { if (!forestReady('door')) orig.drawGateThresholds(ctx, lvl); };
   scene.drawGates = (ctx, lvl) => {
     if (!forestReady('door')) return orig.drawGates(ctx, lvl);
-    for (const door of lvl.doors) {
-      drawDoor(ctx, door);
-      // Gate labels identify simultaneous requirements, especially the reusable Echo in trial 5.
-      ctx.save();ctx.font='bold 9px ui-monospace,monospace';ctx.textAlign='center';
-      for(let i=0;i<door.requiredPlates.length;i++) {
-        const index=lvl.plates.findIndex(p=>p.id===door.requiredPlates[i]),pressed=lvl.plates[index]?.isPressed;
-        const x=door.x+door.width+10,y=door.y+14+i*17;
-        ctx.fillStyle='#10251ded';ctx.fillRect(x-6,y-7,13,14);
-        ctx.strokeStyle=pressed?'#aee4c2':'#ab956d';ctx.strokeRect(x-6,y-7,13,14);
-        ctx.fillStyle=pressed?'#cbffe0':'#ddc595';ctx.fillText(String(index+1),x,y+3);
-      }
-      ctx.restore();
-    }
+    for(const door of lvl.doors) drawDoor(ctx,door);
   };
 
   scene.drawWalls = (ctx, lvl, time) => {
@@ -185,7 +173,7 @@ function drawExitPortal(ctx: Ctx, exit: LevelData['exit'], sinceOpen: number | n
   else if (sinceOpen < 0.7) drawStripBlend(ctx, 'portalExit', 4, 5, (sinceOpen - 0.35) / 0.35, box, { ref: 5 });
   else drawStripBlend(ctx, 'portalExit', 5, 4, 0.2 + 0.15 * Math.sin(time * 2.4), box, { ref: 5 });
   ctx.save();
-  ctx.font = '600 11px "Rajdhani", sans-serif'; ctx.textAlign = 'center';
+  ctx.font = '600 11px "Second Me Pixel", monospace'; ctx.textAlign = 'center';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
   ctx.fillStyle = sinceOpen === null ? '#b9c7a2' : '#d8f7c5';
   ctx.fillText('ANCIENT GATE', cx, box.y - 4);
