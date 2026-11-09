@@ -44,7 +44,7 @@ test('Amplification boosts automatic, recorded attack and recorded skill damage;
  combat(echo,.1);assert.equal(enemy.hp,985);g.useEchoRune('power');echo.attackTimer=0;combat(echo,.1);assert.equal(enemy.hp,965.5);
  const event={time:0,kind:'attack',x:0,y:0,targetX:100,targetY:0};(g as any).replayEchoEvent(event);assert.equal(enemy.hp,952.5);(g as any).replayEchoEvent({...event,kind:'skill'});assert.equal(enemy.hp,933);
  g.enemies=[];g.boss=createBoss();g.boss.x=430;g.boss.y=300;echo.attackTimer=0;combat(echo,.1);assert.equal(g.boss.hp,240);
- g.boss.pillars.forEach(p=>p.hp=0);echo.attackTimer=0;combat(echo,.1);assert.equal(g.boss.hp,220.5);
+ g.boss.pillars.forEach(p=>p.hp=0);echo.attackTimer=0;combat(echo,.1);assert.equal(g.boss.hp,230.25);
 });
 test('recorded rune-boosted attacks cannot hit through walls or fall back onto unrelated nearby targets',t=>{
  const {g,summon}=setup(t);summon();g.useEchoRune('power');const enemy={...createEnemies(g.currentLevel)[0],x:500,y:300,homeX:500,homeY:300,hp:100,maxHp:100};g.enemies=[enemy];g.currentLevel.walls=[{x:445,y:250,width:20,height:100}];

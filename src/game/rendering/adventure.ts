@@ -94,12 +94,23 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     for (const area of boss.burstAreas) {
       drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion, Math.max(0, -area.timer));
     }
-    if (boss.hp > 0 && (boss.mode === 'warning' || boss.mode === 'strike')) {
+    if (boss.hp > 0 && (!boss.attack||boss.attack==='slam') && (boss.mode === 'warning' || boss.mode === 'strike')) {
       const struck = boss.mode === 'strike';
-      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, struck, time, game.reducedMotion, struck ? Math.max(0, .3 - boss.timer) : 0);
+      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, struck, time, game.reducedMotion, struck ? Math.max(0, (boss.strikeDuration??.3) - boss.timer) : 0);
       if (!struck) {
         ctx.save(); ctx.font = 'bold 12px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
         ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
+      }
+    }
+    if(boss.hp>0){
+      const vi=game.language==='vi',recover=boss.mode==='recover'&&boss.armor===0;
+      if(boss.attack==='volley'&&(boss.mode==='warning'||boss.mode==='strike')){
+        ctx.save();ctx.strokeStyle='#f3d888';ctx.fillStyle='#f3d88815';ctx.lineWidth=3;
+        const angle=boss.safeAngle??0;ctx.beginPath();ctx.moveTo(boss.x,boss.y);ctx.arc(boss.x,boss.y,180,angle-.43,angle+.43);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+      }
+      if(boss.mode==='warning'||recover){
+        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='volley'?(vi?'BÃO ĐẠN · NÉ QUA KHE VÀNG':'ICE BARRAGE · GOLD ESCAPE LANE'):boss.attack==='frost'?(vi?'BĂNG TRỒI · RỜI VÙNG XANH':'FROST ERUPTION · LEAVE BLUE ZONES'):(vi?'ĐẬP BĂNG · RỜI VÒNG':'ICE SLAM · LEAVE THE RING');
+        ctx.save();ctx.font='20px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.textBaseline='middle';const width=ctx.measureText(text).width+20,x=Math.max(width/2+45,Math.min(1235-width/2,boss.x)),y=Math.max(155,boss.y-96);ctx.fillStyle='#041623ee';ctx.fillRect(x-width/2,y-15,width,30);ctx.fillStyle=recover?'#baffbd':boss.attack==='volley'?'#ffe2a0':'#d4faff';ctx.fillText(text,x,y);ctx.restore();
       }
     }
     for (const shot of boss.projectiles) {
@@ -109,7 +120,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.ellipse(boss.x, boss.y + 47, 65, 16, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
-    const bossTarget = game.echoes.slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player;
+    const bossTarget = (Math.floor((boss.attackIndex??0)/2)%2===0?game.echoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player;
     const walking = boss.mode === 'stalking' && Math.hypot(bossTarget.x - boss.x, bossTarget.y - boss.y) > 85;
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, bossTarget.x > boss.x, walking);
     if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}

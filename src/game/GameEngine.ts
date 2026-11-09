@@ -106,7 +106,7 @@ export interface HUDState {
   bossHp: number;
   mana?:number;maxMana?:number;skillManaCost?:number;
   bossPhase: number;
-  bossIntroduction?: boolean;
+  bossIntroduction?: boolean;bossAction?:string;bossVulnerable?:boolean;
   attackCooldown: number;
   dodgeCooldown: number;
   legTimeRemaining: number | null;
@@ -866,6 +866,7 @@ export class GameEngine {
       this.addDamageText(this.boss.x, this.boss.y - 60, 0, false, this.language==='vi'?'MIỄN':'IMMUNE');
       return false;
     }
+    amount*=source===this.player?(this.boss.mode==='recover'?1.35:1):.5;
     const result=applyDamage(this.boss.hp,amount);this.boss.hp=result.hp;
     this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: result.dealt, life: .7, broken: false });
     this.combatHits = this.combatHits.slice(-24);
@@ -1713,6 +1714,7 @@ export class GameEngine {
     if(this.boss){
       if(this.skillDrop)offer('skillPickups');
       offer('shield');
+      offer('bossPatterns');
       if(this.echoes.length)offer('decoy');
       if(this.boss.armor===0)offer('vulnerable');
       return;
@@ -2059,7 +2061,7 @@ export class GameEngine {
       const boss = this.boss;
       const normalBossEchoes=[...this.echoes];
       const bossEchoes = [...normalBossEchoes,...(this.supportAlly?[this.supportAlly]:[])];
-      const echoTarget = bossEchoes.slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0]??null;
+      const echoTarget = (Math.floor((boss.attackIndex??0)/2)%2===0?bossEchoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0]??null;
       const burstBefore = boss.burstRemaining;
       let bossDamage=0;
       const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
@@ -2172,7 +2174,7 @@ export class GameEngine {
         health: this.health,maxHealth:this.maxHealth,supplies:{...this.campaign.supplies},chanceCharges:this.campaign.chanceCharges,aidUnlocked:this.campaign.aidUnlocked,usedSupplies:[...this.usedSupplies],
         bossHp: this.boss?.hp ?? 0,
         bossPhase: this.boss?.phase ?? 0,
-        bossIntroduction:this.bossIntroduction,
+        bossIntroduction:this.bossIntroduction,bossAction:this.boss?.attack,bossVulnerable:this.boss?.mode==='recover'&&this.boss.armor===0,
         attackCooldown: this.attackCooldown,
         dodgeCooldown: this.dodgeCooldown,
         legTimeRemaining: this.legTimeRemaining,

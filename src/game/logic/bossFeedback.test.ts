@@ -32,11 +32,22 @@ test('the final pillar shatters armor and grants recovery without lingering proj
   assert.equal(boss.projectiles.length,0);assert.equal(boss.burstRemaining,0);
   updateBoss(boss, engine.player, .1, false);
   assert.equal(boss.burstRemaining,0);assert.equal(boss.projectiles.length,0);
-  assert.equal(engine.damageCombatTarget(boss.x,boss.y,15),true);assert.equal(boss.hp,225);
+  assert.equal(engine.damageCombatTarget(boss.x,boss.y,15),true);assert.equal(boss.hp,219.75);
 });
 test('missing targets and hitting the protected boss never display successful damage', () => {
   const engine=game(),boss=engine.boss!;
   assert.equal(engine.damageCombatTarget(500,400,15),false);
   assert.equal(engine.damageCombatTarget(boss.x,boss.y,15),false);
   assert.equal(boss.hp,boss.maxHp);assert.equal(engine.combatHits.length,0);
+});
+
+test('Echo damage is halved only against the boss; player recovery strikes gain 35 percent',()=>{
+ const engine=game(),boss=engine.boss!;
+ const hit=engine as unknown as {damageCombatTarget(x:number,y:number,amount:number,radius:number,source:{x:number;y:number}):boolean};
+ const echo={x:500,y:300};const pillar=boss.pillars[0];
+ hit.damageCombatTarget(pillar.x,pillar.y,20,10,echo);assert.equal(pillar.hp,40);
+ boss.pillars.forEach(p=>p.hp=0);boss.armor=0;boss.mode='recover';
+ hit.damageCombatTarget(boss.x,boss.y,20,10,echo);assert.equal(boss.hp,230);
+ hit.damageCombatTarget(boss.x,boss.y,20,10,engine.player);assert.equal(boss.hp,203);
+ boss.mode='stalking';hit.damageCombatTarget(boss.x,boss.y,20,10,engine.player);assert.equal(boss.hp,183);
 });

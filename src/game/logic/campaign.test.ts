@@ -133,7 +133,8 @@ test('boss sword requires range, phases escalate, and attacks have a warning',()
   assert.equal(boss.phase,3); assert.equal(boss.mode,'warning');
   updateBoss(boss,{x:100,y:100},1,false);
   assert.equal(boss.mode,'strike');
-  assert.equal(boss.projectiles.length,8);
+  assert.equal(boss.projectiles.length,0); // follow-up volley is telegraphed, not instant
+  updateBoss(boss,{x:100,y:100},.21,false);assert.ok(boss.projectiles.length>=14);
 });
 
 test('four pillars shield the boss until destroyed, then damage reaches its health',t=>{
@@ -150,7 +151,7 @@ test('four pillars shield the boss until destroyed, then damage reaches its heal
   for(const pillar of game.boss!.pillars)hit.damageCombatTarget(pillar.x,pillar.y,60);
   assert.equal(game.boss!.armor,0);
   hit.damageCombatTarget(game.boss!.x,game.boss!.y,60);
-  assert.equal(game.boss!.hp,180);
+  assert.equal(game.boss!.hp,159);
 });
 
 test('skill drops are class-specific and Echo cannot collect one',t=>{
@@ -187,18 +188,14 @@ test('Echo draws boss attention and spends stability to absorb a hit',t=>{
   assert.equal(game.health,100);
 });
 
-test('boss burst has a readable windup and bounded phase-one projectile density',()=>{
-  const boss=createBoss();boss.mode='recover';boss.timer=100;
-  const player={x:300,y:350};
-  for(let i=0;i<101;i++)updateBoss(boss,player,.05,false);
-  assert.ok(boss.burstRemaining>0);
-  const firstProjectiles=boss.projectiles.length;
-  assert.ok(firstProjectiles>=4&&firstProjectiles<=8);
-  assert.ok(boss.burstAreas.length>=1);
-  for(let i=0;i<14;i++)updateBoss(boss,player,.05,false);
-  assert.ok(boss.projectiles.length>firstProjectiles);
-  for(let i=0;i<40;i++)updateBoss(boss,player,.05,false);
-  assert.equal(boss.burstRemaining,0);
+test('boss volleys have a warning, multiple waves and a safe recovery',()=>{
+ const boss=createBoss(),player={x:300,y:350};boss.attackIndex=1;boss.timer=0;
+ updateBoss(boss,player,.05,false);assert.equal(boss.attack,'volley');assert.equal(boss.mode,'warning');assert.equal(boss.projectiles.length,0);
+ updateBoss(boss,player,1.2,false);assert.equal(boss.mode,'strike');
+ updateBoss(boss,player,.21,false);const first=boss.projectiles.length;assert.ok(first>=7&&first<=10);assert.equal(boss.burstAreas.length,0);
+ updateBoss(boss,player,.46,false);assert.ok(boss.projectiles.length>first);
+ for(let i=0;i<35;i++)updateBoss(boss,player,.05,false);
+ assert.equal(boss.mode,'recover');assert.equal(boss.projectiles.length,0);assert.equal(boss.burstRemaining,0);
 });
 
 test('combat Echo pursues and automatically damages an exposed boss',t=>{
@@ -210,7 +207,7 @@ test('combat Echo pursues and automatically damages an exposed boss',t=>{
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;game.boss!.timer=100;game.boss!.burstCooldown=100;
   game.echo={x:game.boss!.x-80,y:game.boss!.y,direction:'right',isMoving:false,elapsedMs:0,status:'replaying',samples:[{time:0,x:game.boss!.x-80,y:game.boss!.y,direction:'right'},{time:100,x:game.boss!.x-80,y:game.boss!.y,direction:'right'}],events:[{time:40,kind:'attack',x:game.boss!.x-80,y:game.boss!.y,targetX:game.boss!.x,targetY:game.boss!.y}],nextEvent:0,stability:100,aggroTime:3,characterClass:'mage'};
   for (let i=0;i<5;i++) (game as unknown as {update(dt:number):void}).update(.05);
-  assert.equal(game.boss!.hp,225);
+  assert.equal(game.boss!.hp,232.5);
 });
 
 test('all six class pickups apply their distinct damage or defense',t=>{

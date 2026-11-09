@@ -163,6 +163,7 @@ export interface BossState {
   projectiles: { x: number; y: number; vx: number; vy: number; life: number }[];
   pillars: { x: number; y: number; hp: number; maxHp: number; hitFlash?: number; destroyedAge?: number }[];
   shieldBreak?: number;
+  attack?:'slam'|'volley'|'frost'; attackIndex?:number; warningDuration?:number; strikeDuration?:number; safeAngle?:number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
   burstAreas: { x: number; y: number; radius: number; timer: number; struck: boolean }[];
@@ -195,19 +196,19 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
   if (activePillars) boss.hp = Math.min(boss.maxHp, damagePoints(boss.hp + activePillars * 2 * dt));
-  boss.burstCooldown -= dt;
-  if (boss.burstCooldown <= 0) { boss.burstCooldown += 8-boss.phase; boss.burstRemaining = 1+boss.phase*.2; boss.burstPulse = 0; }
-  if (boss.burstRemaining > 0) {
-    boss.burstRemaining = Math.max(0,boss.burstRemaining-dt);
-    boss.burstPulse -= dt;
-    if (boss.burstPulse <= 0) {
-      boss.burstPulse += .8-boss.phase*.12;
-      const count=2+boss.phase*2;
-      for(let i=0;i<count;i++) {
-        const angle=Math.PI*2*(i/count)+boss.phase*.17;
-        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*(110+boss.phase*25),vy:Math.sin(angle)*(110+boss.phase*25),life:3.2});
+  // One attack conductor: no independent spell can interrupt the recovery window.
+  if(boss.mode==='strike'&&(boss.attack==='volley'||(boss.phase===3&&boss.attack==='slam'))){
+    boss.burstPulse-=dt;
+    if(boss.burstRemaining>0&&boss.burstPulse<=0){
+      const count=boss.phase===1?10:boss.phase===2?14:18;
+      const gap=boss.safeAngle??0;
+      for(let i=0;i<count;i++){
+        const angle=i*Math.PI*2/count;
+        const delta=Math.abs(Math.atan2(Math.sin(angle-gap),Math.cos(angle-gap)));
+        if(delta<.43)continue; // A visible, persistent escape lane for the entire volley.
+        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*(135+boss.phase*15),vy:Math.sin(angle)*(135+boss.phase*15),life:2.4});
       }
-      for(let i=0;i<1;i++)boss.burstAreas.push({x:Math.max(85,Math.min(1195,player.x+(Math.random()-.5)*260)),y:Math.max(85,Math.min(635,player.y+(Math.random()-.5)*220)),radius:48,timer:.9,struck:false});
+      boss.burstRemaining--;boss.burstPulse=boss.phase===3?.32:.45;
     }
   }
   let burstHit=false;
@@ -230,25 +231,31 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
       boss.y += dy / distance * speed * dt;
     }
     if (boss.timer <= 0) {
-      boss.mode = 'warning'; boss.timer = boss.phase === 3 ? 0.8 : 1.1;
-      boss.targetX = player.x; boss.targetY = player.y;
-    }
-  } else if (boss.mode === 'warning' && boss.timer <= 0) {
-    boss.mode = 'strike'; boss.timer = 0.3;
-    hit = Math.hypot(defender.x - boss.targetX, defender.y - boss.targetY) < 82;
-    if(hit)onPlayerHit?.(DAMAGE.bossSlam);
-    echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index,DAMAGE.bossSlam);});
-    if (boss.phase >= 2) {
-      for (let i = 0; i < 8; i++) {
-        const angle = i * Math.PI / 4;
-        boss.projectiles.push({ x: boss.x, y: boss.y, vx: Math.cos(angle) * 125,
-          vy: Math.sin(angle) * 125, life: 3.5 });
+      const index=boss.attackIndex??0;
+      const sequence:NonNullable<BossState['attack']>[]=boss.phase===1?['slam','volley','frost']:['slam','frost','volley','slam','volley','frost'];
+      boss.attack=sequence[index%sequence.length];boss.attackIndex=index+1;
+      boss.mode='warning';boss.warningDuration=boss.attack==='slam'?(boss.phase===3?.85:1.1):1.15;
+      boss.timer=boss.warningDuration;boss.targetX=player.x;boss.targetY=player.y;
+      boss.safeAngle=Math.atan2(defender.y-boss.y,defender.x-boss.x)+.38;
+      if(boss.attack==='frost'){
+        const offsets=boss.phase===1?[[0,0],[115,0]]:boss.phase===2?[[0,0],[115,0],[-115,0]]:[[0,0],[115,0],[-115,0],[0,-115]];
+        boss.burstAreas=offsets.map(([x,y],i)=>({x:Math.max(85,Math.min(1195,player.x+x)),y:Math.max(85,Math.min(635,player.y+y)),radius:46,timer:boss.timer+i*.16,struck:false})).filter((area,i,all)=>all.slice(0,i).every(other=>Math.hypot(other.x-area.x,other.y-area.y)>85));
       }
     }
+  } else if (boss.mode === 'warning' && boss.timer <= 0) {
+    boss.mode='strike';boss.strikeDuration=boss.attack==='volley'?2.2:boss.attack==='frost'?.9:boss.phase===3?1.2:.3;boss.timer=boss.strikeDuration;
+    if(!boss.attack||boss.attack==='slam'){
+      hit=Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<82;
+      if(hit)onPlayerHit?.(DAMAGE.bossSlam);
+      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index,DAMAGE.bossSlam);});
+    }
+    boss.burstRemaining=boss.attack==='volley'?boss.phase+1:boss.phase===3&&boss.attack==='slam'?2:0;
+    boss.burstPulse=.2;
   } else if (boss.mode === 'strike' && boss.timer <= 0) {
-    boss.mode = 'recover'; boss.timer = 1.4;
+    boss.mode='recover';boss.timer=boss.phase===3?1.45:1.8;
+    boss.projectiles=[];boss.burstAreas=[];boss.burstRemaining=0;
   } else if (boss.mode === 'recover' && boss.timer <= 0) {
-    boss.mode = 'stalking'; boss.timer = Math.max(1, 2.2 - boss.phase * 0.3);
+    boss.mode='stalking';boss.timer=boss.phase===1?1.1:boss.phase===2?.85:.65;
   }
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
