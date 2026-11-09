@@ -162,6 +162,7 @@ const pairs: [string, string][] = [
   ['Sacred ember', 'Than lửa thiêng'], ['A flame that never fades.', 'Ngọn lửa không bao giờ tắt.'],
   ['Ancient rune', 'Ấn thạch cổ'], ['The final shard that awakens the blade.', 'Mảnh cuối để đánh thức thanh kiếm.'],
   ['VINES', 'DÂY LEO'], ['WATCH OUT!', 'CẨN THẬN!'], ['CRUSHER', 'BẪY DẬP'], ['SPIKES', 'BẪY GAI'], ['FALLING ROCKS', 'ĐÁ RƠI'], ['SLOW 45%', 'CHẬM 45%'], ['DODGE!', 'NÉ!'],
+  ['ANCIENT GATE', 'CỔNG CỔ'], ['TRAINING', 'LUYỆN TẬP'], ['TRAINING DUMMY', 'HÌNH NỘM LUYỆN TẬP'],
   ['ECHO GROVE', 'RỪNG VỌNG ÂM'], ['ROOTBOUND PASSAGE', 'LỐI RỄ CHẰNG CHỊT'], ['WHISPERING RUINS', 'PHẾ TÍCH THÌ THẦM'], ['THORNBOUND LABYRINTH', 'MÊ CUNG GAI'], ['THE LAST EMBER', 'ĐỐM LỬA CUỐI'],
 ];
 

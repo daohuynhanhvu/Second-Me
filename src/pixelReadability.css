@@ -26,3 +26,50 @@
 .adventure-app .level-card .player-health strong{font-size:17px!important;line-height:1.2}
 @media(max-height:480px){.adventure-app .boss-bar small{font-size:14px!important}.adventure-app .boss-armor{font-size:14px!important}.adventure-app .boss-bar>div:first-child{font-size:16px}.adventure-app .level-card .player-health strong{font-size:14px!important}}
 .boss-introduction{position:absolute;inset:0;z-index:80;display:grid;place-items:center;background:#03131dcc;backdrop-filter:blur(3px);pointer-events:auto;padding:20px}.boss-introduction>section{width:min(640px,100%);max-height:100%;overflow:auto;padding:30px;background:linear-gradient(145deg,#102f3e,#071924);border:3px solid #85c6d4;box-shadow:0 0 0 5px #07131e,inset 0 0 0 2px #294753;color:#e8f9f8}.boss-intro-eyebrow{color:#a6d6df;font-size:17px;letter-spacing:2px}.boss-introduction h2{font-size:42px;line-height:1;margin:12px 0;color:#e4fbff;font-weight:400}.boss-intro-story{font-size:21px;line-height:1.3;color:#b8cdd2}.boss-introduction ol{list-style:none;counter-reset:boss-steps;padding:0;display:grid;gap:14px}.boss-introduction li{counter-increment:boss-steps;position:relative;padding-left:40px}.boss-introduction li:before{content:counter(boss-steps,upper-roman);position:absolute;left:0;color:#f2d38d;font-size:23px}.boss-introduction li b{display:block;font-size:22px;color:#f0d79d;font-weight:400}.boss-introduction li span{font-size:20px;line-height:1.2;color:#c5d9dc}.boss-intro-stats{font-size:18px;color:#9cc5d3;border-top:1px solid #557b8644;padding:12px 0}.boss-introduction .primary{width:100%;font-size:22px!important;border-radius:0;min-height:48px}@media(max-height:480px){.boss-introduction{padding:10px}.boss-introduction>section{width:min(740px,100%);padding:14px 20px}.boss-introduction h2{font-size:30px;margin:5px 0}.boss-intro-story{font-size:17px;margin:7px 0}.boss-introduction ol{gap:7px;margin:8px 0}.boss-introduction li b{font-size:18px}.boss-introduction li span{font-size:17px}.boss-intro-stats{padding:5px 0;font-size:16px}.boss-introduction .primary{min-height:36px;padding:6px;font-size:18px!important}}
+
+/*
+ * One type scale for the UI (VT323 reads about 30% smaller than a normal font at the same px).
+ * The blanket rules at the top of this file force small/eyebrow to 14px and every button to
+ * 17px with !important at specificity up to (0,4,2), so a panel's own sizes only take effect
+ * with a higher specificity: the panels below repeat a class (.panel.panel) for that.
+ */
+:root{--fs-caption:14px;--fs-small:16px;--fs-body:17px;--fs-control:18px;--fs-label:21px;--fs-value:20px;--fs-button:20px;--fs-button-lg:22px;--fs-title:32px}
+/* Issue 12: text that no rule raised to a readable size (8-10px). */
+.adventure-app .level-card .echo-timeline span{font-size:var(--fs-caption);line-height:1.3;white-space:normal}
+.adventure-app .level-card .echo-timeline-track b{font-size:12px}
+.adventure-app .combat-buff{font-size:15px;padding:6px 14px}
+:is(.adventure-app,.modal-backdrop) .inventory-supplies.inventory-supplies button{font-size:var(--fs-caption)}
+:is(.adventure-app,.modal-backdrop) .inventory-rune-description.inventory-rune-description>button{font-size:var(--fs-caption)}
+/* The boss bar's line meant 17px, but lost to the 14px small rule above. */
+.adventure-app .boss-bar.boss-bar small{font-size:var(--fs-body)!important}
+@media(max-height:480px){.adventure-app .boss-bar.boss-bar small{font-size:var(--fs-caption)!important}}
+/* Issue 01: the settings panel's scale (eyebrow, description and button were overridden). */
+.modal-backdrop .settings-panel.panel.panel .eyebrow{font-size:var(--fs-small)!important;letter-spacing:.08em}
+.modal-backdrop .settings-panel.panel.panel h2{font-size:var(--fs-title);margin:14px 0 12px}
+.modal-backdrop .settings-panel.panel.panel .setting-row b{font-size:var(--fs-label);line-height:1.2}
+.modal-backdrop .settings-panel.panel.panel .setting-row small{font-size:var(--fs-small)!important;line-height:1.3}
+.modal-backdrop .settings-panel.panel.panel .setting-row strong{font-size:var(--fs-value);text-align:right;align-self:center}
+.modal-backdrop .settings-panel.panel.panel .setting-row select{font-size:var(--fs-value)}
+.modal-backdrop .settings-panel.panel.panel .setting-controls,.modal-backdrop .settings-panel.panel.panel .setting-controls summary{font-size:var(--fs-control)}
+.modal-backdrop .settings-panel.panel.panel .setting-controls p{font-size:var(--fs-body)}
+.modal-backdrop .settings-panel.panel.panel>.primary{font-size:var(--fs-button)!important;letter-spacing:.06em}
+@media(max-height:500px){.modal-backdrop .settings-panel.panel.panel h2{font-size:26px;margin:8px 0}}
+@media(max-width:520px){.modal-backdrop .settings-panel.panel.panel h2{font-size:27px}.modal-backdrop .settings-panel.panel.panel .setting-row b{font-size:19px}.modal-backdrop .settings-panel.panel.panel .setting-row small{font-size:15px!important}}
+/* Issue 06: the pause panel's buttons (all three were forced to 17px). */
+.modal-backdrop .pause-panel.panel.panel{max-width:380px}
+.modal-backdrop .pause-panel.panel.panel :is(.primary,.secondary){font-size:var(--fs-button-lg)!important;min-height:54px;padding:14px 22px;letter-spacing:.06em}
+.modal-backdrop .pause-panel.panel.panel .text-button{font-size:var(--fs-control)!important;padding:12px}
+/* Issue 04: the screen's one way back to the lobby (the duplicate under CONFIRM is gone), as readable as the rest. */
+.adventure-app .hero-select-back.hero-select-back{font-size:var(--fs-body);letter-spacing:.06em;min-height:40px;padding:7px 16px}
+/* Issue 02: the credits, in the settings panel's stone frame (CampaignUI.tsx, CreditsPanel). */
+.modal-backdrop .credits-panel.panel.panel{width:min(560px,100%);max-width:560px;overflow:auto}
+.modal-backdrop .credits-panel.panel.panel h2{margin:14px 0 4px;text-align:center;letter-spacing:.12em}
+.credits-panel .credits-tagline{margin:0 0 14px;text-align:center;font-size:var(--fs-body);color:#b3bea1}
+.credits-panel .credits-section{margin:10px 0;padding:10px 14px;border:2px solid #536047;background:#14271c;box-shadow:inset 0 0 0 1px #0c1c12}
+.credits-panel .credits-section h3{margin:0 0 6px;font-size:var(--fs-small);font-weight:400;letter-spacing:.1em;color:#d9bf7b}
+.credits-panel .credits-section ul{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.credits-panel .credits-section li{display:flex;justify-content:space-between;gap:14px;align-items:baseline;border-bottom:1px dashed #33402f;padding:3px 0}
+.credits-panel .credits-section li:last-child{border-bottom:0}
+.credits-panel .credits-section li b{font-size:var(--fs-label);font-weight:400;color:#e4dfbf;text-align:left}
+.credits-panel .credits-section li span{font-size:var(--fs-small);color:#b3bea1;text-align:right}
+.modal-backdrop .credits-panel.panel.panel>.primary{width:100%;margin-top:14px}

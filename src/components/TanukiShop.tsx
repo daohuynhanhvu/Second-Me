@@ -38,6 +38,8 @@ export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   <img className="trading-background" src={asset('tanuki-market-sunset.png')} alt=""/>
   <div className="trading-fireflies" aria-hidden="true"><i/><i/><i/><i/></div>
   <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(2);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-poses.png')})`,backgroundPosition:`${pose%2*100}% ${Math.floor(pose/2)*100}%`,transform:`translate(${poseOffsets[pose][0]}px,${poseOffsets[pose][1]}px)`}}/></button>
+  {/* The counter in front of Tanuki: the same painting, cut to the counter, so Tanuki stands behind it. */}
+  <div className="trading-counter-front" aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-market-sunset.png')})`}}/>
   {ready&&speech&&<div className="trading-speech" role="status">{message||(vi?'Xin chào! Bạn muốn mua gì nào?':'Welcome! What would you like?')}</div>}
   <ChestGacha engine={engine} hud={hud}/>
   <div className="trading-wallet"><img src={asset('raccoon-coin.png')} alt=""/><span>{vi?'XU':'GOLD'}: <b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></span></div>

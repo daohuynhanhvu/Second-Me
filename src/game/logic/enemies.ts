@@ -1,12 +1,23 @@
-import { enemyWaypoint } from './enemyNavigation.ts';
+import { reachableWaypoint } from './enemyNavigation.ts';
 import { getActiveObstacles, resolveMovement } from './collision.ts';
 import { segmentWall } from './combatGeometry.ts';
 import type { LevelData } from './types.ts';
 import { DUMMY_RESET } from './training.ts';
 /** 'dummy': the dev training ground's target (logic/training.ts): never moves, attacks or dies. */
 export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur'|'dummy';
-export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;targetEcho?:{x:number;y:number;aggroTime?:number}}
-export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180,damage:12},bear:{hp:48,speed:60,reach:47,notice:175,damage:20},skull:{hp:30,speed:82,reach:39,notice:190,damage:12},shaman:{hp:36,speed:52,reach:155,notice:200,damage:16},minotaur:{hp:75,speed:58,reach:58,notice:195,damage:28},dummy:{hp:500,speed:0,reach:0,notice:0,damage:0}};
+export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;targetEcho?:{x:number;y:number;aggroTime?:number};
+ /** The Echo this enemy was drawn to, and how long it keeps after it once out of sight (s). */
+ lureEcho?:{x:number;y:number};lureTime?:number}
+/**
+ * notice: how near the player has to be (in sight) to be chased. lure: how near an Echo has to
+ * be, in sight (walls and closed gates block it), to draw the enemy instead: notice + 80, a
+ * little further, as an Echo is a decoy.
+ */
+export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180,lure:260,damage:12},bear:{hp:48,speed:60,reach:47,notice:175,lure:255,damage:20},skull:{hp:30,speed:82,reach:39,notice:190,lure:270,damage:12},shaman:{hp:36,speed:52,reach:155,notice:200,lure:280,damage:16},minotaur:{hp:75,speed:58,reach:58,notice:195,lure:275,damage:28},dummy:{hp:500,speed:0,reach:0,notice:0,lure:0,damage:0}};
+/** An enemy drawn to an Echo keeps after it this long once it loses sight of it (round a corner). */
+export const LURE_MEMORY = 2;
+/** How far from home an Echo can lead an enemy: its lure range plus this (px). */
+export const LURE_LEASH = 120;
 const encounters:Record<number,[EnemyKind,number,number][]>= {
  2:[['goblin',450,580],['goblin',1040,220]],
  3:[['goblin',830,130],['bear',420,120],['skull',440,580]],
@@ -44,14 +55,26 @@ export function updateEnemies(enemies:Enemy[],level:LevelData,player:{x:number;y
    }continue;
   }
   if(e.mode==='recover'){if(e.timer<=0)e.mode='idle';continue;}
-  // Any active Echo draws every living enemy; choose the nearest one deterministically.
-  const decoy=echoes.map((echo,i)=>({...echo,echoIndex:i})).sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0];
+  // An Echo draws an enemy that can see it within its lure range (not through walls or closed
+  // gates), the nearest first, and not further than LURE_LEASH past that range from home. Once
+  // drawn, the enemy keeps after that Echo for LURE_MEMORY s out of sight, routing round walls.
+  const fromHome=Math.hypot(e.x-e.homeX,e.y-e.homeY),leashed=fromHome<stat.lure+LURE_LEASH;
+  let decoy:EnemyTarget|undefined=leashed?echoes.map((echo,i)=>({...echo,echoIndex:i}))
+   .filter(c=>Math.hypot(c.x-e.x,c.y-e.y)<=stat.lure&&sight(e,c))
+   .sort((a,b)=>Math.hypot(a.x-e.x,a.y-e.y)-Math.hypot(b.x-e.x,b.y-e.y))[0]:undefined;
+  if(decoy){e.lureEcho=echoes[decoy.echoIndex!];e.lureTime=LURE_MEMORY;}
+  else if(leashed&&e.lureEcho&&(e.lureTime??0)>0&&echoes.includes(e.lureEcho)){
+   e.lureTime=(e.lureTime??0)-dt;decoy={...e.lureEcho,echoIndex:echoes.indexOf(e.lureEcho)};
+  }else{e.lureEcho=undefined;e.lureTime=0;}
   const target:EnemyTarget=decoy??{...player,echoIndex:null};const distance=Math.hypot(target.x-e.x,target.y-e.y);
-  const engaged=!!decoy||(distance<stat.notice&&Math.hypot(e.x-e.homeX,e.y-e.homeY)<235&&sight(e,target));
+  const engaged=!!decoy||(distance<stat.notice&&fromHome<235&&sight(e,target));
   // Even ranged enemies close in on an Echo, allowing it to defend itself inside 3m.
   const attackReach=decoy?Math.min(stat.reach,90):stat.reach;
   if(engaged&&distance<attackReach&&e.timer<=0&&sight(e,target)){e.mode='warning';e.timer=e.kind==='minotaur'?.9:.7;e.targetX=target.x;e.targetY=target.y;e.targetId=target.echoIndex;e.targetEcho=target.echoIndex===null?undefined:echoes[target.echoIndex];continue;}
-  const destination=engaged?(decoy?enemyWaypoint(e,target,obstacles,dt):target):{x:e.homeX,y:e.homeY},dx=destination.x-e.x,dy=destination.y-e.y,length=Math.hypot(dx,dy);
+  // No way through to the Echo (a gate closed between them): give it up instead of walking into the wall.
+  let way=decoy?reachableWaypoint(e,target,obstacles,dt):target;
+  if(!way){e.lureEcho=undefined;e.lureTime=0;way={x:e.homeX,y:e.homeY};}
+  const destination=engaged?way:{x:e.homeX,y:e.homeY},dx=destination.x-e.x,dy=destination.y-e.y,length=Math.hypot(dx,dy);
   e.mode=length>5?'chase':'idle';e.facingLeft=dx<0;
   if(length>5){const amount=Math.min(length,stat.speed*dt);const pos=resolveMovement(e.x,e.y,e.x+dx/length*amount,e.y+dy/length*amount,30,30,obstacles);e.x=pos.x;e.y=pos.y;}
  }

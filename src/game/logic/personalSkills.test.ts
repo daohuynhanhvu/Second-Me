@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Campaign, createBoss } from './campaign.ts';
 import { GameEngine } from '../GameEngine.ts';
 import { sounds } from './sound.ts';
+import { STORM_ORBS, orbPoint } from './stormOrbs.ts';
 sounds.setMuted(true);
 function setup(t: any) {
   const old=Object.getOwnPropertyDescriptor(globalThis,'document');
@@ -29,12 +30,33 @@ test('locked mechanical class cannot be selected; purchased class gets its own s
   g.screen='playing';g.useSkill();assert.equal(g.overdrive,5);g.attack();assert.equal(g.attackCooldown,.27);
 });
 test('orbs cap at three, orbit and deal nearby damage, then expire',t=>{
-  const g=setup(t);const tick=(g as any).updatePersonalSkill.bind(g);
-  g.player.x=500;g.player.y=300;g.boss!.x=536;g.boss!.y=288;
+  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];const tick=(g as any).updatePersonalSkill.bind(g);
+  g.player.x=500;g.player.y=300;const at=orbPoint(g.player,0);g.boss!.x=at.x+20;g.boss!.y=at.y;
   g.useSkill();g.useSkill();assert.equal(g.orbitOrbs.length,1);
-  tick(.01);assert.equal(g.boss!.hp,236);assert.ok(g.orbitOrbs[0].angle>0);
-  for(let i=0;i<4;i++){g.skillCooldown=0;g.useSkill();}assert.equal(g.orbitOrbs.length,3);
+  tick(.01);assert.equal(g.boss!.hp,240-STORM_ORBS.DAMAGE);assert.ok(g.orbitOrbs[0].angle>0);
+  for(let i=0;i<4;i++){g.skillCooldown=0;g.useSkill();}assert.equal(g.orbitOrbs.length,STORM_ORBS.MAX);
   tick(6.1);assert.equal(g.orbitOrbs.length,0);
+});
+test('orbs stay evenly spaced, however far the others have turned, and spread out again when one expires',t=>{
+  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.boss=null;const tick=(g as any).updatePersonalSkill.bind(g);
+  const gap=(a:number,b:number)=>((b-a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  g.useSkill();tick(1);g.skillCooldown=0;g.useSkill();tick(1.3);g.skillCooldown=0;g.useSkill();
+  const [a,b,c]=g.orbitOrbs.map(o=>o.angle);
+  for(const d of [gap(a,b),gap(b,c),gap(c,a)])assert.ok(Math.abs(d-Math.PI*2/3)<1e-9,`gap ${d}`);
+  tick(STORM_ORBS.LIFE-2.3+.01);                     // the first orb expires
+  assert.equal(g.orbitOrbs.length,2);
+  assert.ok(Math.abs(gap(g.orbitOrbs[0].angle,g.orbitOrbs[1].angle)-Math.PI)<1e-9);
+});
+test('orbs strike an enemy standing in its attack reach, every target they touch, and never through a wall',t=>{
+  const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.boss=null;const tick=(g as any).updatePersonalSkill.bind(g);
+  g.player.x=500;g.player.y=300;
+  const enemy=(x:number,y:number)=>({id:`e${x}`,kind:'goblin' as const,x,y,homeX:x,homeY:y,hp:30,maxHp:30,mode:'idle' as const,timer:9,targetX:0,targetY:0,facingLeft:false,hitFlash:0,deathAge:0,targetId:null});
+  const left=enemy(450,300),right=enemy(550,300);g.enemies=[left,right];   // 50 px either side: where melee enemies stand to strike
+  g.useSkill();for(let i=0;i<Math.round(2.2/.05);i++)tick(.05);             // one full turn
+  assert.ok(left.hp<30&&right.hp<30,`both struck: ${left.hp} ${right.hp}`);
+  const hidden=enemy(550,300);g.enemies=[hidden];g.currentLevel.walls=[{x:520,y:200,width:10,height:200}];
+  g.orbitOrbs=[];g.skillCooldown=0;g.useSkill();for(let i=0;i<Math.round(2.2/.05);i++)tick(.05);
+  assert.equal(hidden.hp,30);
 });
 test('sanctuary heals and boosts damage only inside its fixed radius, and expires',t=>{
   const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.characterClass='swordsman';g.health=40;g.player.x=500;g.player.y=300;

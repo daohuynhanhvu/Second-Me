@@ -10,6 +10,7 @@ import { JourneyCamp } from './JourneyCamp.tsx';
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
 import { IntroEffects } from './IntroEffects.tsx';
 import { MenuVines } from './MenuVines.tsx';
+import credits from '../game/data/credits.json';
 import { ComboPreview } from './ComboShowcase.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { drawWizardSprite } from '../game/rendering/wizardSprite.ts';
@@ -109,12 +110,37 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
     </nav>
     </div>
     {panel === 'settings' && <SettingsPanel engine={engine} hud={hud} close={() => setPanel('none')}/>}
-    {(panel === 'credits' || panel === 'quit') && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={panel === 'credits' ? (vi ? 'Tác giả' : 'Credits') : (vi ? 'Thoát trò chơi' : 'Quit game')} onClick={event => event.stopPropagation()}>
-      <div className="panel-top"><span className="eyebrow gold">{panel === 'credits' ? (vi ? 'TÁC GIẢ' : 'CREDITS') : (vi ? 'THOÁT TRÒ CHƠI' : 'QUIT GAME')}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={() => setPanel('none')}><X size={18}/></button></div>
-      <h2>SECOND ME</h2><p className="muted">{panel === 'credits' ? (vi ? 'Một chuyến phiêu lưu Echo đang được phát triển. Cảm ơn bạn đã đồng hành cùng khu rừng.' : 'An Echo adventure in development. Thank you for exploring the forest with us.') : (vi ? 'Bạn có thể đóng tab trình duyệt để thoát game. Tiến độ đã được lưu trên máy này.' : 'Close this browser tab to leave the game. Your progress is saved on this device.')}</p>
+    {panel === 'credits' && <CreditsPanel vi={vi} close={() => setPanel('none')}/>}
+    {panel === 'quit' && <div className="modal-backdrop intro-dialog" onClick={() => setPanel('none')}><div className="panel" role="dialog" aria-modal="true" aria-label={vi ? 'Thoát trò chơi' : 'Quit game'} onClick={event => event.stopPropagation()}>
+      <div className="panel-top"><span className="eyebrow gold">{vi ? 'THOÁT TRÒ CHƠI' : 'QUIT GAME'}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={() => setPanel('none')}><X size={18}/></button></div>
+      <h2>SECOND ME</h2><p className="muted">{vi ? 'Bạn có thể đóng tab trình duyệt để thoát game. Tiến độ đã được lưu trên máy này.' : 'Close this browser tab to leave the game. Your progress is saved on this device.'}</p>
       <button className="primary" onClick={() => setPanel('none')}>{vi ? 'QUAY LẠI' : 'BACK TO MENU'}</button>
     </div></div>}
   </div>;
+}
+
+/**
+ * Who made the game (src/game/data/credits.json: fill in the names and roles there; an empty
+ * entry shows as "—"), and the third-party work it uses, credited as their licences ask.
+ */
+function CreditsPanel({ vi, close }: { vi: boolean; close: () => void }) {
+  type Entry = { name: string; roleVi: string; roleEn: string; by?: string };
+  const sections: [string, string, Entry[]][] = [
+    ['ĐỘI PHÁT TRIỂN', 'DEVELOPMENT TEAM', credits.team],
+    ['MỸ THUẬT', 'ART', credits.art],
+    ['ÂM NHẠC', 'MUSIC', credits.music],
+    ['TÀI NGUYÊN BÊN THỨ BA', 'THIRD-PARTY ASSETS', credits.thirdParty],
+  ];
+  return <div className="modal-backdrop intro-dialog" onClick={close}><div className="panel settings-panel credits-panel" role="dialog" aria-modal="true" aria-label={vi ? 'Tác giả' : 'Credits'} onClick={event => event.stopPropagation()}>
+    <div className="panel-top"><span className="eyebrow gold">{vi ? 'TÁC GIẢ' : 'CREDITS'}</span><button className="icon-close" aria-label={vi ? 'Đóng' : 'Close'} onClick={close}><X size={18}/></button></div>
+    <h2>SECOND ME</h2>
+    <p className="credits-tagline">{vi ? 'Một chuyến phiêu lưu Echo trong khu rừng cổ.' : 'An Echo adventure in the ancient forest.'}</p>
+    {sections.map(([titleVi, titleEn, list]) => <section key={titleEn} className="credits-section">
+      <h3>{vi ? titleVi : titleEn}</h3>
+      <ul>{list.map((entry, i) => <li key={i}><b>{entry.name || '—'}</b><span>{[entry.by, vi ? entry.roleVi : entry.roleEn].filter(Boolean).join(' · ') || '—'}</span></li>)}</ul>
+    </section>)}
+    <button className="primary" onClick={close}>{vi ? 'QUAY LẠI' : 'BACK TO MENU'}</button>
+  </div></div>;
 }
 
 export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | null; hud: HUDState; close: () => void }) {
@@ -197,7 +223,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
   return <div className="characters-screen overlay hero-select-screen">
     <div className="hero-select-scene" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
       <h1 id="hero-select-title" className="hero-select-title">{vi ? 'CHỌN NHÂN VẬT' : 'CHOOSE YOUR HERO'}</h1>
-      <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>Back</button>
+      <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>{vi ? 'VỀ SẢNH' : 'BACK'}</button>
       <div className="hero-select-grid" role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
         {Array.from({length:8}, (_, i) => {
           const c = roster[i];
@@ -209,7 +235,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
       <section className="hero-select-info" aria-live="polite">
         <div className="hero-info-portrait">{choice.id === 'mage' || choice.id === 'swordsman' ? <ComboPreview key={choice.id} hero={choice.id}/> : portrait(choice.id)}</div>
         <div className="hero-info-copy"><h2>{choice.name} · {vi ? choice.roleVi : choice.roleEn}</h2><p>{detail}</p><small>{vi ? 'VŨ KHÍ' : 'WEAPON'} · {choice.id === 'mage' ? (vi ? 'Trượng phép' : 'Magic staff') : choice.id === 'swordsman' ? (vi ? 'Kiếm' : 'Sword') : (vi ? 'Cưa máy' : 'Chainblade')}</small></div>
-        <div className="hero-info-action"><span>{choice.id === hud.characterClass ? (vi ? 'ĐANG CHỌN' : 'CURRENT HERO') : (vi ? 'NHÂN VẬT SẴN SÀNG' : 'HERO READY')}</span><button type="button" onClick={confirm} disabled={!engine}>{vi ? 'XÁC NHẬN' : 'CONFIRM'}</button><button type="button" className="hero-info-cancel" onClick={() => engine?.goToLobby()}>{vi ? 'VỀ SẢNH' : 'BACK TO LOBBY'}</button></div>
+        <div className="hero-info-action"><span>{choice.id === hud.characterClass ? (vi ? 'ĐANG CHỌN' : 'CURRENT HERO') : (vi ? 'NHÂN VẬT SẴN SÀNG' : 'HERO READY')}</span><button type="button" onClick={confirm} disabled={!engine}>{vi ? 'XÁC NHẬN' : 'CONFIRM'}</button></div>
       </section>
     </div>
   </div>;
@@ -314,7 +340,7 @@ function VictoryStars({count,vi}:{count:number;vi:boolean}){
 
 export function Completion({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
   const last=engine?.currentLevelIdx===4,vi=hud.language==='vi',pending=!!hud.pendingRuneChoices?.length;
-  return <div className="modal-backdrop victory-backdrop"><div role="dialog" aria-modal="true" aria-label={vi?"Chiến thắng":"Victory"} className="panel completion-panel rune-completion woodland-victory"><VictoryOrnaments/><span className="eyebrow gold">{vi?'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC':'A MEMORY AWAKENED'}</span><h2>{vi?'HOÀN THÀNH MÀN':'TRAIL COMPLETE'}</h2><p className="muted">{hud.levelName} · {hud.levelSubtitle}</p>
+  return <div className="modal-backdrop victory-backdrop"><div role="dialog" aria-modal="true" aria-label={vi?"Chiến thắng":"Victory"} className="panel completion-panel rune-completion woodland-victory"><VictoryOrnaments/><span className="eyebrow gold">{vi?'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC':'A MEMORY AWAKENED'}</span><h2>{vi?'HOÀN THÀNH MÀN':'TRAIL COMPLETE'}</h2><p className="muted">{translate(hud.levelName,hud.language)} · {translate(hud.levelSubtitle,hud.language)}</p>
     <VictoryStars count={hud.lastRating?.stars??0} vi={vi}/>
     <div className="victory-loot"><span>+{hud.lastRating?.keys??0} <small>{vi?'CHÌA KHÓA':'KEYS'}</small></span><i/><span><CoinIcon/> +{hud.lastRating?.coins??0} <small>{vi?'XU':'COINS'}</small></span><i/><span><b>◷</b> {hud.elapsedLevelTime.toFixed(1)}<small> SEC</small></span></div>
     <RuneChoicePicker hud={hud} engine={engine}/>
@@ -347,7 +373,7 @@ function DefeatScreen({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
  return <div className="modal-backdrop defeat-backdrop"><section className="defeat-stage" role="dialog" aria-modal="true" aria-labelledby="defeat-title">
   <span className="defeat-kicker">{vi?'MỘT LẦN VẤP NGÃ · CHƯA PHẢI KẾT THÚC':'ONE FALL · NOT THE END'}</span>
   <h2 id="defeat-title">{timeout?(vi?'HẾT THỜI GIAN':'TIME RAN OUT'):(vi?'GỤC NGÃ':'FALLEN')}</h2>
-  <p className="defeat-level">{hud.levelName} · {hud.levelSubtitle}</p>
+  <p className="defeat-level">{translate(hud.levelName,hud.language)} · {translate(hud.levelSubtitle,hud.language)}</p>
   <div className="defeat-sigil" aria-hidden="true"><svg viewBox="0 0 120 120" shapeRendering="crispEdges">
    <path d="M32 10H88V18H99V32H106V84H98V99H85V108H33V100H21V85H14V34H22V20H32Z" fill="#192c28" stroke="#52675a" strokeWidth="3"/>
    <path d="M33 21H83V29H92V83H84V94H34V85H26V35H33Z" fill="#243a31"/>

@@ -1,0 +1,19 @@
+{
+  "team": [
+    { "name": "", "roleVi": "", "roleEn": "" },
+    { "name": "", "roleVi": "", "roleEn": "" },
+    { "name": "", "roleVi": "", "roleEn": "" }
+  ],
+  "art": [
+    { "name": "", "roleVi": "", "roleEn": "" }
+  ],
+  "music": [
+    { "name": "", "roleVi": "", "roleEn": "" }
+  ],
+  "thirdParty": [
+    { "name": "Super Pixel Effects Gigapack", "by": "Will Tice / unTied Games", "roleVi": "Hiệu ứng phép thuật", "roleEn": "Magic effects" },
+    { "name": "VT323", "by": "The VT323 Project Authors", "roleVi": "Phông chữ pixel · SIL OFL 1.1", "roleEn": "Pixel font · SIL OFL 1.1" },
+    { "name": "Noto Serif", "by": "The Noto Project Authors", "roleVi": "Phông chữ tiêu đề · SIL OFL 1.1", "roleEn": "Title font · SIL OFL 1.1" },
+    { "name": "mastermind-game", "by": "github.com/DoNgocSon-Dn", "roleVi": "Sprite quái vật", "roleEn": "Enemy sprites" }
+  ]
+}

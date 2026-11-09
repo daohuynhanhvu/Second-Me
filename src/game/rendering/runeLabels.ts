@@ -12,6 +12,30 @@ export function gateLabelLayout(level:LevelData):Rect[]{
  });
 }
 
+/**
+ * A rune's number as a small stone tag floating beside its plate, in the gate labels' frame
+ * (dark fill, gold rim, the same numerals): as wide as its numeral, with a point toward the
+ * plate and a soft shadow under the point, so it reads as hovering, not painted on the ground.
+ * The next rune to reach is lit gold; a reached one turns green, like a held rune on a gate.
+ */
+export function drawRuneBadge(ctx:CanvasRenderingContext2D,cx:number,cy:number,index:number,plateCenterY:number,state:'next'|'reached'|'ahead'){
+ const label=romanRune(index),below=plateCenterY<cy;
+ ctx.save();ctx.font='24px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+ const width=Math.max(34,Math.ceil(ctx.measureText(label).width)+18),height=30,x=Math.round(cx-width/2),y=Math.round(cy-height/2);
+ const tipY=below?y-7:y+height+7,baseY=below?y:y+height;
+ ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(cx,tipY+(below?-2:3),9,3,0,0,Math.PI*2);ctx.fill();
+ const fill=state==='next'?'#dfbe80':state==='reached'?'#1d3d2b':'#06150f';
+ const rim=state==='next'?'#f3d79b':state==='reached'?'#8bd8b4':'#ad986b';
+ if(state==='next'){ctx.shadowColor='#f3d79b';ctx.shadowBlur=10;}
+ ctx.fillStyle=fill;ctx.fillRect(x,y,width,height);
+ ctx.beginPath();ctx.moveTo(cx-6,baseY);ctx.lineTo(cx,tipY);ctx.lineTo(cx+6,baseY);ctx.closePath();ctx.fill();
+ ctx.shadowBlur=0;ctx.strokeStyle=rim;ctx.lineWidth=2;ctx.strokeRect(x,y,width,height);
+ ctx.beginPath();ctx.moveTo(cx-6,baseY);ctx.lineTo(cx,tipY);ctx.lineTo(cx+6,baseY);ctx.stroke();
+ ctx.fillStyle=fill;ctx.fillRect(cx-5,baseY+(below?0:-1),10,2);   // open the frame where the point leaves it
+ ctx.fillStyle=state==='next'?'#18281f':state==='reached'?'#caffdf':'#fff0bd';ctx.fillText(label,cx,cy+1);
+ ctx.restore();
+}
+
 export function drawGateLabels(ctx:CanvasRenderingContext2D,level:LevelData){
  const labels=gateLabelLayout(level);
  level.doors.forEach((door,doorIndex)=>{

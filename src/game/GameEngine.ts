@@ -6,6 +6,7 @@ import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logi
 import { createEnemies, updateEnemies, type Enemy } from './logic/enemies.ts';
 import { ECHO_RUNES, type EchoRuneId, type EchoRuneStock } from './logic/echoRunes.ts';
 import { segmentCircle, segmentWall } from './logic/combatGeometry.ts';
+import { STORM_ORBS, orbPoint, spaceOrbs, type StormOrb } from './logic/stormOrbs.ts';
 import { puzzleBalance, SHARD_BONUS, PUZZLE_HINTS } from './logic/balance.ts';
 import { TutorialDirector, type GuideTopic } from './logic/tutorials.ts';
 import { isPuzzleExitOpen } from './logic/puzzle.ts';
@@ -293,7 +294,7 @@ export class GameEngine {
   public lastRating: { stars: number; coins: number; keys?:number } | null = null;
   public mana=new ManaPool();
   public skillCooldown = 0;
-  public orbitOrbs: { angle:number; life:number; tick:number }[] = [];
+  public orbitOrbs: StormOrb[] = [];
   public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
   public overdrive = 0;
   public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
@@ -1172,12 +1173,13 @@ export class GameEngine {
     if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
     if(this.bossIntroduction||this.inventoryOpen||this.runeEditing||this.guides.blocking)return;
-    if(this.characterClass==='mage'&&this.orbitOrbs.length>=3)return;
+    if(this.characterClass==='mage'&&this.orbitOrbs.length>=STORM_ORBS.MAX)return;
     if(!this.spendMana(skillManaCost(this.characterClass)))return;
     if (this.characterClass === 'mage') {
       const aim = _target ?? this.combatAim() ?? this.player;
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:aim.x,targetY:aim.y});
-      this.orbitOrbs.push({angle: this.orbitOrbs.length*Math.PI*2/3, life:6, tick:0});
+      this.orbitOrbs.push({angle: 0, life:STORM_ORBS.LIFE});
+      spaceOrbs(this.orbitOrbs);
       this.skillCooldown = 1;
     } else if(this.characterClass === 'swordsman') {
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
@@ -1197,14 +1199,20 @@ export class GameEngine {
 
   private updatePersonalSkill(dt:number) {
     this.overdrive = Math.max(0,this.overdrive-dt);
+    // Storm Orbs (logic/stormOrbs.ts): each orb strikes every target its circle touches, then
+    // not that one again for TICK seconds.
     for(const orb of this.orbitOrbs) {
-      orb.life-=dt; orb.angle+=dt*3; orb.tick-=dt;
-      if(orb.life>0 && orb.tick<=0) {
-        orb.tick=.5;
-        this.damageCombatTarget(this.player.x+Math.cos(orb.angle)*36,this.player.y-12+Math.sin(orb.angle)*28,4,22);
-      }
+      orb.life-=dt; orb.angle+=dt*STORM_ORBS.SPIN;
+      const struck=orb.struck??=new Map<object,number>();
+      for(const [target,left] of struck){if(left-dt<=0)struck.delete(target);else struck.set(target,left-dt);}
+      if(orb.life<=0)continue;
+      const at=orbPoint(this.player,orb.angle),cooling=new Set<object>(struck.keys()),before=cooling.size;
+      this.damageArea(at.x,at.y,STORM_ORBS.HIT_RADIUS,STORM_ORBS.DAMAGE,cooling,Infinity);
+      if(cooling.size>before)for(const target of cooling)if(!struck.has(target))struck.set(target,STORM_ORBS.TICK);
     }
+    const before=this.orbitOrbs.length;
     this.orbitOrbs=this.orbitOrbs.filter(o=>o.life>0);
+    if(this.orbitOrbs.length!==before)spaceOrbs(this.orbitOrbs);
     if(this.lightCircle) {
       this.lightCircle.life-=dt;
       if(this.lightCircle.life<=0) this.lightCircle=null;

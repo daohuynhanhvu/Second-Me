@@ -7,6 +7,7 @@ import './JourneyCamp.css';
 import './JourneyCampV2.css';
 import './JourneyCampScene.css';
 import { JourneyAmbience } from './JourneyAmbience.tsx';
+import { translate } from '../i18n.ts';
 
 // Traced in the painting's native 1536x1024 coordinates, including each bend.
 const trailSegments = [
@@ -42,7 +43,7 @@ export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:G
         <div className="rest-scene-caption"><span>{vi?'BÊN ÁNH LỬA TRẠI':'BY THE CAMPFIRE'}</span><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><button onClick={()=>engine?.openCharacters()}>{vi?'Đổi nhân vật':'Change hero'} <ArrowRight size={14}/></button></div>
       </div>
       <div className="rest-kit"><div><span>{vi?'SẴN SÀNG LÊN ĐƯỜNG':'READY FOR THE TRAIL'}</span><p>{hud.runeLoadout?.length??0} / 5 {vi?'rune đã chọn':'runes equipped'}</p></div><button className="rest-prepare" onClick={()=>setPreparing(true)}><Backpack size={18}/>{vi?'Chuẩn bị':'Prepare'}</button></div>
-      <div className="rest-departure"><span>{complete?(vi?'HÀNH TRÌNH MỚI':'ANOTHER JOURNEY'):(vi?'ĐIỂM ĐẾN TIẾP THEO':'NEXT DESTINATION')}</span><div className="rest-destination"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><strong>{LEVELS[complete?0:next].subtitle}</strong></div>
+      <div className="rest-departure"><span>{complete?(vi?'HÀNH TRÌNH MỚI':'ANOTHER JOURNEY'):(vi?'ĐIỂM ĐẾN TIẾP THEO':'NEXT DESTINATION')}</span><div className="rest-destination"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><strong>{translate(LEVELS[complete?0:next].subtitle,hud.language)}</strong></div>
         <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={19} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'LÊN ĐƯỜNG':'BEGIN JOURNEY')}</span><ArrowRight size={18}/></button>
       </div>
       <footer className="rest-progress"><div role="progressbar" aria-label={vi?'Tiến độ hành trình':'Journey progress'} aria-valuenow={count} aria-valuemin={0} aria-valuemax={6}>{Array.from({length:6},(_,i)=><i key={i} className={i<count?'explored':i===next?'next':''}/>)}</div><span>{vi?'Đã lưu hành trình':'Journey saved'}</span></footer>
@@ -60,9 +61,9 @@ export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:G
           return <button key={item.id} className={`journey-stop ${done?'is-done':''} ${current?'is-current':''} ${i===5?'is-boss':''} ${inspect===i?'is-inspected':''}`} style={{left:`${positions[i][0]}%`,top:`${positions[i][1]}%`}} aria-disabled={!ready} onMouseEnter={()=>setInspect(i)} onMouseLeave={()=>{if(touchInspect===null)setInspect(null);}} onFocus={()=>setInspect(i)} onBlur={()=>{setInspect(null);setTouchInspect(null);}} onClick={()=>{
               if(window.matchMedia('(hover: none)').matches&&touchInspect!==i){setTouchInspect(i);setInspect(i);return;}
               if(ready)engine?.selectLevel(i);
-            }} aria-label={`${String(i+1).padStart(2,'0')} · ${item.subtitle} · ${done?(vi?'Đã hoàn thành':'Cleared'):ready?(vi?'Sẵn sàng':'Ready'):(vi?'Chưa mở':'Locked')}`}>
+            }} aria-label={`${String(i+1).padStart(2,'0')} · ${translate(item.subtitle,hud.language)} · ${done?(vi?'Đã hoàn thành':'Cleared'):ready?(vi?'Sẵn sàng':'Ready'):(vi?'Chưa mở':'Locked')}`}>
             <span className="stop-medallion">{!ready?<Lock size={18}/>:i===5?<Snowflake size={23}/>:done?<Check size={21}/>:<span>{String(i+1).padStart(2,'0')}</span>}</span>
-            <span className="stop-caption" data-idle={inspect===null} role="tooltip" hidden={inspect!==i&&!(inspect===null&&current&&ready)}><small>{i===5?(vi?'THỦ VỆ BĂNG':'FROST GUARDIAN'):`0${i+1}`}</small><strong>{item.subtitle}</strong>{done?<em>{'★'.repeat(hud.bestStars[item.id]??0)}{'☆'.repeat(3-(hud.bestStars[item.id]??0))}</em>:<em>{current&&ready?(vi?'Bắt đầu hành trình':'Begin your journey'):!ready?(vi?'CHƯA MỞ':'LOCKED'):(vi?'SẴN SÀNG':'READY')}</em>}</span>
+            <span className="stop-caption" data-idle={inspect===null} role="tooltip" hidden={inspect!==i&&!(inspect===null&&current&&ready)}><small>{i===5?(vi?'THỦ VỆ BĂNG':'FROST GUARDIAN'):`0${i+1}`}</small><strong>{translate(item.subtitle,hud.language)}</strong>{done?<em>{'★'.repeat(hud.bestStars[item.id]??0)}{'☆'.repeat(3-(hud.bestStars[item.id]??0))}</em>:<em>{current&&ready?(vi?'Bắt đầu hành trình':'Begin your journey'):!ready?(vi?'CHƯA MỞ':'LOCKED'):(vi?'SẴN SÀNG':'READY')}</em>}</span>
           </button>;
         })}
         <span className="world-caption">{vi?'Mỗi lối mòn lưu giữ một tiếng vọng.':'Every trail holds an echo.'}</span>

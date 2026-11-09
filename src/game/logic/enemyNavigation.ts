@@ -50,17 +50,28 @@ export function enemyRoute(start: Point, goal: Point, walls: Rect[]): Point[] {
   return [];
 }
 
-interface RouteCache { targetX: number; targetY: number; remaining: number; points: Point[] }
+interface RouteCache { targetX: number; targetY: number; remaining: number; points: Point[]; found: boolean }
 const routes = new WeakMap<object, RouteCache>();
 /** Cache routes briefly so moving Echoes are followed without searching every frame. */
 export function enemyWaypoint(enemy: Point, target: Point, walls: Rect[], dt: number): Point {
+  return reachableWaypoint(enemy, target, walls, dt) ?? target;
+}
+
+/**
+ * The next point on the way to `target`, or null when no route reaches it (a sealed room):
+ * then the caller decides, instead of walking straight into the wall.
+ */
+export function reachableWaypoint(enemy: Point, target: Point, walls: Rect[], dt: number): Point | null {
   if (clear(enemy,target,walls)) { routes.delete(enemy); return target; }
   let route=routes.get(enemy);
   if(route)route.remaining-=dt;
   if(!route || route.remaining<=0 || Math.hypot(target.x-route.targetX,target.y-route.targetY)>STEP) {
-    route={targetX:target.x,targetY:target.y,remaining:.6,points:enemyRoute(enemy,target,walls)};
+    const points=enemyRoute(enemy,target,walls);
+    route={targetX:target.x,targetY:target.y,remaining:.6,points,found:points.length>0};
     routes.set(enemy,route);
   }
   while(route.points.length && Math.hypot(route.points[0].x-enemy.x,route.points[0].y-enemy.y)<10)route.points.shift();
-  return route.points[0] ?? target;
+  if (route.points.length) return route.points[0];
+  // A route walked to its end: the last stretch to the target. None found: no way through.
+  return route.found ? target : null;
 }

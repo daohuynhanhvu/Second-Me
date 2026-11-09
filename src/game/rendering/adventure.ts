@@ -1,6 +1,6 @@
 import { drawSkillPickup } from './skillPickup.ts';
 import {drawWizardSprite} from './wizardSprite.ts';
-import {romanRune,drawGateLabels} from './runeLabels.ts';
+import {drawGateLabels,drawRuneBadge} from './runeLabels.ts';
 import { drawBossFrostZone } from './bossFrostZone.ts';
 import { drawEnemies, drawEnemyAttacks } from './enemies.ts';
 import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
@@ -13,6 +13,7 @@ import { drawSoldierSprite } from './soldierSprite.ts';
 import { drawComboHero, drawComboEffects, comboPose } from './comboSprites.ts';
 import { drawTimeRelic } from './timeRelic.ts';
 import { drawPillars, drawCombatHits } from './bossFeedback.ts';
+import { orbPoint } from '../logic/stormOrbs.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9a8d4'];
 
@@ -62,11 +63,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       const visited = index < game.checkpointIndex;
       const cx = plate.x + plate.width/2;
       const cy = plate.y-25<140 && cx>430 && cx<830 ? plate.y+plate.height+25 : plate.y-25;
-      ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2);
-      ctx.fillStyle = current ? '#dfbe80' : '#07180f'; ctx.fill();
-      ctx.strokeStyle = visited ? '#8bd8b4' : '#dfbe80'; ctx.lineWidth = current ? 3 : 1; ctx.stroke();
-      ctx.font = '26px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = current ? '#18281f' : '#e3d8b8';
-      ctx.fillText(romanRune(index),cx,cy+8);
+      drawRuneBadge(ctx, cx, cy, index, plate.y + plate.height/2, current ? 'next' : visited ? 'reached' : 'ahead');
       if (current) {
         ctx.strokeStyle = '#f3d79b'; ctx.setLineDash([6,5]); ctx.strokeRect(plate.x-8,plate.y-8,plate.width+16,plate.height+16); ctx.setLineDash([]);
       }
@@ -141,7 +138,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   for (const orb of game.orbitOrbs) {
-    const x = game.player.x + Math.cos(orb.angle) * 36, y = game.player.y - 12 + Math.sin(orb.angle) * 28;
+    const { x, y } = orbPoint(game.player, orb.angle);
     ctx.save(); ctx.globalAlpha *= Math.min(1, orb.life);
     drawLightningOrb(ctx, x, y, orb.angle + Math.PI / 2, 6, time); ctx.restore();
   }

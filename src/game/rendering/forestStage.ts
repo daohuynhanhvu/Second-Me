@@ -10,6 +10,7 @@ import { drawTrap, trapSpritesReady } from './traps.ts';
 import { biomeIndex, biomeLoaded, drawBiomeFloor, drawBiomeProp, drawBiomeWalls, drawBiomeWeather } from './biomes.ts';
 import { livingReady, livingImage, drawLivingDecor } from './livingAssets.ts';
 import { drawPortalEnergy } from './portalEffects.ts';
+import { getCurrentLanguage, translate } from '../../i18n.ts';
 import { drawPixelInteraction } from './pixelInteractions.ts';
 import { understoryReady, planUnderstory, drawUnderstoryStatic, drawUnderstoryMotion } from './forestUnderstory.ts';
 import {
@@ -176,7 +177,7 @@ function drawExitPortal(ctx: Ctx, exit: LevelData['exit'], sinceOpen: number | n
   ctx.font = '600 11px "Second Me Pixel", monospace'; ctx.textAlign = 'center';
   ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
   ctx.fillStyle = sinceOpen === null ? '#b9c7a2' : '#d8f7c5';
-  ctx.fillText('ANCIENT GATE', cx, box.y - 4);
+  ctx.fillText(translate('ANCIENT GATE', getCurrentLanguage()), cx, box.y - 4);
   ctx.restore();
 }
 

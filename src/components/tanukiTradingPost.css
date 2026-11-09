@@ -10,3 +10,16 @@
 
 .trading-items>button>.shop-item-icon{flex:0 0 38px;width:38px;height:38px}.trading-tabs>button>.shop-item-icon{flex:none}.trading-confirm-item>.shop-item-icon{flex:0 0 70px;width:70px;height:70px}
 .shop-original-item{object-fit:contain;image-rendering:pixelated}.trading-items>button>span:not(.shop-item-icon){display:flex;flex-direction:column;gap:2px;font-size:23px}.trading-items>button>span>small{font-size:14px!important;line-height:1.1;color:#b4a687}.trading-items>button{min-height:57px}.trading-items{scrollbar-width:auto;scrollbar-color:#dbb65f #241b13}.trading-merchant{animation:merchant-breath 3.5s ease-in-out infinite;transform-origin:50% 96%}.trading-merchant.merchant-still{animation:none}.trading-loading{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:#0b1e18;color:#e2d1a5;font-size:28px}@keyframes merchant-breath{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}@media(prefers-reduced-motion:reduce){.trading-merchant{animation:none}}
+/*
+ * Issue 10. The counter is only part of the background painting, so Tanuki (and the crate baked
+ * under its paws in the pose sheet) was painted over it, then cut straight across by the
+ * button's overflow at y 487. A strip of the same painting from the counter's top edge down
+ * (world y 459, the background drawn at 1280x720) now sits in front of Tanuki, so it stands
+ * behind its counter. Tanuki is centred in the stall's opening (x 505-730) instead of 64px to
+ * the left, where its sleeve covered the potions painted on the counter, and each pose cell
+ * (631.5 x 622.5 px in the sheet) is shown at one scale (x 0.491) both ways, not squashed.
+ */
+.trading-merchant{left:456px}
+.trading-merchant>span{height:306px}
+.trading-counter-front{position:absolute;left:360px;top:459px;width:520px;height:160px;background-size:1280px 720px;background-position:-360px -459px;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
+.trading-speech{left:424px}
