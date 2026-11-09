@@ -5,6 +5,10 @@ export function getCurrentLanguage() { return currentLanguage; }
 
 // Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
 const pairs: [string, string][] = [
+  ['Hold rune I in the southern grove, cross north and record rune II in the east. Both Echoes unlock the western sanctuary: the exit is back toward where your journey began.', 'Giữ ấn I ở khu rừng phía nam, vượt lên phía bắc rồi ghi Echo giữ ấn II ở phía đông. Hai Echo cùng mở điện thờ phía tây: cổng thoát nằm về phía nơi bạn bắt đầu.'],
+  ['Start in the north-east. Echo I opens the westward crossing; Echo II unlocks the descent; Echo III keeps the southern crossing open. Circle through all four chambers to reach the south-east exit.', 'Bắt đầu từ góc đông bắc. Echo I mở đường sang tây; Echo II mở lối xuống; Echo III giữ cổng phía nam. Đi vòng qua bốn khu để tới cổng thoát ở đông nam.'],
+  ['Wind from the eastern grove toward the inner sanctuary. Hold I in the south-east, II beyond the first gate, III in the northern chamber, then IV in the south-west. All four Echoes open the last turn north.', 'Đi từ khu rừng phía đông vào điện thờ bên trong. Giữ I ở đông nam, II sau cổng đầu, III trong phòng phía bắc và IV ở tây nam. Cả bốn Echo mở lối rẽ cuối cùng lên phía bắc.'],
+
   ['Your relics and weapon remain. Destroy four corner pillars, collect a skill every five seconds, and use Echo to distract the boss.', 'Di vật và vũ khí vẫn được giữ lại. Phá bốn trụ ở góc bản đồ trước, nhặt ô kỹ năng rơi mỗi 5 giây và dùng Echo đánh lạc hướng boss.'],
   ['Character and class', 'Nhân vật và class'], ['Characters', 'NHÂN VẬT'], ['Inventory', 'TÚI ĐỒ'],
   ['CHARACTERS & CLASSES', 'NHÂN VẬT & CLASS'],

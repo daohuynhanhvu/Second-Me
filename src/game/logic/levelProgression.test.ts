@@ -100,3 +100,10 @@ test('puzzle preparation does not drain health and paused Echoes survive deliber
  for(let i=0;i<60;i++)control.update(.1);
  assert.equal(game.echoes.length,1);assert.ok(game.echo!.stability!>=90);
 });
+
+test('spawn portal artwork stays separated from every puzzle rune',()=>{
+ for(const level of LEVELS)for(const plate of level.plates){
+  const distance=Math.hypot(level.playerSpawn.x-(plate.x+plate.width/2),level.playerSpawn.y-(plate.y+plate.height/2));
+  assert.ok(distance>=110,`level ${level.id}: spawn portal overlaps ${plate.id}`);
+ }
+});
