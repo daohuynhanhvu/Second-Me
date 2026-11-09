@@ -121,6 +121,7 @@ export interface HUDState {
   coins: number;
   timeItems: number;
   limitRings: number;
+  chestKeys: number;
   echoLimit: number;
   limitRingActive: boolean;
   bestStars: Record<number, number>;
@@ -464,6 +465,7 @@ export class GameEngine {
   public openShop() { if (this.screen !== 'lobby') return; this.screen = 'shop'; document.body.dataset.state = 'shop'; this.notifyHUD(); }
   public openCharacters() { if (this.screen !== 'lobby') return; this.screen = 'characters'; document.body.dataset.state = 'characters'; this.notifyHUD(); }
   public buyTimeItem() { if (this.screen !== 'shop') return; if (this.campaign.buyTimeItem()) this.showBanner('Time potion purchased'); else this.showBanner('Not enough coins'); this.notifyHUD(); }
+  public openChest(count:1|10) { if(this.screen!=='shop')return null;const rewards=this.campaign.openChest(count);this.notifyHUD();return rewards; }
   public buyLimitRing() { if (this.screen !== 'shop') return; if (this.campaign.buyLimitRing()) this.showBanner(this.language==='vi'?'Đã mua nhẫn tăng giới hạn.':'Limit ring purchased.'); else this.showBanner(this.language==='vi'?'Không đủ xu.':'Not enough coins.'); this.notifyHUD(); }
   public useLimitRing() {
     if (this.screen !== 'playing' || this.guides.blocking || this.exitTravelRemaining>0 || this.bossDeathPending || (this.boss && this.boss.hp<=0) || !this.campaign.useLimitRing()) return false;
@@ -2067,6 +2069,7 @@ export class GameEngine {
         coins: this.campaign.coins,
         timeItems: this.campaign.timeItems,
         limitRings: this.campaign.limitRings,
+        chestKeys: this.campaign.chestKeys,
         echoLimit: this.echoLimit,
         limitRingActive: this.limitRingActive,
         bestStars: { ...this.campaign.bestStars },

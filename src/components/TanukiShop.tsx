@@ -1,3 +1,4 @@
+import {ChestGacha} from './ChestGacha.tsx';
 import React, {useEffect, useState} from 'react';
 import type {GameEngine, HUDState} from '../game/GameEngine.ts';
 import {MECHANICAL_ENABLED} from '../game/logic/campaign.ts';
@@ -44,6 +45,7 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
       <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');talk(vi?(speech==='shop'?'Hôm nay bạn muốn tìm món gì?':'Mời mua hàng!'):(speech==='shop'?'What are you looking for today?':'Have a look!'),true);}}/>
 
     </div>
+    <ChestGacha engine={engine} hud={hud}/>
     <header className="tanuki-header"><h1>{vi?'KHO BÁU THỜI GIAN':'TIME TREASURES'}</h1><div className="tanuki-wallet"><Coin/> <strong>{hud.coins.toLocaleString()}</strong> {vi?'xu':'coins'}</div></header>
     <button className="tanuki-back" onMouseEnter={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onFocus={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onClick={()=>engine?.goToLobby()}>‹ {vi?'VỀ SẢNH':'BACK TO LOBBY'}</button>
     <main className="tanuki-panel">

@@ -124,7 +124,7 @@ export function SettingsPanel({ engine, hud, close }: { engine: GameEngine | nul
     <button className="primary" onClick={close}>LƯU & ĐÓNG</button></div></div>);
 }
 
-const latestNews = { title: 'Quầy Tanuki chuyển động', description: 'Tanuki vẫy tay, chớp mắt và đặt tay lên bàn. Khung thoại tự ẩn sau 5 giây không tương tác.' };
+const latestNews = { title: 'Rương đỏ đã mở', description: 'Dùng 5 chìa khóa mở một lượt hoặc 50 chìa khóa mở 10 lượt. Xem tỉ lệ thưởng ngay trong rương.' };
 
 export function Notifications({ close }: { close: () => void }) {
   return localize(<div className="modal-backdrop"><div className="panel news-panel"><div className="panel-top"><span className="eyebrow gold">THÔNG BÁO TRÒ CHƠI</span><button className="icon-close" aria-label="Đóng thông báo" onClick={close}><X size={18}/></button></div><h2>Tiếng vọng mới trong rừng</h2>

@@ -51,6 +51,8 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['The red chest is here', 'Rương đỏ đã mở'],
+  ['Use 5 keys for one draw or 50 keys for ten. Reward probabilities are shown in the chest.', 'Dùng 5 chìa khóa mở một lượt hoặc 50 chìa khóa mở 10 lượt. Xem tỉ lệ thưởng ngay trong rương.'],
   ['Tanuki’s animated stall', 'Quầy Tanuki chuyển động'],
   ['Tanuki and the stall now turn in a new pixel-art animation when you talk.', 'Tanuki và quầy hàng có chuyển động xoay mới theo phong cách pixel khi bạn trò chuyện.'],
   ['The new Tanuki shop', 'Cửa hàng Tanuki mới'],

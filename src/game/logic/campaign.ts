@@ -1,3 +1,4 @@
+import {rollChest, CHEST_POOL, type ChestRewardId} from './chest.ts';
 import { DAMAGE, damagePoints } from './damage.ts';
 import { ECHO_RUNES, rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
@@ -30,6 +31,8 @@ export class Campaign {
   coins = 0;
   timeItems = 0;
   limitRings = 0;
+  chestKeys = 0;
+  lastChestRewards:ChestRewardId[]=[];
   bestStars: Record<number, number> = {};
   load() {
     try {
@@ -44,6 +47,8 @@ export class Campaign {
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
       this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
+      this.chestKeys=Number.isSafeInteger(value.chestKeys)&&value.chestKeys>=0?value.chestKeys:0;
+      this.lastChestRewards=Array.isArray(value.lastChestRewards)?value.lastChestRewards.filter((id:unknown)=>CHEST_POOL.some(r=>r.id===id)).slice(0,10):[];
       this.echoRunes=cleanRuneStock(value.echoRunes);
       this.pendingRuneChoices=cleanRuneChoices(value.pendingRuneChoices);
       this.runeLoadout=Array.isArray(value.runeLoadout)?[...new Set(value.runeLoadout.filter((id:unknown)=>typeof id==='string'&&ECHO_RUNES.some(r=>r.id===id)))].slice(0,5) as EchoRuneId[]:ECHO_RUNES.filter(r=>(this.echoRunes[r.id]??0)>0).slice(0,5).map(r=>r.id);
@@ -51,12 +56,12 @@ export class Campaign {
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
       if(migrateRunes)this.save();
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
+    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
-      echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, bestStars: this.bestStars,
+      echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, chestKeys:this.chestKeys,lastChestRewards:this.lastChestRewards, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
   award(levelId: number): boolean {
@@ -97,6 +102,13 @@ export class Campaign {
     this.save();
     return reward;
   }
+  openChest(count:1|10,random:()=>number=Math.random):ChestRewardId[]|null {
+    if((count!==1&&count!==10)||this.chestKeys<count*5)return null;
+    const rewards=Array.from({length:count},()=>rollChest(random));
+    this.chestKeys-=count*5;
+    for(const id of rewards){if(id==='coins5')this.coins+=5;else if(id==='coins15')this.coins+=15;else if(id==='time')this.timeItems++;else this.limitRings++;}
+    this.lastChestRewards=rewards;this.save();return [...rewards];
+  }
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { if (this.coins < 5) return false; this.coins -= 5; this.timeItems++; this.save(); return true; }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
@@ -110,7 +122,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.limitRings = 0; this.bestStars = {}; this.save(); }
+  reset() { this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {
