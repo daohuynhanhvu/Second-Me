@@ -27,3 +27,4 @@
 @media(prefers-reduced-motion:no-preference){.loadout-slots>button[aria-pressed=true] .slot-stone{animation:rune-socket-glow 3.8s ease-in-out infinite}.loadout-preview>div:not(.loadout-empty-art)>.rune-stone{animation:rune-altar-hover 4s steps(12) infinite}}
 @keyframes rune-socket-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
 @keyframes rune-altar-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.rune-loadout-editor .loadout-instruction.loadout-warning{color:#f1cf82;background:#6b4d1f33;border-left:3px solid #d4a54f;padding:8px 10px}

@@ -1,3 +1,4 @@
+import {drawWizardSprite} from './wizardSprite.ts';
 import {romanRune,drawGateLabels} from './runeLabels.ts';
 import { drawBossFrostZone } from './bossFrostZone.ts';
 import { drawEnemies, drawEnemyAttacks } from './enemies.ts';
@@ -17,6 +18,15 @@ export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9
 export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
   ctx.save();
   drawEnemies(ctx,game.enemies,time);
+  if(game.supportAlly){
+    const a=game.supportAlly;ctx.save();ctx.globalAlpha=.9;
+    if(a.hero==='mage')drawWizardSprite(ctx,a.x,a.y,a.direction,a.isMoving,true,time);
+    else drawSoldierSprite(ctx,a.x,a.y,a.direction,a.isMoving,true,time,a.attackFlash>0);
+    ctx.globalAlpha=1;ctx.fillStyle='#081c19';ctx.fillRect(a.x-27,a.y-65,54,9);ctx.fillStyle='#70d5cc';ctx.fillRect(a.x-26,a.y-64,52*a.hp/15,7);
+    ctx.font='16px "Second Me Pixel", monospace';ctx.fillStyle='#d6fff1';ctx.textAlign='center';ctx.fillText(`${game.language==='vi'?'CHI VIỆN':'ALLY'} ${a.hp}/15`,a.x,a.y-71);
+    if(a.attackFlash>0&&a.target){ctx.strokeStyle='#c8f5c6';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(a.x,a.y-20);ctx.lineTo(a.target.x,a.target.y-10);ctx.stroke();}
+    ctx.restore();
+  }
   if(game.echoes.length){
     echoCanvas??=document.createElement('canvas');echoCanvas.width=96;echoCanvas.height=112;
     const layer=echoCanvas.getContext('2d')!;

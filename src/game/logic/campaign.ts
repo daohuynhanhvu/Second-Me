@@ -1,12 +1,11 @@
-import {SUPPLIES,emptySupplies,type SupplyId} from './supplies.ts';
+export {TIME_ITEM_PRICE,TIME_ITEM_CAP} from './shopItems.ts';
+import {SHOP_ITEMS,emptySupplies,cleanSupplies,type ShopItemId} from './shopItems.ts';
 import {rollChest, CHEST_POOL, type ChestRewardId} from './chest.ts';
 import { DAMAGE, damagePoints } from './damage.ts';
 import { ECHO_RUNES, rollEchoRune, rollRuneChoices, cleanRuneChoices, cleanRuneStock, type EchoRuneId, type EchoRuneStock } from './echoRunes.ts';
 import { puzzleBalance } from './balance.ts';
 // Temporarily unavailable while its art and gameplay are revised. Ownership is retained.
 export const MECHANICAL_ENABLED = false;
-export const TIME_ITEM_PRICE = 4;
-export const TIME_ITEM_CAP = 99;
 export const MATERIALS = [
   { id: 'iron', name: 'Mảnh sắt cổ', detail: 'Kim loại còn ấm dưới lớp rêu.', icon: '◆', color: '#bbc8cf' },
   { id: 'wood', name: 'Gỗ linh mộc', detail: 'Lõi gỗ dùng để rèn vũ khí Echo.', icon: '✦', color: '#b5c987' },
@@ -32,11 +31,9 @@ export class Campaign {
   lastRuneDrop:EchoRuneId|null = null;
   pendingRuneChoices:EchoRuneId[]=[];
   supplies=emptySupplies();
-  chanceUses=0;
-  heroClears:Record<string,number[]>={};
-  supportClaimed=false;
-  buySupply(id:SupplyId){const item=SUPPLIES.find(i=>i.id===id);if(!item||id==='support'||this.coins<item.price||this.supplies[id]>=item.cap)return false;this.coins-=item.price;this.supplies[id]++;this.save();return true;}
-  recordHeroClear(hero:string,level:number){if(!['mage','swordsman'].includes(hero)||level<1||level>6)return;this.heroClears[hero]=[...new Set([...(this.heroClears[hero]??[]),level])];if(!this.supportClaimed&&['mage','swordsman'].every(h=>[1,2,3,4,5,6].every(l=>this.heroClears[h]?.includes(l)))){this.supplies.support=1;this.supportClaimed=true;}this.save();}
+  chanceCharges=0;
+  aidUnlocked=false;
+  heroClears:Record<string,number[]>={mage:[],swordsman:[]};
   coins = 0;
   timeItems = 0;
   limitRings = 0;
@@ -47,17 +44,20 @@ export class Campaign {
     try {
       if (typeof localStorage === 'undefined') return;
       const value = JSON.parse(localStorage.getItem('second-me-campaign-v3') ?? '{}');
+      this.supplies=cleanSupplies(value.supplies);
+      this.chanceCharges=Number.isInteger(value.chanceCharges)?Math.max(0,Math.min(3,value.chanceCharges)):0;
+      // The former schema kept an opened three-chance item in stock until all charges were spent.
+      if(value.chanceCharges===undefined&&Number.isInteger(value.chanceUses)&&value.chanceUses>0&&value.chanceUses<3&&this.supplies.chances>0){this.chanceCharges=3-value.chanceUses;this.supplies.chances--;}
+
+      this.heroClears={mage:[],swordsman:[]};
+      for(const hero of ['mage','swordsman'])if(Array.isArray(value.heroClears?.[hero]))this.heroClears[hero]=[...new Set<number>(value.heroClears[hero].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=1&&Number(n)<=6))];
+      this.aidUnlocked=value.aidUnlocked===true||value.supportClaimed===true||['mage','swordsman'].every(h=>this.heroClears[h].length===6);
       this.completed = [...new Set<number>((value.completed ?? []).filter((id: unknown) => Number.isInteger(id) && Number(id) >= 1 && Number(id) <= 5))].sort();
       // Only a continuous run unlocks later trails.
       this.completed = this.completed.filter((id, i) => id === i + 1);
       this.forged = this.canForge && value.forged === true;
       this.bossDefeated = this.forged && value.bossDefeated === true;
       this.mechanicalOwned = value.mechanicalOwned === true;
-      this.supplies=emptySupplies();
-      for(const item of SUPPLIES){const n=value.supplies?.[item.id];this.supplies[item.id]=Number.isSafeInteger(n)&&n>=0?Math.min(item.cap,n):0;}
-      this.chanceUses=this.supplies.chances>0&&Number.isInteger(value.chanceUses)&&value.chanceUses>=0&&value.chanceUses<3?value.chanceUses:0;
-      this.heroClears={};for(const hero of ['mage','swordsman'])this.heroClears[hero]=Array.isArray(value.heroClears?.[hero])?[...new Set<number>(value.heroClears[hero].filter((n:unknown)=>Number.isInteger(n)&&Number(n)>=1&&Number(n)<=6))]:[];
-      this.supportClaimed=value.supportClaimed===true;
       this.coins = Number.isSafeInteger(value.coins) && value.coins >= 0 ? value.coins : 0;
       this.timeItems = Number.isSafeInteger(value.timeItems) && value.timeItems >= 0 ? value.timeItems : 0;
       this.limitRings = Number.isSafeInteger(value.limitRings) && value.limitRings >= 0 ? value.limitRings : 0;
@@ -70,11 +70,12 @@ export class Campaign {
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
       if(migrateRunes)this.save();
-    } catch { this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
+    } catch { this.supplies=emptySupplies();this.chanceCharges=0;this.aidUnlocked=false;this.heroClears={mage:[],swordsman:[]};this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
-      supplies:this.supplies,chanceUses:this.chanceUses,heroClears:this.heroClears,supportClaimed:this.supportClaimed,completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
+      supplies:this.supplies,chanceCharges:this.chanceCharges,aidUnlocked:this.aidUnlocked,heroClears:this.heroClears,
+      completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
       echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, chestKeys:this.chestKeys,lastChestRewards:this.lastChestRewards, bestStars: this.bestStars,
     })); } catch { /* Play remains available if browser storage is disabled. */ }
   }
@@ -97,9 +98,8 @@ export class Campaign {
     if(id===null){if(slot>=this.runeLoadout.length)return false;this.runeLoadout.splice(slot,1);}
     else{
       if(!ECHO_RUNES.some(r=>r.id===id)||(this.echoRunes[id]??0)<=0)return false;
-      const index=Math.min(slot,this.runeLoadout.length),old=this.runeLoadout[index],existing=this.runeLoadout.indexOf(id);
-      if(existing>=0){if(existing===index)return false;if(old)this.runeLoadout[existing]=old;else this.runeLoadout.splice(existing,1);}
-      this.runeLoadout[Math.min(index,this.runeLoadout.length)]=id;
+      if(this.runeLoadout.includes(id))return false;
+      this.runeLoadout[Math.min(slot,this.runeLoadout.length)]=id;
     }
     this.save();return true;
   }
@@ -125,10 +125,25 @@ export class Campaign {
     for(const id of rewards){if(id==='coins5')this.coins+=5;else if(id==='coins15')this.coins+=15;else if(id==='time')this.timeItems++;else this.limitRings++;}
     this.lastChestRewards=rewards;this.save();return [...rewards];
   }
+  recordHeroClear(hero:string,level:number){
+    if(!['mage','swordsman'].includes(hero)||!Number.isInteger(level)||level<1||level>6)return;
+    if(!this.heroClears[hero].includes(level))this.heroClears[hero].push(level);
+    if(!this.aidUnlocked&&['mage','swordsman'].every(h=>this.heroClears[h].length===6)){this.aidUnlocked=true;this.supplies.aid=1;}
+    this.save();
+  }
+  buySupply(id:Exclude<ShopItemId,'time'|'ring'>){return this.buyShopItem(id);}
+  shopStock(id:ShopItemId){return id==='time'?this.timeItems:id==='ring'?this.limitRings:this.supplies[id];}
+  buyShopItem(id:ShopItemId,quantity=1){
+    const item=SHOP_ITEMS.find(i=>i.id===id);
+    if(!item||!Number.isSafeInteger(quantity)||quantity<1||id==='aid'||this.shopStock(id)+quantity>item.cap||this.coins<item.price*quantity)return false;
+    this.coins-=item.price*quantity;
+    if(id==='time')this.timeItems+=quantity;else if(id==='ring')this.limitRings+=quantity;else this.supplies[id]+=quantity;
+    this.save();return true;
+  }
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
-  buyTimeItem() { if (this.coins < TIME_ITEM_PRICE || this.timeItems >= TIME_ITEM_CAP) return false; this.coins -= TIME_ITEM_PRICE; this.timeItems++; this.save(); return true; }
+  buyTimeItem() { return this.buyShopItem('time'); }
   useTimeItem() { if (this.timeItems < 1) return false; this.timeItems--; this.save(); return true; }
-  buyLimitRing() { if (this.coins < 30) return false; this.coins -= 30; this.limitRings++; this.save(); return true; }
+  buyLimitRing() { return this.buyShopItem('ring'); }
   useLimitRing() { if (this.limitRings < 1) return false; this.limitRings--; this.save(); return true; }
   get canForge() { return [1,2,3,4,5].every(id => this.completed.includes(id)); }
   forge(): boolean {
@@ -138,7 +153,7 @@ export class Campaign {
     return true;
   }
   get unlockedLevel() { return Math.min(5, this.completed.length); }
-  reset() { this.supplies=emptySupplies();this.chanceUses=0;this.heroClears={};this.supportClaimed=false; this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
+  reset() { this.supplies=emptySupplies();this.supplies.aid=this.aidUnlocked?1:0;this.chanceCharges=0;this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
 export interface BossState {

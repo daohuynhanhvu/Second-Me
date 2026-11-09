@@ -1,8 +1,8 @@
-import {SupplyItems} from './SupplyItems.tsx';
+import {SHOP_ITEMS} from '../game/logic/shopItems.ts';
+import {ShopItemIcon} from './ShopItemIcon.tsx';
 import {useDialogClose} from './useDialogClose.ts';
 import {useEffect,useRef,useState} from 'react';
 import {KeyRound,Backpack,X,ArrowRight,ShieldCheck} from 'lucide-react';
-import {TimeItemArt} from './TimeItemArt.tsx';
 import type {GameEngine,HUDState} from '../game/GameEngine.ts';
 import {ECHO_RUNES} from '../game/logic/echoRunes.ts';
 import {RuneLoadoutEditor,RuneStone} from './EchoRunes.tsx';
@@ -26,9 +26,14 @@ export function TrailInventory({engine,hud,close:onClose}:{engine:GameEngine|nul
   <div className="inventory-scroll">
    <h3 className="inventory-section-title">{vi?'VẬT PHẨM HỖ TRỢ':'TRAIL SUPPLIES'}</h3>
    <div className="inventory-supplies"><article><span className="supply-icon"><KeyRound size={30}/></span><div><h3>{vi?'Chìa khóa rương':'Chest keys'} <b>× {number(hud.chestKeys)}</b></h3><p>{vi?'Chỉ dùng mở rương · 5 chìa khóa mỗi lượt':'Chest only · 5 keys per draw'}</p></div></article>
-    <article><span className="supply-icon time"><TimeItemArt/></span><div><h3>{vi?'Thêm một chút':'A Little More'} <b>× {number(hud.timeItems)}</b></h3><p>{vi?'+2 giây · Tối đa 5 lần mỗi màn':'+2 seconds · Up to 5 uses per level'}</p></div>{playing&&<button disabled={!engine?.canUseTimeItem()} onClick={()=>engine?.useTimeItem()}>{vi?'DÙNG':'USE'}</button>}</article>
-    <article><span className="supply-icon"><img src={`${import.meta.env.BASE_URL}assets/effects/echo-limit-ring.png`} alt=""/></span><div><h3>{vi?'Nhẫn giới hạn':'Echo limit ring'} <b>× {number(hud.limitRings)}</b></h3><p>{hud.limitRingActive?(vi?'Đang hiệu lực · Tối đa 6 Echo':'Active · Up to 6 Echoes'):(vi?'+2 giới hạn Echo · Không cộng dồn':'+2 Echo limit · Does not stack')}</p></div>{playing&&<button disabled={!hud.limitRings||hud.limitRingActive} onClick={()=>engine?.useLimitRing()}>{hud.limitRingActive?(vi?'ĐÃ DÙNG':'ACTIVE'):(vi?'DÙNG':'USE')}</button>}</article>
-    <SupplyItems engine={engine} vi={vi}/>
+    <article><span className="supply-icon time"><ShopItemIcon id="time"/></span><div><h3>{vi?'Bình thời gian':'Time potion'} <b>× {number(hud.timeItems)}</b></h3><p>{vi?'+2 giây · Tối đa 5 lần mỗi màn':'+2 seconds · Up to 5 uses per level'}</p></div>{playing&&<button disabled={!engine?.canUseTimeItem()} onClick={()=>engine?.useTimeItem()}>{vi?'DÙNG':'USE'}</button>}</article>
+    <article><span className="supply-icon"><ShopItemIcon id="ring"/></span><div><h3>{vi?'Nhẫn giới hạn':'Echo limit ring'} <b>× {number(hud.limitRings)}</b></h3><p>{hud.limitRingActive?(vi?'Đang hiệu lực · Tối đa 6 Echo':'Active · Up to 6 Echoes'):(vi?'+2 giới hạn Echo · Không cộng dồn':'+2 Echo limit · Does not stack')}</p></div>{playing&&<button disabled={!hud.limitRings||hud.limitRingActive} onClick={()=>engine?.useLimitRing()}>{hud.limitRingActive?(vi?'ĐÃ DÙNG':'ACTIVE'):(vi?'DÙNG':'USE')}</button>}</article>
+    {SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring').map(item=>{
+      const id=item.id;
+      const count=hud.supplies?.[id]??0;
+      if(count===0&&!(id==='chances'&&(hud.chanceCharges??0)>0)&&!(id==='aid'&&hud.aidUnlocked))return null;
+      return <article key={id}><span className="supply-icon"><ShopItemIcon id={id}/></span><div><h3>{vi?item.vi:item.en} <b>× {number(count)}</b></h3><p>{vi?item.detailVi:item.detailEn}</p>{id==='chances'&&<small>{vi?'TỰ ĐỘNG · Lượt còn lại trong món đã mở: ':'PASSIVE · Charges in opened item: '}{hud.chanceCharges??0}</small>}{hud.usedSupplies?.includes(id)&&<small>{vi?'Đã dùng trong màn này':'Used this level'}</small>}</div>{playing&&id!=='chances'&&id!=='revive'&&<button disabled={!engine?.canUseSupply(id)} onClick={()=>engine?.useSupply(id)}>{vi?'DÙNG':'USE'}</button>}</article>;
+    })}
    </div>
    <div className="inventory-runes-title"><h3 className="inventory-section-title">{vi?'5 Ô RUNE ĐÃ CHỌN':'FIVE SELECTED RUNES'}</h3><button onClick={()=>setEditing(true)}>{vi?'ĐỔI RUNE':'CHANGE RUNES'}<ArrowRight size={12}/></button></div>
    <div className="inventory-rune-slots">{Array.from({length:5},(_,i)=>{const r=ECHO_RUNES.find(r=>r.id===ids[i]);return <button key={i} className={inspect===i?'inspecting':''} aria-pressed={inspect===i} aria-label={r?(vi?r.vi:r.en):(vi?`Ô trống ${i+1}`:`Empty slot ${i+1}`)} onClick={()=>{setInspect(i);if(!r)setEditing(true);}}><small>{i+1}</small>{r?<span style={{color:r.color}}><RuneStone id={r.id}/></span>:<span className="inventory-empty">◇</span>}<strong>{r?(vi?r.vi:r.en):(vi?'Ô trống':'Empty')}</strong>{r&&<em>× {number(hud.echoRunes?.[r.id]??0)}</em>}</button>;})}</div>

@@ -25,6 +25,6 @@ export function ChestSprite({tier=null, reducedMotion=false}: {tier?:ChestTier|n
   const opening=!!tier && age<.8 && !reducedMotion;
   const count=opening?8:12;
   const frame=opening?Math.min(7,Math.floor(age*10)):reducedMotion?0:Math.floor(Math.max(0,age-.8)*8)%12;
-  const file=tier?`chest_${tier}_${opening?'opening':'open_loop'}.png`:'chest_open_empty.png';
+  const file=tier?`chest_${tier}_${opening?'opening':'open_loop'}.png`:'chest_closed.png';
   return <span aria-hidden="true" className="reward-chest-sprite" style={{display:'block',width:'100%',aspectRatio:'1',imageRendering:'pixelated',backgroundImage:`url(${import.meta.env.BASE_URL}assets/chest/${file})`,backgroundRepeat:'no-repeat',backgroundSize:tier?`${count*100}% 100%`:'100% 100%',backgroundPosition:tier?`${frame*100/(count-1)}% 0`:'0 0'}}/>;
 }

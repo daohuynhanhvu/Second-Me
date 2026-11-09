@@ -1,72 +1,60 @@
-import {SupplyItems} from './SupplyItems.tsx';
-import {PixelTanuki} from './PixelTanuki.tsx';
+import {useEffect,useRef,useState} from 'react';
 import {ChestGacha} from './ChestGacha.tsx';
-import React, {useEffect, useState} from 'react';
-import type {GameEngine, HUDState} from '../game/GameEngine.ts';
-import {MECHANICAL_ENABLED,TIME_ITEM_CAP,TIME_ITEM_PRICE} from '../game/logic/campaign.ts';
-import {TimeItemArt} from './TimeItemArt.tsx';
-import './tanukiShop.css';
-
-const asset = (path: string) => `${import.meta.env.BASE_URL}assets/${path}`;
-function Coin() { return <img className="tanuki-coin" src={asset('ui/raccoon-coin.png')} alt="" aria-hidden="true"/>; }
-
-export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDState}) {
-  const vi = hud.language === 'vi';
-  const [tab, setTab] = useState<'items'|'outfits'>('items');
-  const [speech, setSpeech] = useState<'welcome'|'shop'|'bye'>('welcome');
-  const [message, setMessage] = useState('');
-  const [greeting, setGreeting] = useState({text: vi?'Kính chào!':'Welcome!', id:0});
-  const [visible, setVisible] = useState(true);
-  const [wave, setWave] = useState(1);
-  const [frame, setFrame] = useState(17);
-  const talk = (text: string, greet = false) => {
-    setGreeting(previous=>({text,id:previous.id+1})); setVisible(true);
-    if(greet) setWave(previous=>previous+1);
-  };
-  useEffect(()=>{ const timer=window.setTimeout(()=>setVisible(false),5000);return ()=>window.clearTimeout(timer); },[greeting.id]);
-  useEffect(()=>{
-    if(hud.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFrame(0);return;}
-    let tick=0;
-    const timer=window.setInterval(()=>{
-      tick++;
-      if(tick<28) setFrame(17+tick);
-      else { const idle=(tick-28)%65;setFrame(idle>=60?12+idle-60:Math.floor(idle*8/12)%12); }
-    },1000/12);
-    return ()=>window.clearInterval(timer);
-  },[wave,hud.reducedMotion]);
-  const purchase = (kind: 'time'|'ring') => {
-    if (!engine) return;
-    if (kind==='time' && hud.timeItems>=TIME_ITEM_CAP){talk(vi?'Túi đã đủ 99 vật phẩm rồi!':'You already have 99 of this item!');return;}
-    if(hud.coins < (kind==='time'?TIME_ITEM_PRICE:30)){talk(vi?'Chưa đủ xu rồi… Hẹn bạn lần sau nhé!':'Not enough coins… Come back soon!');return;}
-    if (kind === 'time') {if(!engine.buyTimeItem())return;} else engine.buyLimitRing();
-    setMessage(vi?'Cảm ơn bạn đã mua hàng!':'Thank you for your purchase!');
-    talk(vi?'Cảm ơn bạn! Chúc hành trình thuận lợi!':'Thank you! Have a safe journey!',true);
-  };
-  return <div className={`tanuki-shop${hud.reducedMotion?' reduced-motion':''}`} onPointerDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}} onKeyDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}}>
-    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><PixelTanuki frame={frame}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
-    <div className="tanuki-scene-controls">
-      <div className="tanuki-speech" aria-live="polite" hidden={!visible}>{greeting.text}</div>
-      <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');talk(vi?(speech==='shop'?'Hôm nay bạn muốn tìm món gì?':'Mời mua hàng!'):(speech==='shop'?'What are you looking for today?':'Have a look!'),true);}}/>
-
-    </div>
-    <ChestGacha engine={engine} hud={hud}/>
-    <header className="tanuki-header"><h1>{vi?'KHO BÁU THỜI GIAN':'TIME TREASURES'}</h1><div className="tanuki-wallet"><Coin/> <strong>{hud.coins.toLocaleString()}</strong> {vi?'xu':'coins'}</div></header>
-    <button className="tanuki-back" onMouseEnter={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onFocus={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onClick={()=>engine?.goToLobby()}>‹ {vi?'VỀ SẢNH':'BACK TO LOBBY'}</button>
-    <main className="tanuki-panel">
-      <div className="tanuki-panel-heading"><span>✦ {vi?'QUẦY CỦA TANUKI':'TANUKI’S SHOP'} ✦</span><h2>{vi?'NƠI BÁN MỌI THỨ BẠN CẦN':'EVERYTHING FOR YOUR JOURNEY'}</h2></div>
-      <div className="tanuki-tabs" role="tablist" aria-label={vi?'Danh mục cửa hàng':'Shop categories'}>
-        <button role="tab" aria-selected={tab==='items'} onClick={()=>setTab('items')}>{vi?'VẬT PHẨM':'ITEMS'} <span aria-hidden="true">✦</span></button>
-        <button role="tab" aria-selected={tab==='outfits'} onClick={()=>{setTab('outfits');talk(vi?'Hàng chưa về… Mình cũng mong lắm!':'Still waiting for stock… Me too!');}}>{vi?'TRANG PHỤC':'OUTFITS'} <span aria-hidden="true">♜</span></button>
-      </div>
-      <div className="tanuki-stock" role="tabpanel">
-        {tab === 'outfits' ? <div className="tanuki-empty"><span>✧</span><p>{vi?'Đang nhập hàng, hãy chờ nha!':'New outfits are on their way. Please wait!'}</p></div> : <>
-          <article className="tanuki-product"><div className="tanuki-product-art tanuki-time-art"><TimeItemArt/></div><div className="tanuki-product-copy"><h3>{vi?'Thêm một chút':'A Little More'}</h3><p>{vi?'Cộng 2 giây cho chặng hiện tại, tối đa 5 lần mỗi màn. Nhấn F để dùng.':'Add 2 seconds to the current leg, up to 5 times per level. Press F to use.'}</p><small>{vi?'Thường · Đang có':'Common · Owned'}: {hud.timeItems}/{TIME_ITEM_CAP}</small><div className="tanuki-product-bottom"><b><Coin/> {TIME_ITEM_PRICE} {vi?'xu':'coins'}</b><button disabled={hud.coins<TIME_ITEM_PRICE||hud.timeItems>=TIME_ITEM_CAP} onClick={()=>purchase('time')}>{hud.timeItems>=TIME_ITEM_CAP?(vi?'ĐÃ ĐẦY':'FULL'):(vi?'MUA':'BUY')}</button></div></div></article>
-          <article className="tanuki-product"><div className="tanuki-product-art"><img src={asset('effects/echo-limit-ring.png')} alt=""/></div><div className="tanuki-product-copy"><h3>{vi?'Nhẫn tăng giới hạn':'Echo limit ring'}</h3><p>{vi?'Dùng một nhẫn để tăng giới hạn từ 4 lên 6 Echo trong màn hiện tại. Không cộng dồn.':'Use one ring to raise the Echo limit from 4 to 6 for this level. Does not stack.'}</p><small>{vi?'Đang có':'Owned'}: {hud.limitRings}</small><div className="tanuki-product-bottom"><b><Coin/> 30 {vi?'xu':'coins'}</b><button disabled={hud.coins<30} onClick={()=>purchase('ring')}>{vi?'MUA':'BUY'}</button></div></div></article>
-          <SupplyItems engine={engine} vi={vi} shop/>
-          {MECHANICAL_ENABLED && <article className="tanuki-product"><div className="tanuki-product-copy"><h3>Rivet-07</h3><div className="tanuki-product-bottom"><b><Coin/> 100 {vi?'xu':'coins'}</b><button disabled={hud.mechanicalOwned||hud.coins<100} onClick={()=>engine?.buyMechanical()}>{hud.mechanicalOwned?(vi?'ĐÃ SỞ HỮU':'OWNED'):(vi?'MUA':'BUY')}</button></div></div></article>}
-        </>}
-      </div>
-      <p className="tanuki-purchase-message" role="status">{message}</p>
-    </main>
-  </div>;
+import {ShopItemIcon} from './ShopItemIcon.tsx';
+import {SHOP_ITEMS,type ShopItemId} from '../game/logic/shopItems.ts';
+import type {GameEngine,HUDState} from '../game/GameEngine.ts';
+import './tanukiTradingPost.css';
+const displayItems=[...SHOP_ITEMS.filter(i=>i.id==='time'||i.id==='ring'),...SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring')];
+const poseOffsets=[[0,0],[18,-2],[7,6],[18,6]];
+const asset=(name:string)=>`${import.meta.env.BASE_URL}assets/ui/${name}`;
+export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
+ const vi=hud.language==='vi',viewport=useRef<HTMLDivElement>(null),dialog=useRef<HTMLFormElement>(null),buyButton=useRef<HTMLButtonElement>(null),reactionUntil=useRef(0);
+ const [ready,setReady]=useState(false),[greetingRun,setGreetingRun]=useState(0),[scale,setScale]=useState(1),[selected,setSelected]=useState<ShopItemId>('time'),[tab,setTab]=useState<'items'|'outfits'>('items'),[confirm,setConfirm]=useState(false),[quantity,setQuantity]=useState(1),[message,setMessage]=useState(''),[pose,setPose]=useState(0),[speech,setSpeech]=useState(true);
+ const item=SHOP_ITEMS.find(i=>i.id===selected)!;
+ const stock=(id:ShopItemId)=>id==='time'?hud.timeItems:id==='ring'?hud.limitRings:hud.supplies?.[id]??0;
+ const unlocked=selected!=='aid'||!!hud.aidUnlocked,room=item.cap-stock(selected),affordable=item.price?Math.floor(hud.coins/item.price):room,maxQuantity=Math.max(0,Math.min(room,affordable));
+ const close=()=>{setConfirm(false);buyButton.current?.focus();};
+ useEffect(()=>{const element=viewport.current;if(!element)return;const resize=()=>setScale(Math.min(element.clientWidth/1280,element.clientHeight/720));resize();const observer=new ResizeObserver(resize);observer.observe(element);return()=>observer.disconnect();},[]);
+ useEffect(()=>{
+  let mounted=true;
+  const load=(src:string)=>new Promise<void>(resolve=>{const image=new Image();image.onload=()=>resolve();image.onerror=()=>resolve();image.src=src;if(image.complete)resolve();});
+  void Promise.all([load(asset('tanuki-market-sunset.png')),load(asset('tanuki-merchant-poses.png'))]).then(()=>{if(mounted)setReady(true);});
+  return()=>{mounted=false;};
+ },[]);
+ useEffect(()=>{
+  if(!ready)return;
+  setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;
+  setPose(hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:2);
+ },[ready]);
+ useEffect(()=>{if(!ready||hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;let tick=0;const interval=window.setInterval(()=>{tick++;if(performance.now()>=reactionUntil.current)setPose(tick%32===30?1:0);},160);return()=>window.clearInterval(interval);},[ready,hud.reducedMotion]);
+ useEffect(()=>{if(!ready||!speech)return;const timeout=window.setTimeout(()=>setSpeech(false),7000);return()=>window.clearTimeout(timeout);},[ready,speech,message,greetingRun]);
+ useEffect(()=>{if(!confirm)return;dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}else if(e.key==='Tab'){const nodes=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input')??[]),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);},[confirm]);
+ const select=(id:ShopItemId)=>{setSelected(id);setQuantity(1);setMessage('');};
+ const purchase=()=>{
+  if(selected==='aid'||!unlocked||quantity<1||quantity>maxQuantity||!engine?.buyShopItem(selected,quantity)){setMessage(vi?'Không thể mua. Kiểm tra xu và chỗ trống trong túi.':'Cannot purchase. Check your coins and inventory capacity.');return;}
+  setMessage(vi?`Đã nhận ${quantity} × ${item.vi}. Cảm ơn bạn!`:`Received ${quantity} × ${item.en}. Thank you!`);reactionUntil.current=performance.now()+1500;setPose(3);setSpeech(true);close();
+ };
+ return <div className="tanuki-trading-shop" ref={viewport}><div className="trading-world" style={{transform:`translate(-50%,-50%) scale(${scale})`}}>
+  <img className="trading-background" src={asset('tanuki-market-sunset.png')} alt=""/>
+  <div className="trading-fireflies" aria-hidden="true"><i/><i/><i/><i/></div>
+  <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(2);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-poses.png')})`,backgroundPosition:`${pose%2*100}% ${Math.floor(pose/2)*100}%`,transform:`translate(${poseOffsets[pose][0]}px,${poseOffsets[pose][1]}px)`}}/></button>
+  {ready&&speech&&<div className="trading-speech" role="status">{message||(vi?'Xin chào! Bạn muốn mua gì nào?':'Welcome! What would you like?')}</div>}
+  <ChestGacha engine={engine} hud={hud}/>
+  <div className="trading-wallet"><img src={asset('raccoon-coin.png')} alt=""/><span>{vi?'XU':'GOLD'}: <b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></span></div>
+  <section className="trading-catalogue" aria-label={vi?'Quầy hàng Tanuki':'Tanuki’s shop'}>
+   <div className="trading-tabs" role="tablist"><button role="tab" aria-selected={tab==='items'} onClick={()=>setTab('items')}>{vi?'VẬT PHẨM':'ITEMS'} <ShopItemIcon id="healSmall"/></button><button role="tab" aria-selected={tab==='outfits'} onClick={()=>setTab('outfits')}>{vi?'TRANG PHỤC':'OUTFITS'} <span aria-hidden="true">♜</span></button></div>
+   <div className="trading-hint">{vi?'7 VẬT PHẨM · CUỘN ĐỂ XEM TẤT CẢ':'7 ITEMS · SCROLL TO SEE ALL'}</div>
+   {tab==='items'?<><div className="trading-items" role="tabpanel" aria-label={vi?'Vật phẩm':'Items'}>{displayItems.map(product=><button key={product.id} aria-pressed={selected===product.id} onClick={()=>select(product.id)} className={selected===product.id?'selected':''}><ShopItemIcon id={product.id}/><span>{vi?product.vi:product.en}<small>{vi?'Đang có':'Owned'}: {stock(product.id).toLocaleString(vi?'vi-VN':'en-US')}</small></span><b>{product.id==='aid'&&!hud.aidUnlocked?(vi?'KHÓA':'LOCKED'):`${product.price} ${vi?'xu':'coins'}`}</b></button>)}</div>
+   <div className="trading-product-info" aria-live="polite"><header><strong>{vi?item.vi:item.en}</strong><small>{vi?'Trong túi':'Owned'} {stock(selected).toLocaleString()} / {item.cap.toLocaleString()}</small></header><p>{vi?item.detailVi:item.detailEn}</p>{selected==='chances'&&(hud.chanceCharges??0)>0&&<small>{vi?'Món đang dùng còn ':'Opened item has '}{hud.chanceCharges} {vi?'lượt':'charges left'}</small>}</div></>:<div className="trading-outfits" role="tabpanel"><span>♜</span><h2>{vi?'Hàng đang trên đường tới':'More outfits are on the way'}</h2><p>{vi?'Tanuki chưa có trang phục để bán.':'Tanuki has no outfits for sale yet.'}</p></div>}
+  </section>
+  <div className="trading-actions"><button className="trading-buy" ref={buyButton} disabled={tab!=='items'||selected==='aid'||!unlocked||maxQuantity<1} onClick={()=>{setQuantity(1);setConfirm(true);}}>{selected==='aid'?(vi?'PHẦN THƯỞNG HÀNH TRÌNH':'JOURNEY REWARD'):!unlocked?(vi?'CHƯA MỞ KHÓA':'LOCKED'):room<=0?(vi?'TÚI ĐÃ ĐẦY':'INVENTORY FULL'):affordable<1?(vi?'CHƯA ĐỦ XU':'NOT ENOUGH COINS'):vi?'MUA':'BUY'}</button><button className="trading-leave" onClick={()=>engine?.goToLobby()}>{vi?'THOÁT':'LEAVE'} ↩</button></div>
+  {confirm&&<div className="trading-confirm-backdrop" onClick={close}><form ref={dialog} className="trading-confirm" role="dialog" aria-modal="true" aria-labelledby="trading-confirm-title" onClick={e=>e.stopPropagation()} onSubmit={e=>{e.preventDefault();purchase();}}>
+   <header><h2 id="trading-confirm-title">{vi?'XÁC NHẬN MUA?':'CONFIRM PURCHASE?'}</h2><button type="button" aria-label={vi?'Đóng xác nhận':'Close confirmation'} onClick={close}>×</button></header>
+   <div className="trading-confirm-item"><ShopItemIcon id={selected}/><div><strong>{vi?item.vi:item.en}</strong><p>{vi?item.detailVi:item.detailEn}</p></div></div>
+   <label className="trading-quantity"><span>{vi?'SỐ LƯỢNG':'QUANTITY'}</span><button type="button" aria-label={vi?'Giảm số lượng':'Decrease quantity'} disabled={quantity<=1} onClick={()=>setQuantity(n=>Math.max(1,n-1))}>‹</button><input type="number" aria-label={vi?'Số lượng':'Quantity'} min={1} max={maxQuantity} value={quantity} onChange={e=>setQuantity(Math.max(1,Math.min(maxQuantity,Number(e.target.value)||1)))}/><button type="button" aria-label={vi?'Tăng số lượng':'Increase quantity'} disabled={quantity>=maxQuantity} onClick={()=>setQuantity(n=>Math.min(maxQuantity,n+1))}>›</button></label>
+   <p className="trading-total">{vi?'GIÁ':'PRICE'}: {item.price} · {vi?'TỔNG':'TOTAL'}: <b>{item.price*quantity} {vi?'xu':'coins'}</b></p>
+   <footer><button type="submit" disabled={quantity<1||quantity>maxQuantity}>{vi?'XÁC NHẬN':'YES · BUY'}</button><button type="button" onClick={close}>{vi?'HỦY':'CANCEL'}</button></footer>
+  </form></div>}
+  {!ready&&<div className="trading-loading" role="status">{vi?'Tanuki đang mở quầy…':'Tanuki is opening the stall…'}</div>}
+ </div></div>;
 }

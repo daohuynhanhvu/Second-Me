@@ -24,3 +24,4 @@ body :is(#root,.modal-backdrop) :is(.loadout-instruction,.inventory-rune-descrip
  .adventure-hud .hud-tools{gap:3px}.adventure-hud .hud-tools button{padding:6px}.adventure-hud .hud-tools svg{width:14px;height:14px}.adventure-hud .hud-wallet{display:none}
  .adventure-hud .hud-banner:not(.boss-banner){bottom:6px;max-width:85%;width:max-content;font-size:12px;padding:5px 8px}
 }
+.settings-panel .dev-supplies{margin-top:15px;padding:12px;border:2px dashed #b4a062;background:#243923}.settings-panel .dev-supplies button{width:100%;font-size:19px;color:#f0d491;border-radius:0}.settings-panel .dev-supplies p{font-size:16px;line-height:1.4;color:#c1cba7;margin:9px 0 0}

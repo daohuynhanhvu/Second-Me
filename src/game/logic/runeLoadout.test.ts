@@ -4,11 +4,12 @@ import {Campaign} from './campaign.ts';
 import {ECHO_RUNES} from './echoRunes.ts';
 import {GameEngine} from '../GameEngine.ts';
 function storage(t:TestContext){const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage'),map=new Map<string,string>();Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>map.set(k,v)}});t.after(()=>old?Object.defineProperty(globalThis,'localStorage',old):Reflect.deleteProperty(globalThis,'localStorage'));return map;}
-test('loadout holds five unique rune types, replaces or swaps slots without consuming stock',()=>{
+test('loadout holds five unique rune types, replaces slots and rejects duplicates without moving slots or consuming stock',()=>{
  const c=new Campaign();c.echoRunes=Object.fromEntries(ECHO_RUNES.map(r=>[r.id,2]));
  for(let i=0;i<5;i++)assert.ok(c.setRuneSlot(i,ECHO_RUNES[i].id));
  assert.equal(c.runeLoadout.length,5);const stock={...c.echoRunes};assert.ok(c.setRuneSlot(0,'cleave'));assert.equal(c.runeLoadout[0],'cleave');assert.deepEqual(c.echoRunes,stock);
- const second=c.runeLoadout[1];assert.ok(c.setRuneSlot(1,'cleave'));assert.equal(c.runeLoadout[1],'cleave');assert.equal(c.runeLoadout[0],second);assert.equal(new Set(c.runeLoadout).size,5);
+ const before=[...c.runeLoadout];assert.equal(c.setRuneSlot(1,'cleave'),false);assert.deepEqual(c.runeLoadout,before);assert.equal(c.setRuneSlot(0,'cleave'),false);assert.deepEqual(c.runeLoadout,before);assert.deepEqual(c.echoRunes,stock);
+ c.setRuneSlot(4,null);const partial=[...c.runeLoadout];assert.equal(c.setRuneSlot(4,'cleave'),false);assert.deepEqual(c.runeLoadout,partial);
  assert.equal(c.setRuneSlot(5,'vamp'),false);assert.equal(c.setRuneSlot(-1,'vamp'),false);c.echoRunes.vamp=0;assert.equal(c.setRuneSlot(0,'vamp'),false);
 });
 test('old saves pick at most five owned runes; selected empty-stock slots and intentional empty sets survive reload',t=>{
