@@ -17,3 +17,4 @@
 /* Eight redrawn pixel-art views follow the uploaded stall's 360° turn. */
 .tanuki-turn-sprite{position:absolute;top:10%;left:5%;width:78%;aspect-ratio:1;background-repeat:no-repeat;background-size:400% 200%;image-rendering:pixelated}
 @media(max-width:760px){.tanuki-turn-sprite{width:65%;top:4%;left:8%}}
+.tanuki-turn-sprite{background-size:900% 500%}.tanuki-speech[hidden]{display:none}

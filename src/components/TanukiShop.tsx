@@ -13,47 +13,55 @@ export function TanukiShop({engine, hud}: {engine: GameEngine|null; hud: HUDStat
   const [chestOpen, setChestOpen] = useState(true);
   const [chestDialog, setChestDialog] = useState(false);
   const [message, setMessage] = useState('');
-  const [turnRequest, setTurnRequest] = useState(0);
-  const [turnFrame, setTurnFrame] = useState(0);
-  useEffect(() => {
-    if (!turnRequest || hud.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setTurnFrame(0); return; }
-    let frame = 0;
-    const timer = window.setInterval(() => {
-      frame++;
-      if (frame >= 8) { window.clearInterval(timer); setTurnFrame(0); }
-      else setTurnFrame(frame);
-    }, 120);
-    return () => window.clearInterval(timer);
-  }, [turnRequest, hud.reducedMotion]);
+  const [greeting, setGreeting] = useState({text: vi?'Kính chào!':'Welcome!', id:0});
+  const [visible, setVisible] = useState(true);
+  const [wave, setWave] = useState(1);
+  const [frame, setFrame] = useState(17);
+  const talk = (text: string, greet = false) => {
+    setGreeting(previous=>({text,id:previous.id+1})); setVisible(true);
+    if(greet) setWave(previous=>previous+1);
+  };
+  useEffect(()=>{ const timer=window.setTimeout(()=>setVisible(false),5000);return ()=>window.clearTimeout(timer); },[greeting.id]);
+  useEffect(()=>{
+    if(hud.reducedMotion || window.matchMedia('(prefers-reduced-motion: reduce)').matches){setFrame(0);return;}
+    let tick=0;
+    const timer=window.setInterval(()=>{
+      tick++;
+      if(tick<28) setFrame(17+tick);
+      else { const idle=(tick-28)%65;setFrame(idle>=60?12+idle-60:Math.floor(idle*8/12)%12); }
+    },1000/12);
+    return ()=>window.clearInterval(timer);
+  },[wave,hud.reducedMotion]);
   useEffect(() => {
     if (!chestDialog) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); setChestDialog(false); } };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [chestDialog]);
-  const say = speech === 'bye' ? (vi?'Hẹn gặp lại!':'See you again!') : speech === 'shop' ? (vi?'Mời mua hàng!':'Have a look!') : (vi?'Chào mừng!':'Welcome!');
   const purchase = (kind: 'time'|'ring') => {
-    if (!engine || hud.coins < (kind === 'time' ? 5 : 30)) return;
+    if (!engine) return;
+    if(hud.coins < (kind==='time'?5:30)){talk(vi?'Chưa đủ xu rồi… Hẹn bạn lần sau nhé!':'Not enough coins… Come back soon!');return;}
     if (kind === 'time') engine.buyTimeItem(); else engine.buyLimitRing();
     setMessage(vi?'Cảm ơn bạn đã mua hàng!':'Thank you for your purchase!');
+    talk(vi?'Cảm ơn bạn! Chúc hành trình thuận lợi!':'Thank you! Have a safe journey!',true);
   };
-  return <div className={`tanuki-shop${hud.reducedMotion?' reduced-motion':''}`}>
-    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><div className="tanuki-turn-sprite" style={{backgroundImage:`url(${asset('ui/tanuki-shop-turn.png')})`,backgroundPosition:`${(turnFrame%4)*100/3}% ${Math.floor(turnFrame/4)*100}%`}}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
+  return <div className={`tanuki-shop${hud.reducedMotion?' reduced-motion':''}`} onPointerDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}} onKeyDownCapture={()=>{if(visible)setGreeting(previous=>({...previous,id:previous.id+1}));}}>
+    <div className="tanuki-scene" aria-hidden="true"><img src={asset('ui/tanuki-shop-stage.png')} alt=""/><div className="tanuki-turn-sprite" style={{backgroundImage:`url(${asset('ui/tanuki-greeting.png')})`,backgroundPosition:`${(frame%9)*100/8}% ${Math.floor(frame/9)*100/4}%`}}/><i className="tanuki-flame tanuki-flame-lantern"/><i className="tanuki-flame tanuki-flame-lamp"/></div>
     <div className="tanuki-scene-controls">
-      <div className="tanuki-speech" aria-live="polite">{say}</div>
-      <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');setTurnRequest(n=>n+1);}}/>
+      <div className="tanuki-speech" aria-live="polite" hidden={!visible}>{greeting.text}</div>
+      <button className="tanuki-merchant" aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setSpeech(speech === 'shop' ? 'welcome' : 'shop');talk(vi?(speech==='shop'?'Hôm nay bạn muốn tìm món gì?':'Mời mua hàng!'):(speech==='shop'?'What are you looking for today?':'Have a look!'),true);}}/>
       <button className={`tanuki-chest ${chestOpen?'':'is-closed'}`} aria-label={vi?'Mở rương thưởng':'Open reward chest'} onClick={()=>{setChestOpen(false);setChestDialog(true);}}>
         {!chestOpen && <span className="tanuki-closed-chest" aria-hidden="true"><i/></span>}
         <span className="tanuki-chest-label">{vi?'RƯƠNG THƯỞNG':'REWARD CHEST'}</span>
       </button>
     </div>
     <header className="tanuki-header"><h1>{vi?'KHO BÁU THỜI GIAN':'TIME TREASURES'}</h1><div className="tanuki-wallet"><Coin/> <strong>{hud.coins.toLocaleString()}</strong> {vi?'xu':'coins'}</div></header>
-    <button className="tanuki-back" onMouseEnter={()=>setSpeech('bye')} onMouseLeave={()=>setSpeech('welcome')} onFocus={()=>setSpeech('bye')} onBlur={()=>setSpeech('welcome')} onClick={()=>engine?.goToLobby()}>‹ {vi?'VỀ SẢNH':'BACK TO LOBBY'}</button>
+    <button className="tanuki-back" onMouseEnter={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onFocus={()=>talk(vi?'Hẹn gặp lại!':'See you again!',true)} onClick={()=>engine?.goToLobby()}>‹ {vi?'VỀ SẢNH':'BACK TO LOBBY'}</button>
     <main className="tanuki-panel">
       <div className="tanuki-panel-heading"><span>✦ {vi?'QUẦY CỦA TANUKI':'TANUKI’S SHOP'} ✦</span><h2>{vi?'NƠI BÁN MỌI THỨ BẠN CẦN':'EVERYTHING FOR YOUR JOURNEY'}</h2></div>
       <div className="tanuki-tabs" role="tablist" aria-label={vi?'Danh mục cửa hàng':'Shop categories'}>
         <button role="tab" aria-selected={tab==='items'} onClick={()=>setTab('items')}>{vi?'VẬT PHẨM':'ITEMS'} <span aria-hidden="true">✦</span></button>
-        <button role="tab" aria-selected={tab==='outfits'} onClick={()=>setTab('outfits')}>{vi?'TRANG PHỤC':'OUTFITS'} <span aria-hidden="true">♜</span></button>
+        <button role="tab" aria-selected={tab==='outfits'} onClick={()=>{setTab('outfits');talk(vi?'Hàng chưa về… Mình cũng mong lắm!':'Still waiting for stock… Me too!');}}>{vi?'TRANG PHỤC':'OUTFITS'} <span aria-hidden="true">♜</span></button>
       </div>
       <div className="tanuki-stock" role="tabpanel">
         {tab === 'outfits' ? <div className="tanuki-empty"><span>✧</span><p>{vi?'Đang nhập hàng, hãy chờ nha!':'New outfits are on their way. Please wait!'}</p></div> : <>
