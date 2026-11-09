@@ -70,6 +70,14 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
 @media(max-width:600px) and (orientation:portrait){
   .intro-artwork{top:32%;width:100%}
   .intro-menu{left:50%;top:106%;bottom:auto;transform:translateX(-50%);width:min(78%,304px,calc((68dvh - 32vw - 30px) * 304 / 420));height:auto;padding:0;clip-path:none;grid-template-rows:none;gap:6px;background:none;box-shadow:none}
+  .intro-menu::after{display:none}
   .intro-menu-item{aspect-ratio:304/78;font-size:clamp(13px,4vw,20px)}
   .intro-language{top:auto;bottom:3%;right:3%;left:auto;width:auto;padding:4px 8px;background:#0b211de6}
 }
+/* The frame's brambles reaching out to the hovered slab (MenuVines.tsx: a canvas-drawn sheet of 18 frames, each the
+   slab's 304 x 78 sprite cell with 48 px either side and 18 px above and below). Inside the face, so they rise and press with it. */
+.intro-menu-vines{position:absolute;left:calc(-48 / 304 * 100%);right:calc(-48 / 304 * 100%);top:calc(-18 / 78 * 100%);bottom:calc(-18 / 78 * 100%);z-index:2;background-repeat:no-repeat;background-size:1800% 100%;background-position:0 0;image-rendering:pixelated;pointer-events:none;visibility:hidden}
+.intro-menu-item.selected{z-index:3}
+/* The painted frame's rim and the brambles crossing into its opening, back over the stone panel (whose box overlaps
+   them): stone-panel-frame.png, tools/assets/prepare_menu_panel.py. Over the slabs too: the brambles are in front. */
+.intro-menu::after{content:'';position:absolute;inset:0;z-index:4;background:url('/assets/menu/stone-panel-frame.png') 0 0 / 100% 100% no-repeat;image-rendering:pixelated;pointer-events:none}

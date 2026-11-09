@@ -7,6 +7,7 @@ import { EchoRuneStock, RuneChoicePicker, RuneChoiceDialog } from './EchoRunes.t
 import { JourneyCamp } from './JourneyCamp.tsx';
 import { MechanicalPortrait } from './MechanicalPortrait.tsx';
 import { IntroEffects } from './IntroEffects.tsx';
+import { MenuVines } from './MenuVines.tsx';
 import { ComboPreview } from './ComboShowcase.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { drawWizardSprite } from '../game/rendering/wizardSprite.ts';
@@ -100,7 +101,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
         <button key={i} type="button" className={`intro-menu-item${i === selected ? ' selected' : ''}`} disabled={item.disabled}
           style={{ '--slab': i } as React.CSSProperties}
           onMouseEnter={() => !item.disabled && setSelected(i)} onMouseLeave={() => setSelected(-1)} onClick={item.act}>
-          <span className="intro-menu-face"><span className="intro-menu-label">{item.label}</span></span>
+          <span className="intro-menu-face"><span className="intro-menu-label">{item.label}</span><MenuVines active={i === selected && !item.disabled} reducedMotion={hud.reducedMotion}/></span>
         </button>
       ))}
     </nav>

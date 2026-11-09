@@ -188,7 +188,8 @@ export class CinematicIntro {
   private text(ctx: Ctx, str: string, x: number, y: number, o: { size: number; font?: string; color?: string; alpha: number; spacing?: number; align?: CanvasTextAlign; weight?: string; style?: string }) {
     if (o.alpha <= 0.003) return;
     ctx.save(); ctx.textAlign = o.align ?? 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.font = `${o.style ?? ''} ${o.weight ?? '400'} ${o.size}px "Second Me Pixel", monospace'system-ui, "Segoe UI", Arial, sans-serif'}`;
+    // The pixel face first (VT323, with Vietnamese), then the caller's family as a fallback.
+    ctx.font = `${o.style ?? ''} ${o.weight ?? '400'} ${o.size}px "Second Me Pixel", ${o.font ?? 'system-ui, "Segoe UI", Arial, sans-serif'}`;
     (ctx as unknown as { letterSpacing: string }).letterSpacing = `${o.spacing ?? 0}px`;
     ctx.fillStyle = '#020806'; ctx.globalAlpha = clamp01(o.alpha) * 0.7; ctx.fillText(str, x + 2, y + 2);
     ctx.globalAlpha = clamp01(o.alpha); ctx.fillStyle = o.color ?? '#e6ecd6'; ctx.fillText(str, x, y);
@@ -210,12 +211,12 @@ export class CinematicIntro {
     const rule = easeInOutCubic(seg(t, t0 + 0.35, t0 + 0.95));
     ctx.globalAlpha = 0.8 * out; ctx.fillStyle = accent; ctx.fillRect(x + 2, y + 14, Math.round((cx - x - spacing) * rule), 2);
     ctx.restore();
-    this.text(ctx, sub, x + 4, y + 44, { size: 14, font: 'ui-monospace, Consolas, monospace', spacing: 2, alpha: out, align: 'left', color: accent });
+    this.text(ctx, sub, x + 4, y + 50, { size: 22, font: 'ui-monospace, Consolas, monospace', spacing: 2, alpha: out, align: 'left', color: accent });
   }
   /** Subtitles live inside the bottom letterbox bar: always readable, never over the art. */
   private caption(ctx: Ctx, str: string, t: number, a: number, b: number, quote: boolean) {
     const al = Math.min(seg(t, a, a + 0.45), 1 - seg(t, b - 0.45, b));
-    this.text(ctx, quote ? `“${str}”` : str, W / 2, H - 31, { size: 21, alpha: al, spacing: 1, color: quote ? '#f0e2bd' : '#e3ead5', font: this.serif(), style: quote ? 'italic' : '' });
+    this.text(ctx, quote ? `“${str}”` : str, W / 2, H - 28, { size: 32, alpha: al, spacing: 1, color: quote ? '#f0e2bd' : '#e3ead5', font: this.serif(), style: quote ? 'italic' : '' });
   }
 
   // ---------- scenes ----------
@@ -490,7 +491,7 @@ export class CinematicIntro {
     const sc = lerp(1.05, 1, easeOutCubic(seg(t, C.logo, C.logo + 2.2)));
     ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     ctx.translate(W / 2, 345); ctx.scale(sc, sc); ctx.drawImage(this.logoTmp, -lc, -lh / 2); ctx.restore();
-    this.text(ctx, L.tag, W / 2, 548, { size: 15, font: 'ui-monospace, Consolas, monospace', spacing: 10, alpha: easeOutCubic(seg(t, C.logo + 1.6, C.logo + 2.6)), color: '#c6d1b8' });
-    this.text(ctx, '◇　✦　◈　✺　◆', W / 2, 590, { size: 14, spacing: 12, alpha: 0.5 * easeOutCubic(seg(t, C.logo + 2.2, C.logo + 3.2)), color: '#9eb28b' });
+    this.text(ctx, L.tag, W / 2, 552, { size: 22, font: 'ui-monospace, Consolas, monospace', spacing: 10, alpha: easeOutCubic(seg(t, C.logo + 1.6, C.logo + 2.6)), color: '#c6d1b8' });
+    this.text(ctx, '◇　✦　◈　✺　◆', W / 2, 594, { size: 18, spacing: 12, alpha: 0.5 * easeOutCubic(seg(t, C.logo + 2.2, C.logo + 3.2)), color: '#9eb28b' });
   }
 }
