@@ -85,7 +85,7 @@ export class CinematicIntro {
   }
   /** Same lockup as the main menu: SECOND / ME on two lines, ME in sage. Light, not glowing. */
   private buildLogo() {
-    const font = '500 108px "Second Me Serif", Georgia, serif';
+    const font = '500 108px "Second Me Pixel", monospace';
     const spacing = 14;
     const probe = this.logo.getContext('2d')!;
     probe.font = font; (probe as unknown as { letterSpacing: string }).letterSpacing = `${spacing}px`;
@@ -184,11 +184,11 @@ export class CinematicIntro {
     g.globalAlpha = a * 0.3; g.fillRect(Math.round(x - w + 1), Math.round(y + 1), Math.max(1, Math.round(w * 2 - 2)), 1); g.restore();
   }
   // ---------- typography (full resolution) ----------
-  private serif() { return this.lang === 'vi' ? '"Segoe UI", Arial, sans-serif' : 'Georgia, "Times New Roman", serif'; }
+  private serif() { return '"Second Me Pixel", monospace'; }
   private text(ctx: Ctx, str: string, x: number, y: number, o: { size: number; font?: string; color?: string; alpha: number; spacing?: number; align?: CanvasTextAlign; weight?: string; style?: string }) {
     if (o.alpha <= 0.003) return;
     ctx.save(); ctx.textAlign = o.align ?? 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.font = `${o.style ?? ''} ${o.weight ?? '400'} ${o.size}px ${o.font ?? 'system-ui, "Segoe UI", Arial, sans-serif'}`;
+    ctx.font = `${o.style ?? ''} ${o.weight ?? '400'} ${o.size}px "Second Me Pixel", monospace'system-ui, "Segoe UI", Arial, sans-serif'}`;
     (ctx as unknown as { letterSpacing: string }).letterSpacing = `${o.spacing ?? 0}px`;
     ctx.fillStyle = '#020806'; ctx.globalAlpha = clamp01(o.alpha) * 0.7; ctx.fillText(str, x + 2, y + 2);
     ctx.globalAlpha = clamp01(o.alpha); ctx.fillStyle = o.color ?? '#e6ecd6'; ctx.fillText(str, x, y);
@@ -199,7 +199,7 @@ export class CinematicIntro {
     const out = 1 - seg(t, t1 - 0.45, t1);
     if (t < t0 || out <= 0) return;
     ctx.save();
-    const font = `500 48px ${this.serif()}`, spacing = 6;
+    const font = `500 48px "Second Me Pixel", monospace`, spacing = 6;
     ctx.font = font; (ctx as unknown as { letterSpacing: string }).letterSpacing = `${spacing}px`;
     let cx = x;
     [...name].forEach((ch, i) => {

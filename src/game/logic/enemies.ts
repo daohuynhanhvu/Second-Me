@@ -8,10 +8,10 @@ export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur'|'dummy';
 export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;targetEcho?:{x:number;y:number;aggroTime?:number}}
 export const ENEMY_STATS={goblin:{hp:30,speed:68,reach:42,notice:180,damage:12},bear:{hp:48,speed:60,reach:47,notice:175,damage:20},skull:{hp:30,speed:82,reach:39,notice:190,damage:12},shaman:{hp:36,speed:52,reach:155,notice:200,damage:16},minotaur:{hp:75,speed:58,reach:58,notice:195,damage:28},dummy:{hp:500,speed:0,reach:0,notice:0,damage:0}};
 const encounters:Record<number,[EnemyKind,number,number][]>= {
- 2:[['goblin',440,110],['goblin',700,580]],
- 3:[['goblin',430,130],['bear',700,110],['skull',870,560]],
- 4:[['goblin',230,100],['bear',500,110],['shaman',860,425],['skull',1130,570]],
- 5:[['goblin',150,95],['skull',345,580],['bear',520,440],['shaman',730,95],['minotaur',925,435]],
+ 2:[['goblin',450,580],['goblin',1040,220]],
+ 3:[['goblin',830,130],['bear',420,120],['skull',440,580]],
+ 4:[['goblin',1140,400],['bear',850,580],['shaman',510,235],['skull',230,500]],
+ 5:[['goblin',1130,95],['skull',935,580],['bear',760,440],['shaman',550,95],['minotaur',355,435]],
  // Training ground (TRAINING_LEVEL_ID): a group of three for sweeping hits, one far for range.
  0:[['dummy',700,290],['dummy',770,360],['dummy',700,430],['dummy',1040,360]],
 };

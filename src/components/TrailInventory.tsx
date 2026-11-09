@@ -1,6 +1,8 @@
+import {SupplyItems} from './SupplyItems.tsx';
 import {useDialogClose} from './useDialogClose.ts';
 import {useEffect,useRef,useState} from 'react';
-import {Backpack,Hourglass,X,ArrowRight,ShieldCheck} from 'lucide-react';
+import {KeyRound,Backpack,X,ArrowRight,ShieldCheck} from 'lucide-react';
+import {TimeItemArt} from './TimeItemArt.tsx';
 import type {GameEngine,HUDState} from '../game/GameEngine.ts';
 import {ECHO_RUNES} from '../game/logic/echoRunes.ts';
 import {RuneLoadoutEditor,RuneStone} from './EchoRunes.tsx';
@@ -23,9 +25,10 @@ export function TrailInventory({engine,hud,close:onClose}:{engine:GameEngine|nul
   <header className="inventory-heading"><span className="inventory-emblem"><Backpack size={25}/></span><div><small>{vi?'HÀNH TRANG ECHO':'ECHO TRAVEL KIT'}</small><h2 id="inventory-heading">{vi?'Túi hành trình':'Trail inventory'}</h2></div><div className="inventory-wallet"><img src={`${import.meta.env.BASE_URL}assets/ui/raccoon-coin.png`} alt=""/><b>{number(hud.coins)}</b><small>{vi?'XU':'COINS'}</small></div><button className="inventory-close" onClick={close} aria-label={vi?'Đóng túi đồ':'Close inventory'}><X size={20}/></button></header>
   <div className="inventory-scroll">
    <h3 className="inventory-section-title">{vi?'VẬT PHẨM HỖ TRỢ':'TRAIL SUPPLIES'}</h3>
-   <div className="inventory-supplies">
-    <article><span className="supply-icon time"><Hourglass size={30}/></span><div><h3>{vi?'Bình thời gian':'Time potion'} <b>× {number(hud.timeItems)}</b></h3><p>{vi?'+2 giây · Mỗi chặng dùng một lần':'+2 seconds · Once per leg'}</p></div>{playing&&<button disabled={!engine?.canUseTimeItem()} onClick={()=>engine?.useTimeItem()}>{vi?'DÙNG':'USE'}</button>}</article>
+   <div className="inventory-supplies"><article><span className="supply-icon"><KeyRound size={30}/></span><div><h3>{vi?'Chìa khóa rương':'Chest keys'} <b>× {number(hud.chestKeys)}</b></h3><p>{vi?'Chỉ dùng mở rương · 5 chìa khóa mỗi lượt':'Chest only · 5 keys per draw'}</p></div></article>
+    <article><span className="supply-icon time"><TimeItemArt/></span><div><h3>{vi?'Thêm một chút':'A Little More'} <b>× {number(hud.timeItems)}</b></h3><p>{vi?'+2 giây · Tối đa 5 lần mỗi màn':'+2 seconds · Up to 5 uses per level'}</p></div>{playing&&<button disabled={!engine?.canUseTimeItem()} onClick={()=>engine?.useTimeItem()}>{vi?'DÙNG':'USE'}</button>}</article>
     <article><span className="supply-icon"><img src={`${import.meta.env.BASE_URL}assets/effects/echo-limit-ring.png`} alt=""/></span><div><h3>{vi?'Nhẫn giới hạn':'Echo limit ring'} <b>× {number(hud.limitRings)}</b></h3><p>{hud.limitRingActive?(vi?'Đang hiệu lực · Tối đa 6 Echo':'Active · Up to 6 Echoes'):(vi?'+2 giới hạn Echo · Không cộng dồn':'+2 Echo limit · Does not stack')}</p></div>{playing&&<button disabled={!hud.limitRings||hud.limitRingActive} onClick={()=>engine?.useLimitRing()}>{hud.limitRingActive?(vi?'ĐÃ DÙNG':'ACTIVE'):(vi?'DÙNG':'USE')}</button>}</article>
+    <SupplyItems engine={engine} vi={vi}/>
    </div>
    <div className="inventory-runes-title"><h3 className="inventory-section-title">{vi?'5 Ô RUNE ĐÃ CHỌN':'FIVE SELECTED RUNES'}</h3><button onClick={()=>setEditing(true)}>{vi?'ĐỔI RUNE':'CHANGE RUNES'}<ArrowRight size={12}/></button></div>
    <div className="inventory-rune-slots">{Array.from({length:5},(_,i)=>{const r=ECHO_RUNES.find(r=>r.id===ids[i]);return <button key={i} className={inspect===i?'inspecting':''} aria-pressed={inspect===i} aria-label={r?(vi?r.vi:r.en):(vi?`Ô trống ${i+1}`:`Empty slot ${i+1}`)} onClick={()=>{setInspect(i);if(!r)setEditing(true);}}><small>{i+1}</small>{r?<span style={{color:r.color}}><RuneStone id={r.id}/></span>:<span className="inventory-empty">◇</span>}<strong>{r?(vi?r.vi:r.en):(vi?'Ô trống':'Empty')}</strong>{r&&<em>× {number(hud.echoRunes?.[r.id]??0)}</em>}</button>;})}</div>

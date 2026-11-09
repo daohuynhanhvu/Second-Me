@@ -5,6 +5,10 @@ export function getCurrentLanguage() { return currentLanguage; }
 
 // Each entry is [English, Vietnamese]. Game names and control keys remain proper names.
 const pairs: [string, string][] = [
+  ['Hold rune I in the southern grove, cross north and record rune II in the east. Both Echoes unlock the western sanctuary: the exit is back toward where your journey began.', 'Giữ ấn I ở khu rừng phía nam, vượt lên phía bắc rồi ghi Echo giữ ấn II ở phía đông. Hai Echo cùng mở điện thờ phía tây: cổng thoát nằm về phía nơi bạn bắt đầu.'],
+  ['Start in the north-east. Echo I opens the westward crossing; Echo II unlocks the descent; Echo III keeps the southern crossing open. Circle through all four chambers to reach the south-east exit.', 'Bắt đầu từ góc đông bắc. Echo I mở đường sang tây; Echo II mở lối xuống; Echo III giữ cổng phía nam. Đi vòng qua bốn khu để tới cổng thoát ở đông nam.'],
+  ['Wind from the eastern grove toward the inner sanctuary. Hold I in the south-east, II beyond the first gate, III in the northern chamber, then IV in the south-west. All four Echoes open the last turn north.', 'Đi từ khu rừng phía đông vào điện thờ bên trong. Giữ I ở đông nam, II sau cổng đầu, III trong phòng phía bắc và IV ở tây nam. Cả bốn Echo mở lối rẽ cuối cùng lên phía bắc.'],
+
   ['Your relics and weapon remain. Destroy four corner pillars, collect a skill every five seconds, and use Echo to distract the boss.', 'Di vật và vũ khí vẫn được giữ lại. Phá bốn trụ ở góc bản đồ trước, nhặt ô kỹ năng rơi mỗi 5 giây và dùng Echo đánh lạc hướng boss.'],
   ['Character and class', 'Nhân vật và class'], ['Characters', 'NHÂN VẬT'], ['Inventory', 'TÚI ĐỒ'],
   ['CHARACTERS & CLASSES', 'NHÂN VẬT & CLASS'],
@@ -47,6 +51,10 @@ const pairs: [string, string][] = [
   ['Language', 'Ngôn ngữ'], ['Choose the game language', 'Chọn ngôn ngữ trò chơi'],
   ['SAVE & CLOSE', 'LƯU & ĐÓNG'], ['Close settings', 'Đóng cài đặt'],
   ['NEW · 08.11.2026', 'MỚI · 08.11.2026'],
+  ['Tanuki’s new look', 'Diện mạo Tanuki mới'],
+  ['The shopkeeper now has brown fur, a light muzzle and a green leaf on its head. Its greeting animations have been updated to match.', 'Chủ quầy có bộ lông nâu, mõm sáng và chiếc lá xanh trên đầu. Các động tác chào khách cũng được cập nhật đồng bộ.'],
+  ['The red chest is here', 'Rương đỏ đã mở'],
+  ['Use 5 keys for one draw or 50 keys for ten. Reward probabilities are shown in the chest.', 'Dùng 5 chìa khóa mở một lượt hoặc 50 chìa khóa mở 10 lượt. Xem tỉ lệ thưởng ngay trong rương.'],
   ['Tanuki’s animated stall', 'Quầy Tanuki chuyển động'],
   ['Tanuki and the stall now turn in a new pixel-art animation when you talk.', 'Tanuki và quầy hàng có chuyển động xoay mới theo phong cách pixel khi bạn trò chuyện.'],
   ['The new Tanuki shop', 'Cửa hàng Tanuki mới'],

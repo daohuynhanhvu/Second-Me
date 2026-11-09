@@ -1,3 +1,4 @@
+import {romanRune,drawGateLabels} from './runeLabels.ts';
 import { drawBossFrostZone } from './bossFrostZone.ts';
 import { drawEnemies, drawEnemyAttacks } from './enemies.ts';
 import { drawMageStaff, drawLightningOrb } from './mageMagic.ts';
@@ -32,13 +33,14 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
         drawLightningOrb(ctx, echo.x + dx * t, echo.y - 12 + dy * t, Math.atan2(dy, dx), 5, time);
       }
       ctx.strokeStyle=ECHO_COLORS[slot];ctx.lineWidth=game.echo===echo?3:1.5;ctx.beginPath();ctx.ellipse(echo.x,echo.y+12,17,7,0,0,Math.PI*2);ctx.stroke();
-      ctx.fillStyle=ECHO_COLORS[slot];ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(`E${slot+1}`,echo.x,echo.y-48);
+      ctx.fillStyle=ECHO_COLORS[slot];ctx.font='bold 12px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.fillText(`E${slot+1}`,echo.x,echo.y-48);
     }
   }
   // With the hand-drawn art the trap floors were drawn under the characters by the renderer;
   // only falling boulders go on top here.
   const trapLayer = trapSpritesReady() ? 'overhead' : 'all';
   for (const trap of game.currentLevel.traps ?? []) drawTrap(ctx, trap, time, trapLayer, game.currentLevel.id);
+  drawGateLabels(ctx,game.currentLevel);
   if (game.legTimeRemaining !== null) {
     if (game.timePickup) {
       const { x, y } = game.timePickup;
@@ -47,18 +49,19 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     game.currentLevel.plates.forEach((plate, index) => {
       const current = index === game.checkpointIndex;
       const visited = index < game.checkpointIndex;
-      const cx = plate.x + plate.width/2, cy = plate.y - 20;
-      ctx.beginPath(); ctx.arc(cx,cy,13,0,Math.PI*2);
-      ctx.fillStyle = current ? '#dfbe80' : '#172920'; ctx.fill();
+      const cx = plate.x + plate.width/2;
+      const cy = plate.y-25<140 && cx>430 && cx<830 ? plate.y+plate.height+25 : plate.y-25;
+      ctx.beginPath(); ctx.arc(cx,cy,18,0,Math.PI*2);
+      ctx.fillStyle = current ? '#dfbe80' : '#07180f'; ctx.fill();
       ctx.strokeStyle = visited ? '#8bd8b4' : '#dfbe80'; ctx.lineWidth = current ? 3 : 1; ctx.stroke();
-      ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = current ? '#18281f' : '#e3d8b8';
-      ctx.fillText(`${index+1}`,cx,cy+4);
+      ctx.font = '26px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = current ? '#18281f' : '#e3d8b8';
+      ctx.fillText(romanRune(index),cx,cy+8);
       if (current) {
         ctx.strokeStyle = '#f3d79b'; ctx.setLineDash([6,5]); ctx.strokeRect(plate.x-8,plate.y-8,plate.width+16,plate.height+16); ctx.setLineDash([]);
       }
     });
     if (game.slowed) {
-      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#c1e28b';
+      ctx.font = 'bold 12px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#c1e28b';
       ctx.fillText(translate('CHẬM 45%', getCurrentLanguage()),game.player.x,game.player.y-40);
     }
   }
@@ -71,7 +74,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.beginPath();
     ctx.arc(hazard.x, hazard.y, hazard.radius + 5, -Math.PI / 2, -Math.PI / 2 + beat / hazard.period * Math.PI * 2);
     ctx.strokeStyle = '#f4be7a'; ctx.stroke();
-    ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillStyle = active ? '#ffe3c1' : '#a77f58';
+    ctx.font = '20px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = active ? '#ffe3c1' : '#a77f58';
     ctx.fillText('✦', hazard.x, hazard.y + 7);
   }
   const boss = game.boss;
@@ -84,7 +87,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       const struck = boss.mode === 'strike';
       drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, struck, time, game.reducedMotion, struck ? Math.max(0, .3 - boss.timer) : 0);
       if (!struck) {
-        ctx.save(); ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
+        ctx.save(); ctx.font = 'bold 12px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
         ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
       }
     }
@@ -133,7 +136,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.beginPath(); ctx.ellipse(game.player.x, y + 12, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
     game.renderer.drawCharacterSprite(ctx, game.player.x, y, game.player.direction, 0, false, time, game.player.isMoving);
     if (game.recorder.getStatus() === 'recording') {
-      ctx.fillStyle = '#fb7185'; ctx.font = 'bold 10px ui-monospace,monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fb7185'; ctx.font = 'bold 10px "Second Me Pixel", monospace'; ctx.textAlign = 'center';
       ctx.fillText(`REC ${Math.max(0, (8000 - game.recorder.getDuration()) / 1000).toFixed(1)}s`, game.player.x, y - 58);
     }
     ctx.restore();
@@ -155,9 +158,9 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.fillStyle='#163137';ctx.strokeStyle=color;ctx.lineWidth=2;
     ctx.beginPath();ctx.ellipse(0,9,23,9,0,0,Math.PI*2);ctx.stroke();
     ctx.fillRect(-13,-19,26,28);ctx.strokeRect(-13,-19,26,28);
-    ctx.fillStyle=color;ctx.textAlign='center';ctx.font='bold 20px monospace';
+    ctx.fillStyle=color;ctx.textAlign='center';ctx.font='bold 20px "Second Me Pixel", monospace';
     ctx.fillText(game.characterClass==='mage'?'*':'+',0,3);
-    ctx.font='bold 9px monospace';ctx.fillText('SKILL RUNE',0,30);
+    ctx.font='bold 9px "Second Me Pixel", monospace';ctx.fillText('SKILL RUNE',0,30);
     ctx.restore();
   }
   if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c';ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -170,7 +173,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   // Hits on the hero have a distinct red impact, shield feedback and actual HP loss.
   for(const hit of game.incomingHits){
     const k=1-hit.life/.85;ctx.save();ctx.globalAlpha=Math.min(1,hit.life/.2);
-    ctx.textAlign='center';ctx.font='bold 19px ui-monospace,monospace';ctx.lineWidth=4;ctx.strokeStyle='#180e0b';
+    ctx.textAlign='center';ctx.font='bold 19px "Second Me Pixel", monospace';ctx.lineWidth=4;ctx.strokeStyle='#180e0b';
     const text=hit.damage>0?`−${hit.damage} HP`:`${game.language==='vi'?'CHẶN':'BLOCK'} ${hit.absorbed}`;
     const y=hit.y-(game.reducedMotion?0:k*28);ctx.strokeText(text,hit.x,y);ctx.fillStyle=hit.damage>0?'#ff947f':'#b4e9ec';ctx.fillText(text,hit.x,y);
     if(k<.35){ctx.strokeStyle=hit.damage>0?'#ffb59a':'#a4e8ed';ctx.lineWidth=3;ctx.beginPath();ctx.arc(hit.x,hit.y+35,12+k*70,0,Math.PI*2);ctx.stroke();}
@@ -186,7 +189,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
 function drawTrainingBoard(ctx: CanvasRenderingContext2D, game: GameEngine) {
   const st = game.training, now = game.levelClock, vi = game.language === 'vi';
   const live = st.active(now), x = 850, y = 66, w = 330, rowH = 24, h = 40 + rowH * 4 + 8;
-  const font = (size: number) => `bold ${size}px "Segoe UI", Arial, sans-serif`;
+  const font = (size: number) => `bold ${size}px "Second Me Pixel", monospace`;
   ctx.save();
   ctx.fillStyle = '#06110d99'; ctx.fillRect(x + 4, y + 5, w, h);                 // shadow
   ctx.fillStyle = '#2e2116'; ctx.fillRect(x, y, w, h);                           // frame
