@@ -222,7 +222,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
   const choice = roster.find(c => c.id === selected) ?? roster[0];
   const portrait = (id: SelectableCharacter) => id === 'mage' ? <AerisPortrait/> : id === 'swordsman' ? <KaelPortrait/> : <MechanicalPortrait/>;
   const detail = choice.id === 'mage'
-    ? (vi ? 'Pháp sư sử dụng trượng Echo và cầu sét. Kỹ năng triệu hồi tối đa 3 cầu sét trong 6 giây.' : 'A mage who channels the Echo staff and lightning. Summon up to three storm orbs for six seconds.')
+    ? (vi ? 'Chuột phải: ma pháp gai băng, ưu tiên boss, rồi quái gần nhất, cuối cùng là vị trí chuột. Hồi chiêu 6 giây.' : 'Right-click: Ice Spike magic targets the boss, then the nearest enemy, then the cursor. Cooldown: 6 seconds.')
     : choice.id === 'swordsman'
     ? (vi ? 'Kiếm sĩ cận chiến với Kiếm Echo. Pháp trận ánh sáng tăng sát thương và hồi máu trong 5 giây.' : 'A close-range fighter wielding the Echo sword. Light Sanctuary boosts damage and restores health for five seconds.')
     : (vi ? 'Chiến binh cơ giới dùng cưa máy. Kỹ năng Quá tải tăng tốc đánh trong 5 giây.' : 'A mechanical fighter wielding a chainblade. Overdrive boosts attack speed for five seconds.');
@@ -375,7 +375,7 @@ function DefeatScreen({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
  const hint=timeout
   ?(vi?`Mỗi chặng có ${seconds} giây. Chạm rune theo thứ tự để nạp lại giờ; nhặt mảnh thời gian +3 giây và để Echo giữ cổng.`:`Each leg gives you ${seconds} seconds. Reach runes in order to refill the timer, collect +3s shards and leave Echoes holding the gates.`)
   :boss
-   ?(vi?'Phá bốn trụ trước để gỡ giáp boss; mỗi khi boss mất 25% máu, khiên và bốn trụ sẽ quay lại. Gọi Echo hỗ trợ, né vòng băng trước khi gai trồi lên và tận dụng kỹ năng rơi trên sân.':'Break all four pillars to remove the Guardian’s armor; every 25% of health it loses brings the shield and the pillars back. Summon Echoes, dodge frost warnings and collect the arena skill drops.')
+   ?(vi?'Phá bốn trụ trước để gỡ giáp boss; mỗi khi boss mất 25% máu, khiên và bốn trụ sẽ quay lại. Gọi Echo hỗ trợ, né ba tia băng trên mặt đất để tránh sát thương và làm chậm và tận dụng kỹ năng rơi trên sân.':'Break all four pillars to remove the Guardian’s armor; every 25% of health it loses brings the shield and the pillars back. Summon Echoes, evade the three ground ice rays and their slowing effect and collect the arena skill drops.')
    :(vi?'Né khỏi vùng cảnh báo trước khi bẫy hoặc quái ra đòn. Gọi Echo hỗ trợ chiến đấu và giữ rune để mở đường.':'Leave warning zones before traps or enemies strike. Let Echoes help in combat and hold runes to open the path.');
  return <div className="modal-backdrop defeat-backdrop"><section className="defeat-stage" role="dialog" aria-modal="true" aria-labelledby="defeat-title">
   <span className="defeat-kicker">{vi?'MỘT LẦN VẤP NGÃ · CHƯA PHẢI KẾT THÚC':'ONE FALL · NOT THE END'}</span>

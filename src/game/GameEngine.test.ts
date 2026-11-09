@@ -158,8 +158,8 @@ test('right mouse uses skill, left mouse attacks, and the game suppresses its co
   let prevented=false;
   input.handleCanvasMouseDown({button:2,clientX:110,clientY:120,preventDefault(){prevented=true;}} as MouseEvent);
   assert.equal(prevented,true);
-  assert.equal(engine.skillCooldown,1);
-  assert.equal(engine.orbitOrbs.length,1);
+  assert.equal(engine.skillCooldown,6);
+  assert.equal(engine.frostZones.length,1);
   assert.equal(engine.magicShots.length,0);
   input.handleCanvasMouseDown({button:0,clientX:110,clientY:120,preventDefault(){}} as MouseEvent);
   assert.equal(engine.combo?.step,0);              // left mouse starts the normal-attack combo

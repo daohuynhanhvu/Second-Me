@@ -1,3 +1,4 @@
+import {FROST_STRIKE,makeIceRays,insideIceRay,type IceRay} from './iceMagic.ts';
 export {TIME_ITEM_PRICE,TIME_ITEM_CAP} from './shopItems.ts';
 import {SHOP_ITEMS,emptySupplies,cleanSupplies,type ShopItemId} from './shopItems.ts';
 import {rollChest, CHEST_POOL, type ChestRewardId} from './chest.ts';
@@ -165,16 +166,16 @@ export interface BossState {
   shieldBreak?: number;
   /** 1 → 0 just after the shield comes back up (the pillars rise again), for its effect. */
   shieldRaise?: number;
-  attack?:'slam'|'volley'|'frost'; attackIndex?:number; warningDuration?:number; strikeDuration?:number; safeAngle?:number;
+  attack?:'triple'|'volley'; attackIndex?:number; warningDuration?:number; strikeDuration?:number; safeAngle?:number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
-  burstAreas: { x: number; y: number; radius: number; timer: number; struck: boolean }[];
+  iceRays:IceRay[];
 }
 export function createBoss(): BossState {
   return { x: 890, y: 350, hp: 240, maxHp: 240, phase: 1, mode: 'stalking', timer: 2,
     targetX: 0, targetY: 0, hitFlash: 0, projectiles: [],
     pillars: [[130,125],[1150,125],[130,595],[1150,595]].map(([x,y])=>({x,y,hp:60,maxHp:60})),
-    armor: 100, burstCooldown: 5, burstRemaining: 0, burstPulse: 0, burstAreas: [], };
+    armor: 100, burstCooldown: 5, burstRemaining: 0, burstPulse: 0, iceRays: [], };
 }
 
 /**
@@ -223,7 +224,7 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void,onSlow?:()=>void): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
@@ -239,7 +240,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   // Standing pillars heal the boss, but never past the top of the part it is in.
   if (activePillars) boss.hp = Math.max(boss.hp, Math.min(bossSegmentTop(boss), damagePoints(boss.hp + activePillars * 2 * dt)));
   // One attack conductor: no independent spell can interrupt the recovery window.
-  if(boss.mode==='strike'&&(boss.attack==='volley'||(boss.phase===3&&boss.attack==='slam'))){
+  if(boss.mode==='strike'&&boss.attack==='volley'){
     boss.burstPulse-=dt;
     if(boss.burstRemaining>0&&boss.burstPulse<=0){
       const count=boss.phase===1?10:boss.phase===2?14:18;
@@ -254,15 +255,6 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     }
   }
   let burstHit=false;
-  for(const area of boss.burstAreas) {
-    area.timer-=dt;
-    if(area.timer<=0 && !area.struck) {
-      area.struck=true;
-      if(Math.hypot(defender.x-area.x,defender.y-area.y)<area.radius+12){burstHit=true;onPlayerHit?.(DAMAGE.bossArea);}
-      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-area.x,echo.y-area.y)<area.radius+12)onEchoHit?.(index,DAMAGE.bossArea);});
-    }
-  }
-  boss.burstAreas=boss.burstAreas.filter(a=>a.timer>-.3);
   boss.timer -= dt;
   let hit = false;
   if (boss.mode === 'stalking') {
@@ -274,31 +266,34 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     }
     if (boss.timer <= 0) {
       const index=boss.attackIndex??0;
-      const sequence:NonNullable<BossState['attack']>[]=boss.phase===1?['slam','volley','frost']:['slam','frost','volley','slam','volley','frost'];
+      const sequence:NonNullable<BossState['attack']>[]=['triple','volley'];
       boss.attack=sequence[index%sequence.length];boss.attackIndex=index+1;
-      boss.mode='warning';boss.warningDuration=boss.attack==='slam'?(boss.phase===3?.85:1.1):1.15;
+      boss.mode='warning';boss.warningDuration=boss.phase===3?.9:1.15;
       boss.timer=boss.warningDuration;boss.targetX=player.x;boss.targetY=player.y;
       boss.safeAngle=Math.atan2(defender.y-boss.y,defender.x-boss.x)+.38;
-      if(boss.attack==='frost'){
-        const offsets=boss.phase===1?[[0,0],[115,0]]:boss.phase===2?[[0,0],[115,0],[-115,0]]:[[0,0],[115,0],[-115,0],[0,-115]];
-        boss.burstAreas=offsets.map(([x,y],i)=>({x:Math.max(85,Math.min(1195,player.x+x)),y:Math.max(85,Math.min(635,player.y+y)),radius:46,timer:boss.timer+i*.16,struck:false})).filter((area,i,all)=>all.slice(0,i).every(other=>Math.hypot(other.x-area.x,other.y-area.y)>85));
-      }
+
     }
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
-    boss.mode='strike';boss.strikeDuration=boss.attack==='volley'?2.2:boss.attack==='frost'?.9:boss.phase===3?1.2:.3;boss.timer=boss.strikeDuration;
-    if(!boss.attack||boss.attack==='slam'){
-      hit=Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<82;
-      if(hit)onPlayerHit?.(DAMAGE.bossSlam);
-      echoDefenders.forEach((echo,index)=>{if(Math.hypot(echo.x-boss.targetX,echo.y-boss.targetY)<82)onEchoHit?.(index,DAMAGE.bossSlam);});
-    }
-    boss.burstRemaining=boss.attack==='volley'?boss.phase+1:boss.phase===3&&boss.attack==='slam'?2:0;
+    boss.mode='strike';boss.strikeDuration=boss.attack==='volley'?2.2:FROST_STRIKE.LIFE+FROST_STRIKE.FADE;boss.timer=boss.strikeDuration;
+    if(boss.attack!=='volley')boss.iceRays=makeIceRays({x:boss.x,y:boss.y},Math.atan2(boss.targetY-boss.y,boss.targetX-boss.x));
+    boss.burstRemaining=boss.attack==='volley'?boss.phase+1:0;
     boss.burstPulse=.2;
   } else if (boss.mode === 'strike' && boss.timer <= 0) {
     boss.mode='recover';boss.timer=(boss.phase===3?1.45:1.8)*bossTempo(boss).recover;
-    boss.projectiles=[];boss.burstAreas=[];boss.burstRemaining=0;
+    boss.projectiles=[];boss.iceRays=[];boss.burstRemaining=0;
   } else if (boss.mode === 'recover' && boss.timer <= 0) {
     boss.mode='stalking';boss.timer=(boss.phase===1?1.1:boss.phase===2?.85:.65)*bossTempo(boss).pause;
   }
+  // A shared pulse may touch several rays, but each defender takes damage only once.
+  let playerPulse=false;const echoPulses=new Set<number>();
+  for(const ray of boss.iceRays){
+    ray.timer-=dt;ray.tick-=dt;
+    if(insideIceRay(ray,defender)){onSlow?.();if(ray.tick<=0)playerPulse=true;}
+    if(ray.tick<=0){echoDefenders.forEach((echo,i)=>{if(insideIceRay(ray,echo))echoPulses.add(i);});ray.tick=FROST_STRIKE.TICK;}
+  }
+  if(playerPulse){burstHit=true;onPlayerHit?.(FROST_STRIKE.DAMAGE);}
+  for(const i of echoPulses)onEchoHit?.(i,FROST_STRIKE.DAMAGE);
+  boss.iceRays=boss.iceRays.filter(ray=>ray.timer>-FROST_STRIKE.FADE);
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
     const echoIndex = echoDefenders.findIndex(echo => Math.hypot(shot.x - echo.x, shot.y - echo.y) < 19);

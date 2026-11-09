@@ -1,3 +1,4 @@
+import {makeIceRays} from './logic/iceMagic.ts';
 import test, {type TestContext} from 'node:test';
 import assert from 'node:assert/strict';
 import { GameEngine } from './GameEngine.ts';
@@ -35,7 +36,7 @@ test('every Echo pursues and damages nearby enemies within its fixed 3m area, th
   assert.ok(enemy1.hp<300 && enemy2.hp<300,'both Echoes attack autonomously');
   assert.equal(first.elapsedMs,0,'recorded route is paused during combat');
   enemy1.hp=0;enemy2.hp=0;
-  for(let i=0;i<40;i++)update();
+  for(let i=0;i<50;i++)update();
   assert.ok(first.elapsedMs>0,'recording resumes after returning to its anchor');
 });
 
@@ -70,21 +71,21 @@ test('guard reduces incoming damage and recalls only the depleted Echo',t=>{
   }
 });
 
-test('boss slams deal 30 stability damage and prioritize Echo over the player',t=>{
-  const {game,update,summon}=setup(t,5);const echo=summon(400,300);echo.status='finished';const boss=game.boss!;boss.x=850;boss.y=300;boss.burstCooldown=100;
-  for(let i=1;i<=4;i++){
+test('boss ground rays deal 24 stability damage and prioritize Echo over the player',t=>{
+  const {game,update,summon}=setup(t,5);const echo=summon(400,300);echo.status='finished';const boss=game.boss!;boss.x=600;boss.y=300;boss.burstCooldown=100;
+  for(let i=1;i<=5;i++){
     boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-    assert.equal(game.echoes.includes(echo),i<4);assert.equal(game.health,100);
+    assert.equal(game.echoes.includes(echo),i<5);assert.equal(game.health,100);
   }
 });
 
 test('boss area attacks hit every Echo and the player; a projectile is consumed by the Echo it hits',()=>{
   const boss=createBoss();boss.mode='recover';boss.timer=100;boss.burstCooldown=100;
   const player={x:300,y:300}, echoes=[{x:300,y:300},{x:310,y:300}], hits:number[]=[];
-  boss.burstAreas=[{x:300,y:300,radius:48,timer:.01,struck:false}];
+  boss.iceRays=makeIceRays({x:200,y:300},0);
   assert.equal(updateBoss(boss,player,.05,false,player,echoes,i=>hits.push(i)),true);
   assert.deepEqual(hits,[0,1]);
-  boss.projectiles=[{x:500,y:300,vx:0,vy:0,life:1}];hits.length=0;
+  boss.iceRays=[];boss.projectiles=[{x:500,y:300,vx:0,vy:0,life:1}];hits.length=0;
   assert.equal(updateBoss(boss,player,.05,false,player,[{x:500,y:300}],i=>hits.push(i)),false);
   assert.deepEqual(hits,[0]);assert.equal(boss.projectiles.length,0);
 });
@@ -100,19 +101,19 @@ test('automatic Echo attacks damage a boss after its existing armor is broken',t
 
 test('enemy and boss damage accumulate in the same stability pool',t=>{
   const {game,update,summon}=setup(t,5);const echo=summon(400,300);echo.status='finished';
-  const boss=game.boss!;boss.x=900;boss.y=300;boss.mode='recover';boss.timer=100;boss.burstCooldown=100;
+  const boss=game.boss!;boss.x=600;boss.y=300;boss.mode='recover';boss.timer=100;boss.burstCooldown=100;
   const enemy={...createEnemies({...game.currentLevel,id:2})[0],x:420,y:300,homeX:420,homeY:300,hp:300,maxHp:300,timer:100};game.enemies=[enemy];
   for(let i=0;i<2;i++){
     enemy.mode='warning';enemy.timer=.01;enemy.targetEcho=echo;enemy.targetId=0;enemy.targetX=echo.x;enemy.targetY=echo.y;enemy.x=echo.x+20;enemy.y=echo.y;
     update();assert.ok(game.echoes.includes(echo));
   }
   boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-  assert.ok(game.echoes.includes(echo),'24 enemy damage plus 30 boss damage leaves 46 stability');
-  assert.equal(echo.stability,46);
+  assert.ok(game.echoes.includes(echo),'24 enemy damage plus 24 boss damage leaves 52 stability');
+  assert.equal(echo.stability,52);
   boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-  assert.equal(echo.stability,16);
+  assert.equal(echo.stability,28);
   boss.mode='warning';boss.timer=.01;boss.targetX=echo.x;boss.targetY=echo.y;update();
-  assert.equal(game.echoes.length,0,'a further 30 damage depletes the Echo');
+  assert.equal(echo.stability,4);boss.mode='warning';boss.timer=.01;update();assert.equal(game.echoes.length,0);
 });
 
 test('Echo combat cannot damage an enemy through a closed wall',t=>{

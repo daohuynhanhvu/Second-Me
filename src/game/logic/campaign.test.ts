@@ -71,7 +71,7 @@ test('mage magic and class skill damage the boss, while the class fixes the weap
   game.useSkill({x:game.boss!.x,y:game.boss!.y});
   for(let i=0;i<7;i++)update(.05);
   assert.equal(game.boss!.hp,228);
-  assert.equal(game.orbitOrbs.length,1);
+  assert.equal(game.frostZones.length,1);
   game.goToLobby();game.selectClass('swordsman');
   assert.equal(game.weapon,'sword');
 });
@@ -129,7 +129,7 @@ test('boss sword requires range, phases escalate, and attacks have a warning',()
   assert.equal(swordHit(boss,100,100),0);
   assert.equal(swordHit(boss,boss.x,boss.y),15);
   assert.equal(swordHit(boss,boss.x,boss.y,true),24);
-  boss.hp=70; boss.timer=0;
+  boss.hp=70; boss.timer=0;boss.attackIndex=1;
   assert.equal(updateBoss(boss,{x:boss.x,y:boss.y},.05,false),false);
   assert.equal(boss.phase,3); assert.equal(boss.mode,'warning');
   updateBoss(boss,{x:100,y:100},1,false);
@@ -228,7 +228,7 @@ test('Echo draws boss attention and spends stability to absorb a hit',t=>{
   game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.toggleRecording();game.toggleRecording();game.spawnEcho();
   assert.equal(game.echo?.aggroTime,3);game.player.x=600;game.player.y=350;
-  game.boss!.mode='warning';game.boss!.timer=.01;game.boss!.targetX=game.echo!.x;game.boss!.targetY=game.echo!.y;
+  game.echo!.samples=[];game.echo!.status='finished';game.echo!.x=400;game.echo!.y=300;game.boss!.x=580;game.boss!.y=300;game.player.x=100;game.player.y=600;game.boss!.mode='warning';game.boss!.timer=.01;game.boss!.targetX=game.echo!.x;game.boss!.targetY=game.echo!.y;
   game.boss!.burstCooldown=100;
   (game as unknown as {update(dt:number):void}).update(.05);
   assert.ok(game.echo);
@@ -240,7 +240,7 @@ test('boss volleys have a warning, multiple waves and a safe recovery',()=>{
  const boss=createBoss(),player={x:300,y:350};boss.attackIndex=1;boss.timer=0;
  updateBoss(boss,player,.05,false);assert.equal(boss.attack,'volley');assert.equal(boss.mode,'warning');assert.equal(boss.projectiles.length,0);
  updateBoss(boss,player,1.2,false);assert.equal(boss.mode,'strike');
- updateBoss(boss,player,.21,false);const first=boss.projectiles.length;assert.ok(first>=7&&first<=10);assert.equal(boss.burstAreas.length,0);
+ updateBoss(boss,player,.21,false);const first=boss.projectiles.length;assert.ok(first>=7&&first<=10);assert.equal(boss.iceRays.length,0);
  updateBoss(boss,player,.46,false);assert.ok(boss.projectiles.length>first);
  for(let i=0;i<35;i++)updateBoss(boss,player,.05,false);
  assert.equal(boss.mode,'recover');assert.equal(boss.projectiles.length,0);assert.equal(boss.burstRemaining,0);

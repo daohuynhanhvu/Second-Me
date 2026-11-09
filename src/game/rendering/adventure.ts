@@ -13,7 +13,7 @@ import { drawSoldierSprite } from './soldierSprite.ts';
 import { drawComboHero, drawComboEffects, comboPose } from './comboSprites.ts';
 import { drawTimeRelic } from './timeRelic.ts';
 import { drawPillars, drawCombatHits } from './bossFeedback.ts';
-import { orbPoint } from '../logic/stormOrbs.ts';
+import {drawTripleFrost} from './tripleFrost.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9a8d4'];
 
@@ -73,6 +73,10 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
       ctx.fillText(translate('CHẬM 45%', getCurrentLanguage()),game.player.x,game.player.y-40);
     }
   }
+  if(game.frostSlow>0){
+    ctx.save();ctx.font='bold 14px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.fillStyle='#c9f6ff';
+    ctx.fillText(game.language==='vi'?'BĂNG HÀN · CHẬM 45%':'FROST · SLOW 45%',game.player.x,game.player.y-50);ctx.restore();
+  }
   for (const hazard of game.currentLevel.hazards ?? []) {
     const beat = (time + hazard.offset) % hazard.period;
     const active = beat < 0.9;
@@ -88,17 +92,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   const boss = game.boss;
   if (boss) {
     drawPillars(ctx, boss, time, game.reducedMotion);
-    for (const area of boss.burstAreas) {
-      drawBossFrostZone(ctx, area.x, area.y, area.radius, area.struck, time, game.reducedMotion, Math.max(0, -area.timer));
-    }
-    if (boss.hp > 0 && (!boss.attack||boss.attack==='slam') && (boss.mode === 'warning' || boss.mode === 'strike')) {
-      const struck = boss.mode === 'strike';
-      drawBossFrostZone(ctx, boss.targetX, boss.targetY, 82, struck, time, game.reducedMotion, struck ? Math.max(0, (boss.strikeDuration??.3) - boss.timer) : 0);
-      if (!struck) {
-        ctx.save(); ctx.font = 'bold 12px "Second Me Pixel", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#d8faff';
-        ctx.fillText(translate('NÉ!', getCurrentLanguage()), boss.targetX, boss.targetY - 90); ctx.restore();
-      }
-    }
+    if(boss.hp>0)drawTripleFrost(ctx,boss,game.reducedMotion);
     if(boss.hp>0){
       const vi=game.language==='vi',recover=boss.mode==='recover'&&boss.armor===0;
       if(boss.attack==='volley'&&(boss.mode==='warning'||boss.mode==='strike')){
@@ -106,7 +100,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
         const angle=boss.safeAngle??0;ctx.beginPath();ctx.moveTo(boss.x,boss.y);ctx.arc(boss.x,boss.y,180,angle-.43,angle+.43);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
       }
       if(boss.mode==='warning'||recover){
-        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='volley'?(vi?'BÃO ĐẠN · NÉ QUA KHE VÀNG':'ICE BARRAGE · GOLD ESCAPE LANE'):boss.attack==='frost'?(vi?'BĂNG TRỒI · RỜI VÙNG XANH':'FROST ERUPTION · LEAVE BLUE ZONES'):(vi?'ĐẬP BĂNG · RỜI VÒNG':'ICE SLAM · LEAVE THE RING');
+        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='volley'?(vi?'BÃO ĐẠN · NÉ QUA KHE VÀNG':'ICE BARRAGE · GOLD ESCAPE LANE'):(vi?'TAM TRỌNG HÀN KÍCH · NÉ BA TIA BĂNG':'TRIPLE FROST STRIKE · EVADE THE THREE RAYS');
         ctx.save();ctx.font='20px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.textBaseline='middle';const width=ctx.measureText(text).width+20,x=Math.max(width/2+45,Math.min(1235-width/2,boss.x)),y=Math.max(155,boss.y-96);ctx.fillStyle='#041623ee';ctx.fillRect(x-width/2,y-15,width,30);ctx.fillStyle=recover?'#baffbd':boss.attack==='volley'?'#ffe2a0':'#d4faff';ctx.fillText(text,x,y);ctx.restore();
       }
     }
@@ -137,11 +131,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.restore();
   }
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
-  for (const orb of game.orbitOrbs) {
-    const { x, y } = orbPoint(game.player, orb.angle);
-    ctx.save(); ctx.globalAlpha *= Math.min(1, orb.life);
-    drawLightningOrb(ctx, x, y, orb.angle + Math.PI / 2, 6, time); ctx.restore();
-  }
+  for(const zone of game.frostZones)drawBossFrostZone(ctx,zone.x,zone.y,zone.radius,zone.struck,time,game.reducedMotion,Math.max(0,-zone.timer));
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
   // Kael and Aeris show their combo frames while attacking (rendering/comboSprites.ts).
   const comboFrame = !game.exitTravelRemaining && comboPose(game) ? drawComboHero(ctx, game) : false;

@@ -6,7 +6,7 @@ import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logi
 import { createEnemies, updateEnemies, type Enemy } from './logic/enemies.ts';
 import { ECHO_RUNES, type EchoRuneId, type EchoRuneStock } from './logic/echoRunes.ts';
 import { segmentCircle, segmentWall } from './logic/combatGeometry.ts';
-import { STORM_ORBS, orbPoint, spaceOrbs, type StormOrb } from './logic/stormOrbs.ts';
+import {ICE_MAGIC,FROST_STRIKE,insideIceRay,type FrostZone} from './logic/iceMagic.ts';
 import { puzzleBalance, SHARD_BONUS, PUZZLE_HINTS } from './logic/balance.ts';
 import { TutorialDirector, type GuideTopic } from './logic/tutorials.ts';
 import { isPuzzleExitOpen } from './logic/puzzle.ts';
@@ -117,6 +117,7 @@ export interface HUDState {
   runesHeld?: number;
   runesRequired?: number;
   slowed: boolean;
+  frostSlow?:number;
   defeatReason: 'timeout' | 'damage';
   volume: number;
   reducedMotion: boolean;
@@ -294,7 +295,9 @@ export class GameEngine {
   public lastRating: { stars: number; coins: number; keys?:number } | null = null;
   public mana=new ManaPool();
   public skillCooldown = 0;
-  public orbitOrbs: StormOrb[] = [];
+  public frostZones:FrostZone[]=[];
+  public frostSlow=0;
+  private cursorTarget:{x:number;y:number}|null=null;
   public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
   public overdrive = 0;
   public get insideLightCircle() { return !!this.lightCircle && Math.hypot(this.player.x-this.lightCircle.x,this.player.y-this.lightCircle.y)<=58; }
@@ -599,7 +602,7 @@ export class GameEngine {
     this.magicShots = [];
     this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
     preloadComboSprites();
-    this.orbitOrbs = []; this.lightCircle = null; this.overdrive = 0;
+    this.frostZones=[];this.frostSlow=0;this.cursorTarget=null; this.lightCircle = null; this.overdrive = 0;
     this.skillDrop = null; this.skillDropTimer = 5;
     this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
     this.combatFlash = null;
@@ -790,6 +793,7 @@ export class GameEngine {
       this.campaign.bossDefeated = true;
       this.campaign.save();
       this.bossDeathPending = true;
+      this.boss.iceRays=[];this.boss.projectiles=[];this.frostSlow=0;this.frostZones=[];
       this.bossDeathElapsed = 0;
       this.heldKeys.clear();
       sounds.playVictory();
@@ -859,7 +863,7 @@ export class GameEngine {
           this.boss.shieldBreak = 1;
           this.boss.mode = 'recover'; this.boss.timer = 1.8;
           this.boss.burstCooldown = Math.max(2, this.boss.burstCooldown);
-          this.boss.burstRemaining = 0; this.boss.burstAreas = []; this.boss.projectiles = [];
+          this.boss.burstRemaining = 0; this.boss.iceRays = []; this.boss.projectiles = [];
         }
         this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
         voice.say(this.voiceRole, 'kill');
@@ -1173,14 +1177,13 @@ export class GameEngine {
     if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
     if(this.bossIntroduction||this.inventoryOpen||this.runeEditing||this.guides.blocking)return;
-    if(this.characterClass==='mage'&&this.orbitOrbs.length>=STORM_ORBS.MAX)return;
     if(!this.spendMana(skillManaCost(this.characterClass)))return;
     if (this.characterClass === 'mage') {
-      const aim = _target ?? this.combatAim() ?? this.player;
+      const enemy=this.enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
+      const aim=this.boss&&this.boss.hp>0?this.boss:enemy??_target??this.cursorTarget??this.player;
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:aim.x,targetY:aim.y});
-      this.orbitOrbs.push({angle: 0, life:STORM_ORBS.LIFE});
-      spaceOrbs(this.orbitOrbs);
-      this.skillCooldown = 1;
+      this.frostZones.push({x:aim.x,y:aim.y,radius:ICE_MAGIC.RADIUS,timer:ICE_MAGIC.WARNING,struck:false});
+      this.skillCooldown=ICE_MAGIC.COOLDOWN;
     } else if(this.characterClass === 'swordsman') {
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
       this.lightCircle = {x:this.player.x,y:this.player.y,life:5,heal:0};
@@ -1190,8 +1193,8 @@ export class GameEngine {
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
       this.skillCooldown = 10;
     }
-    // Shout the real skill name: Storm Orbs / Light Sanctuary; Rivet's Overdrive is its ultimate.
-    if (this.characterClass === 'mage') voice.say('aeris', 'skill', { id: 'orbs' });
+    // Ice magic uses an impact sound; do not announce the retired Storm Orbs skill.
+    if (this.characterClass === 'mage') sounds.playIceHit(false);
     else if (this.characterClass === 'swordsman') voice.say('kael', 'skill', { id: 'sanctuary' });
     else voice.say('rivet', 'ultimate', { id: 'overdrive' });
     this.notifyHUD();
@@ -1199,20 +1202,16 @@ export class GameEngine {
 
   private updatePersonalSkill(dt:number) {
     this.overdrive = Math.max(0,this.overdrive-dt);
-    // Storm Orbs (logic/stormOrbs.ts): each orb strikes every target its circle touches, then
-    // not that one again for TICK seconds.
-    for(const orb of this.orbitOrbs) {
-      orb.life-=dt; orb.angle+=dt*STORM_ORBS.SPIN;
-      const struck=orb.struck??=new Map<object,number>();
-      for(const [target,left] of struck){if(left-dt<=0)struck.delete(target);else struck.set(target,left-dt);}
-      if(orb.life<=0)continue;
-      const at=orbPoint(this.player,orb.angle),cooling=new Set<object>(struck.keys()),before=cooling.size;
-      this.damageArea(at.x,at.y,STORM_ORBS.HIT_RADIUS,STORM_ORBS.DAMAGE,cooling,Infinity);
-      if(cooling.size>before)for(const target of cooling)if(!struck.has(target))struck.set(target,STORM_ORBS.TICK);
+    this.frostSlow=Math.max(0,this.frostSlow-dt);
+    for(const zone of this.frostZones){
+      zone.timer-=dt;
+      if(zone.timer<=0&&!zone.struck){
+        zone.struck=true;
+        const targets:CombatTarget[]=[...this.enemies.filter(e=>e.hp>0),...(this.boss&&this.boss.hp>0?[...this.boss.pillars.filter(p=>p.hp>0),this.boss]:[])];
+        for(const target of targets)if(Math.hypot(target.x-zone.x,target.y-zone.y)<=zone.radius)this.strike(target,ICE_MAGIC.DAMAGE);
+      }
     }
-    const before=this.orbitOrbs.length;
-    this.orbitOrbs=this.orbitOrbs.filter(o=>o.life>0);
-    if(this.orbitOrbs.length!==before)spaceOrbs(this.orbitOrbs);
+    this.frostZones=this.frostZones.filter(z=>z.timer>-ICE_MAGIC.IMPACT);
     if(this.lightCircle) {
       this.lightCircle.life-=dt;
       if(this.lightCircle.life<=0) this.lightCircle=null;
@@ -1656,6 +1655,11 @@ export class GameEngine {
     this.pauseGame();
   };
 
+  private handleCanvasMouseMove=(e:MouseEvent)=>{
+    if(!this.canvas)return;
+    const bounds=this.canvas.getBoundingClientRect();
+    if(bounds.width&&bounds.height)this.cursorTarget={x:(e.clientX-bounds.left)*this.canvas.width/bounds.width,y:(e.clientY-bounds.top)*this.canvas.height/bounds.height};
+  };
   private handleCanvasMouseDown = (e: MouseEvent) => {
     if ((e.button !== 0 && e.button !== 2) || !this.canvas || this.screen !== 'playing') return;
     const bounds = this.canvas.getBoundingClientRect();
@@ -1671,6 +1675,7 @@ export class GameEngine {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('blur', this.handleWindowBlur);
+    this.canvas?.addEventListener('mousemove',this.handleCanvasMouseMove);
     this.canvas?.addEventListener('mousedown', this.handleCanvasMouseDown);
     this.canvas?.addEventListener('contextmenu', this.handleCanvasContextMenu);
   }
@@ -1679,6 +1684,7 @@ export class GameEngine {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
     window.removeEventListener('blur', this.handleWindowBlur);
+    this.canvas?.removeEventListener('mousemove',this.handleCanvasMouseMove);
     this.canvas?.removeEventListener('mousedown', this.handleCanvasMouseDown);
     this.canvas?.removeEventListener('contextmenu', this.handleCanvasContextMenu);
   }
@@ -1885,7 +1891,8 @@ export class GameEngine {
 
     // 1. Process player movement
     const effects = trapEffects(this.currentLevel.traps ?? [], this.player, this.elapsedLevelTime);
-    this.slowed = effects.slowed;
+    if(this.boss?.hp&&this.boss.iceRays.some(ray=>insideIceRay(ray,this.player)))this.frostSlow=FROST_STRIKE.SLOW_TIME;
+    this.slowed = effects.slowed||this.frostSlow>0;
     let moveX = 0;
     let moveY = 0;
 
@@ -1926,8 +1933,8 @@ export class GameEngine {
       }
 
       // Calculate target position
-      const targetX = this.player.x + moveX * this.player.speed * effects.speedMultiplier * dt;
-      const targetY = this.player.y + moveY * this.player.speed * effects.speedMultiplier * dt;
+      const targetX = this.player.x + moveX * this.player.speed * Math.min(effects.speedMultiplier,this.frostSlow>0?FROST_STRIKE.SLOW:1) * dt;
+      const targetY = this.player.y + moveY * this.player.speed * Math.min(effects.speedMultiplier,this.frostSlow>0?FROST_STRIKE.SLOW:1) * dt;
 
       // Obstacle collision resolution (walls and closed doors)
       const obstacles = getActiveObstacles(
@@ -2083,7 +2090,7 @@ export class GameEngine {
 
     // 7. Check Exit Portal Victory Condition
     const afterMove = trapEffects(this.currentLevel.traps ?? [], this.player, this.elapsedLevelTime);
-    this.slowed = afterMove.slowed;
+    this.slowed = afterMove.slowed||this.frostSlow>0;
     if (afterMove.damage && this.invulnerability <= 0) {
       this.trappedTime = Math.max(this.trappedTime, 0.25);
       this.takeDamage(DAMAGE.trap);
@@ -2103,7 +2110,7 @@ export class GameEngine {
       let bossDamage=0;
       const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
         if(index>=normalBossEchoes.length)this.hitSupport(damage);else{const echo=normalBossEchoes[index];if(echo)this.hitEcho(echo,damage);}
-      }, damage=>{bossDamage=Math.max(bossDamage,damage);});
+      }, damage=>{bossDamage=Math.max(bossDamage,damage);},()=>{this.frostSlow=FROST_STRIKE.SLOW_TIME;});
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
       this.lastBossPhase = this.boss.phase;
       // Slam wind-up: the shout is timed to end exactly as the blow lands.
@@ -2220,7 +2227,7 @@ export class GameEngine {
         legTimeBudget: puzzleBalance(this.currentLevel.id).legSeconds,
         runesHeld: this.currentLevel.plates.filter(p=>p.isPressed&&this.currentLevel.exitRequiredPlates?.includes(p.id)).length,
         runesRequired: this.currentLevel.exitRequiredPlates?.length??0,
-        slowed: this.slowed,
+        slowed: this.slowed,frostSlow:this.frostSlow,
         defeatReason: this.defeatReason,
         volume: sounds.getVolume(),
         reducedMotion: this.reducedMotion,

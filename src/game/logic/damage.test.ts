@@ -31,12 +31,10 @@ test('each enemy attack delivers its configured damage to either hero or Echo an
   e.mode='warning';e.timer=.01;player.y+=100;damage=0;updateEnemies([e],level,player,[],.02,(_,n)=>damage=n);assert.equal(damage,0);assert.equal(e.attackFx,.32,'misses still animate');
  }
 });
-test('boss slam, projectile and frost area deliver their own damage values to both defenders',()=>{
- const player={x:300,y:300},echo={x:310,y:300};
- const g=createBoss();g.burstCooldown=100;g.mode='warning';g.timer=.01;g.targetX=300;g.targetY=300;
- const hits:number[]=[],echoHits:number[]=[];updateBoss(g,player,.02,false,player,[echo],(_,n)=>echoHits.push(n),n=>hits.push(n));assert.deepEqual(hits,[30]);assert.deepEqual(echoHits,[30]);
- g.mode='recover';g.timer=100;g.projectiles=[{x:300,y:300,vx:0,vy:0,life:1}];hits.length=0;updateBoss(g,player,.02,false,player,[],undefined,n=>hits.push(n));assert.deepEqual(hits,[16]);
- g.burstAreas=[{x:300,y:300,radius:48,timer:.01,struck:false}];hits.length=0;updateBoss(g,player,.02,false,player,[],undefined,n=>hits.push(n));assert.deepEqual(hits,[24]);
+test('boss rays damage each defender once per pulse and projectiles retain their damage',()=>{
+ const player={x:300,y:300},echo={x:310,y:300},g=createBoss();g.x=200;g.y=300;g.mode='warning';g.attack='triple';g.timer=.01;g.targetX=300;g.targetY=300;
+ const hits:number[]=[],echoHits:number[]=[];updateBoss(g,player,.02,false,player,[echo],(_,n)=>echoHits.push(n),n=>hits.push(n));assert.deepEqual(hits,[24]);assert.deepEqual(echoHits,[24]);
+ g.iceRays=[];g.mode='recover';g.timer=100;g.projectiles=[{x:300,y:300,vx:0,vy:0,life:1}];hits.length=0;updateBoss(g,player,.02,false,player,[],undefined,n=>hits.push(n));assert.deepEqual(hits,[16]);
 });
 test('outgoing damage text matches actual remaining HP for enemy, pillar and boss',t=>{
  const g=setup(t),hit=(target:unknown,n:number)=>(g as unknown as {strike(t:unknown,n:number):void}).strike(target,n);
