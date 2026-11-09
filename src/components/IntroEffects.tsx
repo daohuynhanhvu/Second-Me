@@ -52,7 +52,20 @@ export function IntroEffects() {
         <radialGradient id="intro-portal-light"><stop offset="0" stopColor="#bdffcb" stopOpacity=".23"/><stop offset=".55" stopColor="#2ae9bd" stopOpacity=".14"/><stop offset="1" stopColor="#19d5b2" stopOpacity="0"/></radialGradient>
         <radialGradient id="intro-portal-core"><stop offset="0" stopColor="#d7ffe5" stopOpacity=".62"/><stop offset=".38" stopColor="#52ffc9" stopOpacity=".32"/><stop offset="1" stopColor="#31e8b6" stopOpacity="0"/></radialGradient>
         <filter id="intro-soft-glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
+        <radialGradient id="intro-swirl-fade"><stop offset=".9" stopColor="#fff"/><stop offset="1" stopColor="#fff" stopOpacity="0"/></radialGradient>
+        {/* Solid out to 90%: the gold ring sits at 85-95% of the radius, so an earlier fade let the static painted gold show through. */}
+        <mask id="intro-swirl-mask" maskUnits="userSpaceOnUse" x="180" y="260" width="260" height="380"><ellipse cx="309" cy="445" rx="108" ry="162" fill="url(#intro-swirl-fade)"/></mask>
       </defs>
+      {/* The painted swirl itself (gold arms included) spins: a copy of the painting rotated about the
+          portal centre in a frame stretched 1.5x vertically, so the ellipse maps onto itself; the
+          feathered mask blends its edge into the static arch. */}
+      <g mask="url(#intro-swirl-mask)">
+        <g transform="translate(309 445) scale(1 1.5)">
+          <g className="portal-swirl">
+            <image href="/assets/menu/second-me-forest-clean.png" width="1376" height="768" transform="scale(1 .6667) translate(-309 -445)" preserveAspectRatio="none"/>
+          </g>
+        </g>
+      </g>
       <ellipse className="portal-breath" cx="309" cy="445" rx="104" ry="157" fill="url(#intro-portal-light)"/>
       <g clipPath="url(#intro-portal-clip)">
         {[0, 1, 2].map(index => <g className="plasma-wave" style={{ animationDelay: `${index * -1.3}s` }} key={index}>
@@ -72,9 +85,10 @@ export function IntroEffects() {
       <g className="rune-glow rune-one" fill="none" stroke="#86fff0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M63 548 L53 508 L69 521 M55 518 L67 525"/>
       </g>
-      <g className="rune-glow rune-two" fill="none" stroke="#86fff0" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M568 546 L562 506 L585 520 L566 532 M566 532 L583 549"/>
-      </g>
+      {/* Painting's R is baked unlit (tools/assets/prepare_menu_wizard_rune.py); this is the original lit R. */}
+      <image className="rune-r-lit" href="/assets/menu/rune-r-lit.png" x="548" y="484" width="52" height="82" preserveAspectRatio="none"/>
+      {/* The in-game Aeris, back turned, where the painted wizard stood (feet at 621,742). */}
+      <image className="menu-wizard" href="/assets/menu/menu-wizard.png" x="574" y="613.5" width="94" height="128.5" preserveAspectRatio="none"/>
       <g className="rune-glow rune-three" fill="none" stroke="#86fff0" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M1299 521 L1312 487 L1291 501 L1307 510 M1301 520 L1288 537"/>
       </g>

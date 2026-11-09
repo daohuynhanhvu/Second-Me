@@ -1,0 +1,75 @@
+/* Pixel-2D skin for the Echo Camp lobby: hard bevels, notched corners, no soft gradients.
+   Visual only — layout/sizing stays in JourneyCamp*.css. Loaded last. */
+.journey-lobby{
+  --px-ink:#050d08;--px-moss:#3f6a3a;--px-moss-hi:#6f9a55;--px-slot:#0a1610;
+  --px-gold:#e6c46e;--px-gold-hi:#fff0b0;--px-gold-lo:#8a6424;
+  --px-stone:#2b3a2c;--px-stone-hi:#5d7556;--px-stone-lo:#121c14;
+  --px-notch:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px));
+}
+
+/* Header: stone ledge with a hard moss lip */
+.journey-lobby.journey-lobby .lobby-header{background:linear-gradient(#0b1810c0,#0b1810c0),url('/assets/menu/stone-panel.png') 0 0/334px 434px repeat;image-rendering:pixelated;box-shadow:inset 0 -2px 0 var(--px-moss),0 4px 0 var(--px-ink)}
+.journey-lobby .camp-brand b{text-shadow:2px 2px 0 var(--px-ink);color:var(--px-gold-hi)}
+.journey-lobby .camp-brand small{color:var(--px-moss-hi);text-shadow:1px 1px 0 var(--px-ink)}
+.journey-lobby.journey-lobby .lobby-header nav{gap:8px}
+.journey-lobby.journey-lobby .lobby-header nav button{border:3px solid var(--px-ink);border-radius:0;background:var(--px-stone);color:#e9dfbc;clip-path:var(--px-notch);box-shadow:inset 3px 3px 0 var(--px-stone-hi),inset -3px -3px 0 var(--px-stone-lo);transition:none}
+.journey-lobby.journey-lobby .lobby-header nav button:hover{background:#3a4d38;color:var(--px-gold-hi)}
+.journey-lobby.journey-lobby .lobby-header nav button:active{transform:translateY(2px);box-shadow:inset 3px 3px 0 var(--px-stone-lo),inset -3px -3px 0 var(--px-stone-hi)}
+
+/* Sidebar: mossy stone wall, thick pixel edge toward the map */
+.journey-lobby.journey-lobby .journey-camp.integrated-camp{background:linear-gradient(#08140da8,#08140da8),url('/assets/menu/stone-panel.png') 0 0/334px 434px repeat;image-rendering:pixelated;border-right:4px solid var(--px-ink);box-shadow:inset -2px 0 0 var(--px-moss)}
+.journey-lobby .integrated-camp :is(span,strong,b,p){text-shadow:2px 2px 0 var(--px-ink)}
+.journey-lobby .rest-heading{padding:6px 10px;background:var(--px-slot);border:3px solid var(--px-ink);clip-path:var(--px-notch);box-shadow:inset 0 2px 0 var(--px-moss);color:var(--px-gold)}
+
+/* Campsite: a framed window into the scene instead of a soft fade */
+.journey-lobby.journey-lobby .integrated-camp .rest-scene{border-block:4px solid var(--px-ink);box-shadow:0 -2px 0 var(--px-moss),0 2px 0 var(--px-moss)}
+.journey-lobby .rest-scene:after{background:none}
+.journey-lobby.journey-lobby .integrated-camp .rest-scene-caption{background:none;padding-top:8px}
+.journey-lobby .rest-scene-caption strong{color:var(--px-gold-hi)}
+.journey-lobby .rest-scene-caption button{border-bottom:2px dashed var(--px-moss-hi);color:#d8d3a6}
+.journey-lobby .rest-scene-caption button:hover{color:var(--px-gold-hi);border-bottom-style:solid}
+.journey-lobby .rest-hero:after{border-radius:0}
+
+/* Recessed inventory-like slots */
+.journey-lobby .rest-kit,.journey-lobby .rest-departure{margin-top:10px;padding:12px;background:#0a1610e0;border:3px solid var(--px-ink);clip-path:var(--px-notch);box-shadow:inset 3px 3px 0 #02070499,inset -2px -2px 0 #2b4a2a}
+.journey-lobby .rest-kit>div>span,.journey-lobby .rest-departure>span{color:var(--px-moss-hi)}
+.journey-lobby .rest-destination b{color:var(--px-gold)}
+
+/* Stone button */
+.journey-lobby .rest-prepare{border:3px solid var(--px-ink);background:var(--px-stone);color:#f0dc9c;clip-path:var(--px-notch);box-shadow:inset 3px 3px 0 var(--px-stone-hi),inset -3px -3px 0 var(--px-stone-lo)}
+.journey-lobby .rest-prepare:hover{background:#3a4d38;border-color:var(--px-ink)}
+.journey-lobby .rest-prepare:active{transform:translateY(2px);box-shadow:inset 3px 3px 0 var(--px-stone-lo),inset -3px -3px 0 var(--px-stone-hi)}
+
+/* Primary gold button: flat fill, bevel, thick base that collapses when pressed */
+.journey-lobby.journey-lobby .integrated-camp .camp-continue.camp-continue{border:3px solid var(--px-ink);background:var(--px-gold);color:#2a1d08;clip-path:var(--px-notch);box-shadow:inset 3px 3px 0 var(--px-gold-hi),inset -3px -7px 0 var(--px-gold-lo);padding-bottom:13px;transition:none}
+.journey-lobby .integrated-camp .camp-continue>span{text-shadow:1px 1px 0 var(--px-gold-hi)}
+.journey-lobby.journey-lobby .integrated-camp .camp-continue:hover{background:#f2d482;transform:none}
+.journey-lobby.journey-lobby .integrated-camp .camp-continue:active{transform:translateY(4px);box-shadow:inset 3px 3px 0 var(--px-gold-lo),inset -3px -3px 0 var(--px-gold-hi);padding-bottom:9px}
+.journey-lobby .integrated-camp .camp-continue>svg:first-child{animation:px-blink 1s steps(1) infinite}
+
+/* Progress: chunky blocks, the next stop blinks */
+.journey-lobby .rest-progress [role=progressbar]{gap:4px;padding:3px;background:var(--px-ink)}
+.journey-lobby .rest-progress i{width:14px;height:10px;background:#1d2e1f;box-shadow:inset -2px -2px 0 #0e1a10}
+.journey-lobby .rest-progress i.explored{background:#b8c46e;box-shadow:inset 2px 2px 0 #e5ec9c,inset -2px -2px 0 #6c7a35}
+.journey-lobby .rest-progress i.next{background:var(--px-gold);animation:px-blink 1s steps(1) infinite}
+
+/* Map: hard pixel frame over the painting */
+.journey-lobby.journey-lobby .journey-chart.journey-chart{position:relative}
+.journey-lobby .journey-chart:after{content:'';position:absolute;inset:0;z-index:20;pointer-events:none;box-shadow:inset 0 0 0 4px var(--px-ink),inset 0 0 0 6px var(--px-moss),inset 0 0 0 8px var(--px-ink)}
+
+/* Map stops: square pixel badges */
+.journey-lobby .stop-medallion{border-radius:0;border:3px solid var(--px-ink);background:#1f3a26;box-shadow:inset 3px 3px 0 var(--px-moss-hi),inset -3px -3px 0 #0c1d12,0 4px 0 #050d08aa;transition:none}
+.journey-lobby .is-done .stop-medallion{background:#4c5a2c;box-shadow:inset 3px 3px 0 #9fae5e,inset -3px -3px 0 #26301a,0 4px 0 #050d08aa}
+.journey-lobby .is-current .stop-medallion{background:var(--px-gold);color:#2a1d08;box-shadow:inset 3px 3px 0 var(--px-gold-hi),inset -3px -3px 0 var(--px-gold-lo),0 4px 0 #050d08aa}
+.journey-lobby .is-current .stop-medallion:after{border-radius:0;border:2px dashed var(--px-gold-hi);animation:px-blink 1.2s steps(1) infinite}
+.journey-lobby .is-boss .stop-medallion{background:#1d4552;box-shadow:inset 3px 3px 0 #7fd0dc,inset -3px -3px 0 #0b2229,0 4px 0 #050d08aa}
+.journey-lobby .journey-stop[aria-disabled=true] .stop-medallion{background:#16241c;box-shadow:inset 3px 3px 0 #33473a,inset -3px -3px 0 #0a140e}
+.journey-lobby .journey-stop:hover:not([aria-disabled=true]) .stop-medallion{transform:translateY(-2px)}
+.journey-lobby .stop-caption{border-radius:0;border:3px solid var(--px-ink);background:#e6d5a8;box-shadow:inset 3px 3px 0 #fff4cf,inset -3px -3px 0 #a8915c,4px 4px 0 #050d08aa}
+
+@keyframes px-blink{50%{opacity:.35}}
+.journey-lobby .map-still .stop-medallion:after{animation:none}
+@media(prefers-reduced-motion:reduce){.journey-lobby :is(.camp-continue svg,.rest-progress i,.stop-medallion:after){animation:none!important}}
+
+/* Centre the badge exactly on its clearing point (was -35%, which sank it below). */
+.journey-lobby.journey-lobby .journey-stop{transform:translate(-50%,-50%);justify-content:center}

@@ -211,6 +211,32 @@ class SoundEngine {
     osc.stop(t + 0.06);
   }
 
+  /** Main-menu stone slab under the pointer / arrow keys: a light gritty tick. */
+  public playStoneHover() { this.stoneHit(0.08, 900, 0.07, 190, 120, 0.05); }
+
+  /** Main-menu stone slab pressed: grind plus a low thud. */
+  public playStoneClick() { this.stoneHit(0.22, 520, 0.16, 140, 50, 0.32); }
+
+  /** Filtered noise burst (stone grit) over a falling sine (the weight of the slab). */
+  private stoneHit(dur: number, gritHz: number, gritPeak: number, thudFrom: number, thudTo: number, thudPeak: number) {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx || !this.effectsGain) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const grit = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), gritGain = ctx.createGain();
+    grit.buffer = buf; filt.type = 'bandpass'; filt.frequency.value = gritHz * (0.95 + Math.random() * 0.1); filt.Q.value = 1.1;
+    gritGain.gain.setValueAtTime(gritPeak, t); gritGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    grit.connect(filt); filt.connect(gritGain); gritGain.connect(this.effectsGain);
+    const thud = ctx.createOscillator(), thudGain = ctx.createGain();
+    thud.type = 'sine'; thud.frequency.setValueAtTime(thudFrom, t); thud.frequency.exponentialRampToValueAtTime(thudTo, t + dur * 0.8);
+    thudGain.gain.setValueAtTime(thudPeak, t); thudGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    thud.connect(thudGain); thudGain.connect(this.effectsGain);
+    grit.start(t); thud.start(t); grit.stop(t + dur); thud.stop(t + dur);
+  }
+
   /** Short low impact for damage, bright metallic tone when a shield absorbs it. */
   public playImpact(blocked=false){
     if(this.isMuted)return;this.initCtx();if(!this.ctx||!this.effectsGain)return;

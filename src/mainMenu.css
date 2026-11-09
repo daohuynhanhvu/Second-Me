@@ -11,7 +11,7 @@
 .portal-core{transform-box:view-box;transform-origin:309px 445px;animation:plasma-core 3.9s ease-in-out infinite}
 .portal-motes circle{filter:drop-shadow(0 0 4px #7effd9);animation:portal-mote-inward var(--mote-duration) ease-in var(--mote-delay) infinite}
 .rune-glow{opacity:.35;filter:drop-shadow(0 0 7px #49f9e6);animation:rune-pulse 3.5s ease-in-out infinite}
-.rune-two{animation-delay:-1.1s}.rune-three{animation-delay:-2.2s}
+.rune-three{animation-delay:-2.2s}
 .intro-fireflies circle{opacity:.2;filter:drop-shadow(0 0 5px var(--fly-color));animation:firefly-float var(--fly-duration) ease-in-out var(--fly-delay) infinite,firefly-twinkle var(--twinkle-duration) ease-in-out var(--fly-delay) infinite}
 .intro-foliage-patch{position:absolute;inset:0;background:url('/assets/menu/second-me-forest-clean.png') center / 100% 100% no-repeat;opacity:.9;animation:foliage-sway 5.8s ease-in-out infinite alternate}
 .foliage-left{clip-path:polygon(0 70%,12% 70%,12% 100%,0 100%);mask-image:radial-gradient(ellipse 8% 18% at 4% 91%,#000 16%,transparent 100%);transform-origin:4% 100%}
@@ -26,6 +26,18 @@
 @keyframes firefly-twinkle{0%,100%{opacity:.12}22%{opacity:.88}49%{opacity:.26}72%{opacity:1}88%{opacity:.2}}
 body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:none}
 @media(prefers-reduced-motion:reduce){.intro-fireflies,.portal-motes{display:none}}
+.portal-swirl{transform-box:view-box;transform-origin:0 0;animation:portal-swirl 16s linear infinite}
+@keyframes portal-swirl{to{transform:rotate(-360deg)}}
+body.reduced-motion .portal-swirl{animation:none}
+@media(prefers-reduced-motion:reduce){.portal-swirl{animation:none}}
+/* R rune strokes, no halo: from min up to max, slowly fully off, back to max, ease down to min (loops from there). */
+.rune-r-lit{animation:rune-blink 9s ease-in-out infinite}
+@keyframes rune-blink{0%,100%{opacity:.6}10%{opacity:1}45%,52%{opacity:0}66%{opacity:1}}
+/* Wizard dips gently, squashing from the feet. */
+.menu-wizard{image-rendering:pixelated;transform-box:view-box;transform-origin:621px 742px;animation:wizard-bob 1.6s ease-in-out infinite}
+@keyframes wizard-bob{50%{transform:scale(1.03,.95)}}
+body.reduced-motion :is(.rune-r-lit,.menu-wizard){animation:none}
+@media(prefers-reduced-motion:reduce){:is(.rune-r-lit,.menu-wizard){animation:none}}
 @keyframes foliage-sway{from{transform:translateX(-1px) rotate(-.16deg)}to{transform:translateX(2px) rotate(.23deg)}}
 .intro-accessible-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .intro-mobile-title{display:none}

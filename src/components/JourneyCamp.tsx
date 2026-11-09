@@ -6,18 +6,20 @@ import { RuneLoadoutEditor, RuneStone } from './EchoRunes.tsx';
 import './JourneyCamp.css';
 import './JourneyCampV2.css';
 import './JourneyCampScene.css';
+import './JourneyCampPixel.css';
 import { JourneyAmbience } from './JourneyAmbience.tsx';
 import { translate } from '../i18n.ts';
 
 // Traced in the painting's native 1536x1024 coordinates, including each bend.
 const trailSegments = [
- 'M215 737 C213 670 246 624 278 604 C310 580 365 580 382 548 C402 514 392 487 412 462 C428 436 439 425 434 410 L430 369',
- 'M430 369 L434 420 C482 426 500 474 509 520 C517 569 523 586 575 599 C624 611 668 639 707 645',
- 'M707 645 C744 620 749 584 757 552 C766 522 791 516 782 488 C776 465 760 454 765 424 C772 385 797 360 840 353 C877 350 908 339 937 328',
- 'M937 328 C977 339 1006 352 1004 390 C999 429 1011 449 1050 464 C1101 483 1149 508 1198 522',
- 'M1198 522 C1240 491 1271 448 1278 405 C1284 379 1327 362 1355 346 C1382 331 1377 303 1364 278 C1355 248 1351 210 1352 174',
+ 'M215 725 C213 670 246 624 278 604 C310 580 365 580 382 548 C402 514 392 487 412 462 C428 436 439 425 434 410 L440 350',
+ 'M440 350 L434 420 C482 426 500 474 509 520 C517 569 523 586 575 599 C624 611 660 630 690 630',
+ 'M690 630 C744 620 749 584 757 552 C766 522 791 516 782 488 C776 465 760 454 765 424 C772 385 797 360 840 353 C877 350 900 315 920 310',
+ 'M920 310 C977 339 1006 352 1004 390 C999 429 1011 449 1050 464 C1101 483 1149 508 1200 515',
+ 'M1200 515 C1240 491 1271 448 1278 405 C1284 379 1327 362 1355 346 C1382 331 1377 303 1364 278 C1355 248 1355 225 1355 205',
 ];
-const positions = [[14,72],[28,36],[46,63],[61,32],[78,51],[88,17]];
+// Centre of each clearing in the same native coordinates (= the trail ends above).
+const stops = [[215,725],[440,350],[690,630],[920,310],[1200,515],[1355,205]];
 export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number;traveler?:React.ReactNode;onNews?:()=>void}) {
   const vi=hud.language==='vi';
   const [runeEditor,setRuneEditor]=useState(false);
@@ -58,7 +60,7 @@ export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:G
         <div className="chart-north" aria-hidden="true">N<span>↑</span></div>
         {LEVELS.map((item,i)=>{
           const ready=unlocked(i),done=i<5?hud.completed.includes(i+1):complete,current=i===next&&!complete;
-          return <button key={item.id} className={`journey-stop ${done?'is-done':''} ${current?'is-current':''} ${i===5?'is-boss':''} ${inspect===i?'is-inspected':''}`} style={{left:`${positions[i][0]}%`,top:`${positions[i][1]}%`}} aria-disabled={!ready} onMouseEnter={()=>setInspect(i)} onMouseLeave={()=>{if(touchInspect===null)setInspect(null);}} onFocus={()=>setInspect(i)} onBlur={()=>{setInspect(null);setTouchInspect(null);}} onClick={()=>{
+          return <button key={item.id} className={`journey-stop ${done?'is-done':''} ${current?'is-current':''} ${i===5?'is-boss':''} ${inspect===i?'is-inspected':''}`} style={{left:`${stops[i][0]/15.36}%`,top:`${stops[i][1]/10.24}%`}} aria-disabled={!ready} onMouseEnter={()=>setInspect(i)} onMouseLeave={()=>{if(touchInspect===null)setInspect(null);}} onFocus={()=>setInspect(i)} onBlur={()=>{setInspect(null);setTouchInspect(null);}} onClick={()=>{
               if(window.matchMedia('(hover: none)').matches&&touchInspect!==i){setTouchInspect(i);setInspect(i);return;}
               if(ready)engine?.selectLevel(i);
             }} aria-label={`${String(i+1).padStart(2,'0')} · ${translate(item.subtitle,hud.language)} · ${done?(vi?'Đã hoàn thành':'Cleared'):ready?(vi?'Sẵn sàng':'Ready'):(vi?'Chưa mở':'Locked')}`}>

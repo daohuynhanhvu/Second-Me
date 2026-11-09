@@ -14,6 +14,7 @@ import credits from '../game/data/credits.json';
 import { ComboPreview } from './ComboShowcase.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { drawWizardSprite } from '../game/rendering/wizardSprite.ts';
+import { sounds } from '../game/logic/sound.ts';
 import { drawSoldierSprite } from '../game/rendering/soldierSprite.ts';
 import { localize } from '../localize.tsx';
 import { translate } from '../i18n.ts';
@@ -62,6 +63,9 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
     { label: vi ? 'THOÁT' : 'QUIT', disabled: false, act: () => setPanel('quit') },
   ];
   const [selected, setSelected] = useState(-1);
+  // Stone tick whenever the highlight lands on a slab, by mouse or arrow keys.
+  useEffect(() => { if (selected >= 0) sounds.playStoneHover(); }, [selected]);
+  const press = (item: typeof items[number]) => { sounds.playStoneClick(); item.act(); };
   const menu = useRef({ items, selected, panel });
   menu.current = { items, selected, panel };
   useEffect(() => {
@@ -77,7 +81,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
         setSelected(i);
       } else if ((event.key === 'Enter' || event.key === ' ') && m.selected >= 0) {
         event.preventDefault(); event.stopPropagation();
-        m.items[m.selected].act();
+        sounds.playStoneClick(); m.items[m.selected].act();
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -103,7 +107,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
         // A stone slab (mainMenu.css): its face, carrying the label, rises when selected.
         <button key={i} type="button" className={`intro-menu-item${i === selected ? ' selected' : ''}`} disabled={item.disabled}
           style={{ '--slab': i } as React.CSSProperties}
-          onMouseEnter={() => !item.disabled && setSelected(i)} onMouseLeave={() => setSelected(-1)} onClick={item.act}>
+          onMouseEnter={() => !item.disabled && setSelected(i)} onMouseLeave={() => setSelected(-1)} onClick={() => press(item)}>
           <span className="intro-menu-face"><span className="intro-menu-label">{item.label}</span><MenuVines active={i === selected && !item.disabled} reducedMotion={hud.reducedMotion}/></span>
         </button>
       ))}
@@ -207,6 +211,9 @@ type SelectableCharacter = 'mage' | 'swordsman' | 'mechanical';
 export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDState}) {
   const vi = hud.language === 'vi';
   const [selected, setSelected] = useState<SelectableCharacter>(hud.characterClass);
+  const grid = useRef<HTMLDivElement>(null);
+  // Start keyboard focus on the current hero, so focus and selection agree on open.
+  useEffect(() => { grid.current?.querySelector<HTMLButtonElement>('.is-selected')?.focus({preventScroll: true}); }, []);
   const roster: {id: SelectableCharacter; name: string; roleVi: string; roleEn: string}[] = [
     {id:'mage', name:'Aeris', roleVi:'Pháp sư', roleEn:'Mage'},
     {id:'swordsman', name:'Kael', roleVi:'Kiếm sĩ', roleEn:'Swordsman'},
@@ -224,7 +231,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
     <div className="hero-select-scene" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
       <h1 id="hero-select-title" className="hero-select-title">{vi ? 'CHỌN NHÂN VẬT' : 'CHOOSE YOUR HERO'}</h1>
       <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>{vi ? 'VỀ SẢNH' : 'BACK'}</button>
-      <div className="hero-select-grid" role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
+      <div className="hero-select-grid" ref={grid} role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
         {Array.from({length:8}, (_, i) => {
           const c = roster[i];
           return c ? <button key={c.id} type="button" className={'hero-slot' + (choice.id === c.id ? ' is-selected' : '')} onClick={() => setSelected(c.id)} aria-pressed={choice.id === c.id} aria-label={`${c.name} · ${vi ? c.roleVi : c.roleEn}`}>
