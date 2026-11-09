@@ -1,7 +1,7 @@
 import { COMBO_HITS, hitDuration } from './combo.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Campaign, createBoss, swordHit, updateBoss, levelRating } from './campaign.ts';
+import { Campaign, createBoss, swordHit, updateBoss, levelRating, bossShieldFloor, bossSegment, bossSegmentTop } from './campaign.ts';
 import { GameEngine } from '../GameEngine.ts';
 import { LEVELS } from './levels.ts';
 import { sounds } from './sound.ts';
@@ -109,6 +109,7 @@ test('all five wins unlock the forge, forging gates the boss, and the boss gates
   controls.update(0.05);
   assert.equal(game.screen,'playing');
   for(let i=0;i<4000 && game.boss!.hp>0;i++) {
+    if(game.boss!.armor>0){game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;}   // each quarter's pillars
     game.player.x=game.boss!.x-70;game.player.y=game.boss!.y;game.invulnerability=9;
     game.attack();controls.update(0.05);
   }
@@ -151,7 +152,54 @@ test('four pillars shield the boss until destroyed, then damage reaches its heal
   for(const pillar of game.boss!.pillars)hit.damageCombatTarget(pillar.x,pillar.y,60);
   assert.equal(game.boss!.armor,0);
   hit.damageCombatTarget(game.boss!.x,game.boss!.y,60);
-  assert.equal(game.boss!.hp,159);
+  // A quarter of its health gone (81 dealt, stopped at 180): the shield is back, the pillars whole.
+  assert.equal(game.boss!.hp,180);
+  assert.equal(game.boss!.armor,100);
+  assert.ok(game.boss!.pillars.every(p=>p.hp===p.maxHp));
+  hit.damageCombatTarget(game.boss!.x,game.boss!.y,60);
+  assert.equal(game.boss!.hp,180);
+});
+
+test('the boss health comes in four quarters, each one behind the four pillars, the last one ending in its death',t=>{
+  const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{body:{dataset:{}}}});
+  t.after(()=>previous?Object.defineProperty(globalThis,'document',previous):Reflect.deleteProperty(globalThis,'document'));
+  const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
+  game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
+  const hit=game as unknown as {damageCombatTarget(x:number,y:number,amount:number,radius?:number):boolean};
+  const boss=game.boss!;
+  assert.deepEqual([bossShieldFloor(boss),bossSegment(boss)],[180,1]);
+  for(const [floor,segment] of [[120,2],[60,3],[0,4]]){
+    for(const pillar of boss.pillars)hit.damageCombatTarget(pillar.x,pillar.y,60);
+    assert.equal(boss.armor,0);
+    boss.mode='stalking';
+    while(boss.armor===0)hit.damageCombatTarget(boss.x,boss.y,1000);
+    assert.equal(boss.hp,floor+60);
+    assert.deepEqual([bossShieldFloor(boss),bossSegment(boss)],[floor,segment]);
+    assert.equal((boss.shieldRaise??0)>0,true);
+  }
+  for(const pillar of boss.pillars)hit.damageCombatTarget(pillar.x,pillar.y,60);
+  boss.mode='stalking';hit.damageCombatTarget(boss.x,boss.y,1000);
+  assert.equal(boss.hp,0);
+  assert.equal(game.campaign.bossDefeated,true);
+});
+
+test('each later quarter of its health, the boss pauses less between attacks and recovers sooner',()=>{
+  const gaps=[240,180,120,60].map(hp=>{
+    const boss=createBoss();boss.hp=hp;boss.pillars.forEach(p=>p.hp=0);boss.phase=1;
+    boss.mode='recover';boss.timer=0;updateBoss(boss,{x:boss.x+300,y:boss.y},.001,false);
+    const pause=boss.timer;
+    boss.mode='strike';boss.timer=0;updateBoss(boss,{x:boss.x+300,y:boss.y},.001,false);
+    return [pause,boss.timer];
+  });
+  for(let i=1;i<gaps.length;i++){assert.ok(gaps[i][0]<gaps[i-1][0],`pause ${gaps}`);assert.ok(gaps[i][1]<gaps[i-1][1],`recover ${gaps}`);}
+});
+
+test('standing pillars heal the boss only up to the top of its current quarter',()=>{
+  const boss=createBoss();boss.hp=150;boss.timer=100;
+  assert.equal(bossSegmentTop(boss),180);
+  for(let i=0;i<100;i++)updateBoss(boss,{x:100,y:100},.1,false);
+  assert.equal(boss.hp,180);
 });
 
 test('skill drops are class-specific and Echo cannot collect one',t=>{
@@ -217,6 +265,7 @@ test('all six class pickups apply their distinct damage or defense',t=>{
   const game=new GameEngine();for(let i=1;i<=5;i++)game.campaign.award(i);
   game.screen='forge';game.forgeWeapon();game.enterBoss();game.beginBossFight();
   game.boss!.pillars.forEach(p=>p.hp=0);game.boss!.armor=0;
+  game.boss!.maxHp=960;                             // 240 HP is then its last quarter: no shield returns mid-test
   const internal=game as unknown as {collectCombatSkill(kind:import('../GameEngine.ts').CombatSkill):void;takeDamage():void};
   internal.collectCombatSkill('fire');assert.equal(game.boss!.hp,205);assert.equal(game.fireBurnTime,3);
   internal.collectCombatSkill('lightning');assert.equal(game.boss!.hp,155);

@@ -343,6 +343,8 @@ export class LoadingScene {
     const title = this.titleArt();
     const props = !TRANSITION.includes(this.phase) && this.phase !== 'done' && ready(images.arch) && ready(images.barFrame) && !!title;
     const [ox, oy, s] = this.forestAt;
+    // Hidden or not laid out yet (no size, so no scale): nothing to paint until it is.
+    if (!el.width || !el.height || !(s > 0) || !Number.isFinite(ox) || !Number.isFinite(oy)) return;
     const key = `${el.width}x${el.height}:${props}`;
     if (key === this.forestFor) return;
     this.forestFor = key;

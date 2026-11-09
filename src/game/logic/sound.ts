@@ -15,6 +15,14 @@ class SoundEngine {
   /** Voice-over has its own bus so it can be balanced against music and effects. */
   private voiceGain: GainNode | null = null;
   private voiceVolume = 1;
+  /**
+   * Effects (every synth sound and public/assets/sfx file) and music (public/assets/music and
+   * the intro's synthesised score) each have their own bus too, all under the master volume.
+   */
+  private effectsGain: GainNode | null = null;
+  private effectsVolume = 1;
+  private musicGain: GainNode | null = null;
+  private musicVolume = 1;
 
   private initCtx() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -27,6 +35,12 @@ class SoundEngine {
         this.voiceGain = this.ctx.createGain();
         this.voiceGain.gain.value = this.voiceVolume;
         this.voiceGain.connect(this.masterGain);
+        this.effectsGain = this.ctx.createGain();
+        this.effectsGain.gain.value = this.effectsVolume;
+        this.effectsGain.connect(this.masterGain);
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.value = this.musicVolume;
+        this.musicGain.connect(this.masterGain);
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -59,6 +73,20 @@ class SoundEngine {
 
   public getVoiceVolume() { return this.voiceVolume; }
 
+  public setEffectsVolume(value: number) {
+    this.effectsVolume = Math.max(0, Math.min(1, value));
+    if (this.effectsGain && this.ctx) this.effectsGain.gain.setValueAtTime(this.effectsVolume, this.ctx.currentTime);
+  }
+
+  public getEffectsVolume() { return this.effectsVolume; }
+
+  public setMusicVolume(value: number) {
+    this.musicVolume = Math.max(0, Math.min(1, value));
+    if (this.musicGain && this.ctx) this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+  }
+
+  public getMusicVolume() { return this.musicVolume; }
+
   public toggleMute(): boolean {
     this.setMuted(!this.isMuted);
     return this.isMuted;
@@ -82,13 +110,13 @@ class SoundEngine {
     const list = sfxFiles(id);
     if (!list.length) return false;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return false;
+    if (!this.ctx || !this.effectsGain) return false;
     const url = sfxUrl(list[Math.floor(Math.random() * list.length)]);
     const buf = this.ready.get(url);
     if (!buf) { void this.loadBuffer(url); return false; }
     const src = this.ctx.createBufferSource();
     src.buffer = buf; src.playbackRate.value = 0.96 + Math.random() * 0.08;
-    src.connect(this.sfxBus(this.ctx, this.masterGain)); src.start();
+    src.connect(this.sfxBus(this.ctx, this.effectsGain)); src.start();
     return true;
   }
 
@@ -128,7 +156,7 @@ class SoundEngine {
     const list = sfxFiles(id);
     if (this.isMuted || !list.length) return none;
     this.initCtx();
-    const ctx = this.ctx, master = this.masterGain;
+    const ctx = this.ctx, master = this.effectsGain;
     if (!ctx || !master) return none;
     const url = sfxUrl(list[Math.floor(Math.random() * list.length)]);
     const buf = this.ready.get(url);
@@ -163,7 +191,7 @@ class SoundEngine {
   public playFootstep() {
     if (this.isMuted || this.sample('footstep')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -177,7 +205,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.06);
@@ -185,18 +213,18 @@ class SoundEngine {
 
   /** Short low impact for damage, bright metallic tone when a shield absorbs it. */
   public playImpact(blocked=false){
-    if(this.isMuted)return;this.initCtx();if(!this.ctx||!this.masterGain)return;
+    if(this.isMuted)return;this.initCtx();if(!this.ctx||!this.effectsGain)return;
     const t=this.ctx.currentTime,osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
     osc.type=blocked?'triangle':'sawtooth';osc.frequency.setValueAtTime(blocked?660:145,t);
     osc.frequency.exponentialRampToValueAtTime(blocked?220:42,t+.14);
     gain.gain.setValueAtTime(.13,t);gain.gain.exponentialRampToValueAtTime(.001,t+.17);
-    osc.connect(gain);gain.connect(this.masterGain);osc.start(t);osc.stop(t+.18);
+    osc.connect(gain);gain.connect(this.effectsGain);osc.start(t);osc.stop(t+.18);
   }
 
   public playIceHit(broken: boolean) {
     if (this.isMuted || this.sample(broken ? 'break' : 'hit')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
     const t = this.ctx.currentTime;
     for (const frequency of broken ? [170, 510, 1230, 2310] : [310, 930, 1910]) {
       const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
@@ -204,14 +232,14 @@ class SoundEngine {
       osc.frequency.exponentialRampToValueAtTime(frequency * .32, t + .16);
       gain.gain.setValueAtTime(broken ? .12 : .065, t);
       gain.gain.exponentialRampToValueAtTime(.001, t + (broken ? .34 : .13));
-      osc.connect(gain);gain.connect(this.masterGain);osc.start(t);osc.stop(t + .36);
+      osc.connect(gain);gain.connect(this.effectsGain);osc.start(t);osc.stop(t + .36);
     }
   }
 
   public playRecordStart() {
     if (this.isMuted || this.sample('recordStart')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc1 = this.ctx.createOscillator();
@@ -233,7 +261,7 @@ class SoundEngine {
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc1.start(t);
     osc2.start(t);
@@ -244,7 +272,7 @@ class SoundEngine {
   public playRecordStop() {
     if (this.isMuted || this.sample('recordStop')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -258,7 +286,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.18);
@@ -267,7 +295,7 @@ class SoundEngine {
   public playEchoSpawn() {
     if (this.isMuted || this.sample('echoSpawn')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     // Harmonic temporal chime (cyan echo resonance)
@@ -283,7 +311,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
 
       osc.connect(gain);
-      gain.connect(this.masterGain!);
+      gain.connect(this.effectsGain!);
 
       osc.start(t + idx * 0.03);
       osc.stop(t + 0.48);
@@ -293,7 +321,7 @@ class SoundEngine {
   public playEchoDismiss() {
     if (this.isMuted || this.sample('echoDismiss')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -307,7 +335,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.22);
@@ -316,7 +344,7 @@ class SoundEngine {
   public playPlateActivate() {
     if (this.isMuted || this.sample('plateOn')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -330,7 +358,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.15);
@@ -339,7 +367,7 @@ class SoundEngine {
   public playPlateDeactivate() {
     if (this.isMuted || this.sample('plateOff')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -353,7 +381,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.1);
@@ -362,7 +390,7 @@ class SoundEngine {
   public playDoorOpen() {
     if (this.isMuted || this.sample('doorOpen')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     // Hydraulic hiss + tone
@@ -377,7 +405,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.32);
@@ -386,7 +414,7 @@ class SoundEngine {
   public playDoorClose() {
     if (this.isMuted || this.sample('doorClose')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
@@ -400,7 +428,7 @@ class SoundEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.effectsGain);
 
     osc.start(t);
     osc.stop(t + 0.26);
@@ -409,7 +437,7 @@ class SoundEngine {
   public playVictory() {
     if (this.isMuted || this.sample('victory')) return;
     this.initCtx();
-    if (!this.ctx || !this.masterGain) return;
+    if (!this.ctx || !this.effectsGain) return;
 
     const t = this.ctx.currentTime;
     const chords = [523.25, 659.25, 783.99, 1046.5]; // C major sci-fi fanfare
@@ -425,7 +453,7 @@ class SoundEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8 + idx * 0.1);
 
       osc.connect(gain);
-      gain.connect(this.masterGain!);
+      gain.connect(this.effectsGain!);
 
       osc.start(t + idx * 0.1);
       osc.stop(t + 0.9 + idx * 0.1);
@@ -435,9 +463,9 @@ class SoundEngine {
   private bufferCache = new Map<string, Promise<AudioBuffer | null>>();
 
   /** Shared audio graph for other players (voice-over). Null until audio exists. */
-  public graph(): { ctx: AudioContext; master: GainNode; voice: GainNode } | null {
+  public graph(): { ctx: AudioContext; master: GainNode; voice: GainNode; music: GainNode } | null {
     this.initCtx();
-    return this.ctx && this.masterGain && this.voiceGain ? { ctx: this.ctx, master: this.masterGain, voice: this.voiceGain } : null;
+    return this.ctx && this.masterGain && this.voiceGain && this.musicGain ? { ctx: this.ctx, master: this.masterGain, voice: this.voiceGain, music: this.musicGain } : null;
   }
 
   /**
@@ -472,7 +500,7 @@ class SoundEngine {
    */
   public playIntroScore(offset: number, cue: IntroCues, total: number): () => void {
     this.initCtx();
-    const ctx = this.ctx, master = this.masterGain;
+    const ctx = this.ctx, master = this.musicGain;   // the synthesised score is music
     if (!ctx || !master) return () => {};
     const now = ctx.currentTime;
     const at = (t: number) => now + Math.max(0, t - offset); // timeline seconds -> context time

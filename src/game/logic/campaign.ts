@@ -161,8 +161,10 @@ export interface BossState {
   mode: 'stalking' | 'warning' | 'strike' | 'recover'; timer: number;
   targetX: number; targetY: number; hitFlash: number;
   projectiles: { x: number; y: number; vx: number; vy: number; life: number }[];
-  pillars: { x: number; y: number; hp: number; maxHp: number; hitFlash?: number; destroyedAge?: number }[];
+  pillars: { x: number; y: number; hp: number; maxHp: number; hitFlash?: number; destroyedAge?: number; restoreAge?: number }[];
   shieldBreak?: number;
+  /** 1 → 0 just after the shield comes back up (the pillars rise again), for its effect. */
+  shieldRaise?: number;
   attack?:'slam'|'volley'|'frost'; attackIndex?:number; warningDuration?:number; strikeDuration?:number; safeAngle?:number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
@@ -173,6 +175,43 @@ export function createBoss(): BossState {
     targetX: 0, targetY: 0, hitFlash: 0, projectiles: [],
     pillars: [[130,125],[1150,125],[130,595],[1150,595]].map(([x,y])=>({x,y,hp:60,maxHp:60})),
     armor: 100, burstCooldown: 5, burstRemaining: 0, burstPulse: 0, burstAreas: [], };
+}
+
+/**
+ * The boss's health is split into BOSS_SEGMENTS equal parts. With the pillars down it can be hurt,
+ * but only down to the bottom of the part it is in: there its shield comes back up and the four
+ * pillars rise again (raiseBossShield), until the last part, which ends in its death.
+ */
+export const BOSS_SEGMENTS = 4;
+const segmentSize = (boss: Pick<BossState, 'maxHp'>) => boss.maxHp / BOSS_SEGMENTS;
+/** The HP at which the shield comes back: the bottom of the part the boss is in (0 in the last). */
+export function bossShieldFloor(boss: Pick<BossState, 'hp' | 'maxHp'>) {
+  const size = segmentSize(boss);
+  return damagePoints(Math.max(0, (Math.ceil(damagePoints(boss.hp) / size - 1e-6) - 1) * size));
+}
+/** The top of the part the boss is in: the most its pillars can heal it back to. */
+export function bossSegmentTop(boss: Pick<BossState, 'hp' | 'maxHp'>) {
+  return Math.min(boss.maxHp, damagePoints(bossShieldFloor(boss) + segmentSize(boss)));
+}
+/** Which part the boss is in, 1 (full health) … BOSS_SEGMENTS (the last). */
+export function bossSegment(boss: Pick<BossState, 'hp' | 'maxHp'>) {
+  return BOSS_SEGMENTS - Math.round(bossShieldFloor(boss) / segmentSize(boss));
+}
+/**
+ * How much sooner the boss attacks in each part of its health: its pause between attacks and its
+ * recovery after one are multiplied by these (1 at full health, shortest in the last part).
+ */
+export const BOSS_TEMPO = { pause: [1, .75, .55, .4], recover: [1, .9, .8, .7] } as const;
+export function bossTempo(boss: Pick<BossState, 'hp' | 'maxHp'>) {
+  const i = Math.min(BOSS_SEGMENTS, Math.max(1, bossSegment(boss))) - 1;
+  return { pause: BOSS_TEMPO.pause[i], recover: BOSS_TEMPO.recover[i] };
+}
+/** The shield back up: all four pillars whole again and the boss armoured, its opening gone. */
+export function raiseBossShield(boss: BossState) {
+  for (const pillar of boss.pillars) { pillar.hp = pillar.maxHp; pillar.hitFlash = 0; pillar.destroyedAge = undefined; pillar.restoreAge = 0; }
+  boss.armor = boss.pillars.length * 25;
+  boss.shieldBreak = 0; boss.shieldRaise = 1;
+  if (boss.mode === 'recover') { boss.mode = 'stalking'; boss.timer = 1.4 * bossTempo(boss).pause; }
 }
 
 export function swordHit(boss: BossState, x: number, y: number, empowered = false): number {
@@ -189,13 +228,16 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
   boss.shieldBreak = Math.max(0, (boss.shieldBreak ?? 0) - dt);
+  boss.shieldRaise = Math.max(0, (boss.shieldRaise ?? 0) - dt);
   for (const pillar of boss.pillars) {
     pillar.hitFlash = Math.max(0, (pillar.hitFlash ?? 0) - dt);
     if (pillar.hp <= 0) pillar.destroyedAge = (pillar.destroyedAge ?? 0) + dt;
+    if (pillar.restoreAge !== undefined) pillar.restoreAge += dt;
   }
   const activePillars = boss.pillars.filter(p=>p.hp>0).length;
   boss.armor = activePillars * 25;
-  if (activePillars) boss.hp = Math.min(boss.maxHp, damagePoints(boss.hp + activePillars * 2 * dt));
+  // Standing pillars heal the boss, but never past the top of the part it is in.
+  if (activePillars) boss.hp = Math.max(boss.hp, Math.min(bossSegmentTop(boss), damagePoints(boss.hp + activePillars * 2 * dt)));
   // One attack conductor: no independent spell can interrupt the recovery window.
   if(boss.mode==='strike'&&(boss.attack==='volley'||(boss.phase===3&&boss.attack==='slam'))){
     boss.burstPulse-=dt;
@@ -252,10 +294,10 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     boss.burstRemaining=boss.attack==='volley'?boss.phase+1:boss.phase===3&&boss.attack==='slam'?2:0;
     boss.burstPulse=.2;
   } else if (boss.mode === 'strike' && boss.timer <= 0) {
-    boss.mode='recover';boss.timer=boss.phase===3?1.45:1.8;
+    boss.mode='recover';boss.timer=(boss.phase===3?1.45:1.8)*bossTempo(boss).recover;
     boss.projectiles=[];boss.burstAreas=[];boss.burstRemaining=0;
   } else if (boss.mode === 'recover' && boss.timer <= 0) {
-    boss.mode='stalking';boss.timer=boss.phase===1?1.1:boss.phase===2?.85:.65;
+    boss.mode='stalking';boss.timer=(boss.phase===1?1.1:boss.phase===2?.85:.65)*bossTempo(boss).pause;
   }
   for (const shot of boss.projectiles) {
     shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;

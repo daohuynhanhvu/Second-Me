@@ -94,6 +94,7 @@ function arena(t: { after(fn: () => void): void }, hero: ComboHero) {
   const g = new GameEngine(); g.screen = 'playing'; g.characterClass = hero; g.boss = createBoss();
   g.currentLevel.walls = []; g.currentLevel.doors = [];          // an open arena: no wall in the way
   g.boss.pillars.forEach(p => p.hp = 0); g.boss.armor = 0;
+  g.boss.maxHp = 960;                                             // 240 HP is its last quarter: no shield returns mid-combo
   g.boss.x = 600; g.boss.y = 320; g.player.x = hero === 'mage' ? 420 : 560; g.player.y = 338;
   return g;
 }

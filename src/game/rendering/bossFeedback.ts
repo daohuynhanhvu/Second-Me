@@ -21,7 +21,16 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
         ctx.beginPath();ctx.moveTo(x - 5, y + 3);ctx.lineTo(x - 2, y - 5 - i % 4);ctx.lineTo(x + 5, y);ctx.lineTo(x + 2, y + 4);ctx.closePath();ctx.fill();ctx.stroke();
       }
     } else {
-      ctx.shadowColor = '#8eeaff';ctx.shadowBlur = 8 + flash * 60;
+      // Risen again with the boss's shield: it grows out of the ground in 0.7 s, glowing.
+      const rise = reduced || pillar.restoreAge === undefined ? 1 : Math.min(1, pillar.restoreAge / .7);
+      if (rise < 1) {
+        const k = 1 - (1 - rise) ** 3;
+        ctx.save();ctx.globalAlpha = 1 - rise;ctx.strokeStyle = '#c1faff';ctx.lineWidth = 3;
+        ctx.beginPath();ctx.ellipse(0, 13, 20 + rise * 30, 8 + rise * 11, 0, 0, Math.PI * 2);ctx.stroke();ctx.restore();
+        ctx.beginPath();ctx.rect(-60, 30 - 110 * k, 120, 110 * k + 10);ctx.clip();
+        ctx.translate(0, (1 - k) * 40);
+      }
+      ctx.shadowColor = '#8eeaff';ctx.shadowBlur = 8 + flash * 60 + (1 - rise) * 40;
       if (flash > 0) ctx.filter = `brightness(${1 + flash * 4})`;
       if (biomeLoaded() === 2) drawBiomeProp(ctx, 6, 0, 0, 100);
       else {ctx.fillStyle='#91d1e6';ctx.fillRect(-15,-40,30,60);}
@@ -45,6 +54,18 @@ export function drawPillars(ctx: CanvasRenderingContext2D, boss: BossState, time
     ctx.save();ctx.globalAlpha = boss.shieldBreak!;ctx.strokeStyle = '#c1faff';ctx.lineWidth = 4 * boss.shieldBreak!;
     ctx.beginPath();ctx.arc(boss.x,boss.y,64 + (reduced ? 10 : t * 110),0,Math.PI*2);ctx.stroke();
     ctx.font='bold 16px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.fillStyle='#e8fcff';ctx.fillText('SHIELD BROKEN',boss.x,boss.y-90);ctx.restore();
+  }
+  if ((boss.shieldRaise ?? 0) > 0) {
+    // The shield closing back round the boss: a ring shrinking onto it, and one from each pillar.
+    const left = boss.shieldRaise!, t = 1 - left;
+    ctx.save();ctx.globalAlpha = Math.min(1, left * 1.6);ctx.strokeStyle = '#c1faff';ctx.lineWidth = 2 + 4 * t;
+    ctx.beginPath();ctx.arc(boss.x,boss.y,64 + (reduced ? 0 : left * 120),0,Math.PI*2);ctx.stroke();
+    if (!reduced) {
+      ctx.lineWidth = 2;ctx.setLineDash([6, 8]);
+      for (const p of boss.pillars) {ctx.beginPath();ctx.moveTo(p.x + (boss.x - p.x) * t, p.y + (boss.y - p.y) * t);ctx.lineTo(p.x + (boss.x - p.x) * Math.min(1, t + .25), p.y + (boss.y - p.y) * Math.min(1, t + .25));ctx.stroke();}
+      ctx.setLineDash([]);
+    }
+    ctx.font='bold 16px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.fillStyle='#e8fcff';ctx.fillText('SHIELD RESTORED',boss.x,boss.y-90);ctx.restore();
   }
 }
 

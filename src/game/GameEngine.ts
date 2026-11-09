@@ -39,7 +39,7 @@ import { LEVELS, levelAt, TRAINING_IDX, TRAINING_LEVEL_ID } from './logic/levels
 import { TrainingStats } from './logic/training.ts';
 import { sounds } from './logic/sound.ts';
 import { GameRenderer } from './rendering/renderer.ts';
-import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, type BossState, type CharacterClass } from './logic/campaign.ts';
+import { MECHANICAL_ENABLED, Campaign, createBoss, updateBoss, bossShieldFloor, bossSegment, raiseBossShield, BOSS_SEGMENTS, type BossState, type CharacterClass } from './logic/campaign.ts';
 import { renderAdventure } from './rendering/adventure.ts';
 import { drawPortalEnergy, finishPixelFrame } from './rendering/portalEffects.ts';
 import { translate, setCurrentLanguage, type Language } from '../i18n.ts';
@@ -120,6 +120,8 @@ export interface HUDState {
   volume: number;
   reducedMotion: boolean;
   voiceVolume: number;
+  effectsVolume: number;
+  musicVolume: number;
   showHints: boolean;
   devUnlocked: boolean;
   language: Language;
@@ -136,6 +138,8 @@ export interface HUDState {
   skillCooldown: number;
   bossArmor: number;
   pillarsRemaining: number;
+  /** The boss HP at which its shield comes back and the pillars rise again (0: the last quarter). */
+  bossShieldAt?: number;
   activeBuff: string;
   skillDrop: CombatSkill | null;
   mechanicalOwned: boolean;
@@ -355,6 +359,8 @@ export class GameEngine {
       sounds.setMuted(value.muted === true);
       sounds.setVolume(typeof value.volume === 'number' ? value.volume : 0.25);
       sounds.setVoiceVolume(typeof value.voiceVolume === 'number' ? value.voiceVolume : 1);
+      sounds.setEffectsVolume(typeof value.effectsVolume === 'number' ? value.effectsVolume : 1);
+      sounds.setMusicVolume(typeof value.musicVolume === 'number' ? value.musicVolume : 1);
       this.reducedMotion = value.reducedMotion === true;
       this.showHints = value.showHints !== false;
       this.language = value.language === 'vi' ? 'vi' : 'en';
@@ -367,7 +373,7 @@ export class GameEngine {
 
   private saveSettings() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      muted: sounds.getMuted(), volume: sounds.getVolume(), voiceVolume: sounds.getVoiceVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
+      muted: sounds.getMuted(), volume: sounds.getVolume(), voiceVolume: sounds.getVoiceVolume(), effectsVolume: sounds.getEffectsVolume(), musicVolume: sounds.getMusicVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
     })); } catch { /* Ignore unavailable storage. */ }
   }
 
@@ -668,6 +674,8 @@ export class GameEngine {
   public toggleAudio() { sounds.toggleMute(); this.saveSettings(); this.notifyHUD(); }
   public setVolume(value: number) { sounds.setVolume(value); this.saveSettings(); this.notifyHUD(); }
   public setVoiceVolume(value: number) { sounds.setVoiceVolume(value); this.saveSettings(); this.notifyHUD(); }
+  public setEffectsVolume(value: number) { sounds.setEffectsVolume(value); this.saveSettings(); this.notifyHUD(); }
+  public setMusicVolume(value: number) { sounds.setMusicVolume(value); this.saveSettings(); this.notifyHUD(); }
   public setReducedMotion(value: boolean) {
     this.reducedMotion = value;
     if (typeof document !== 'undefined') document.body.classList.toggle('reduced-motion', value);
@@ -867,11 +875,26 @@ export class GameEngine {
       return false;
     }
     amount*=source===this.player?(this.boss.mode==='recover'?1.35:1):.5;
-    const result=applyDamage(this.boss.hp,amount);this.boss.hp=result.hp;
-    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: result.dealt, life: .7, broken: false });
+    // Its health comes in quarters: a hit can take it down to the bottom of this one at most,
+    // where the shield comes back up and the four pillars rise again (except in the last).
+    const floor=bossShieldFloor(this.boss);
+    const result=applyDamage(this.boss.hp,amount);
+    const shielded=floor>0&&result.hp<=floor;
+    const dealt=shielded?damagePoints(this.boss.hp-floor):result.dealt;
+    this.boss.hp=shielded?floor:result.hp;
+    this.combatHits.push({ x: this.boss.x, y: this.boss.y - 35, damage: dealt, life: .7, broken: shielded });
     this.combatHits = this.combatHits.slice(-24);
-    sounds.playIceHit(false);
+    sounds.playIceHit(shielded);
     this.boss.hitFlash=.18;
+    if(shielded) {
+      raiseBossShield(this.boss);
+      this.fireBurnTime=0;
+      this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,90);
+      for(const pillar of this.boss.pillars)this.renderer.emitMagic('sparkle',pillar.x,pillar.y,50);
+      const left=BOSS_SEGMENTS-bossSegment(this.boss)+1;
+      this.showBanner(this.language==='vi'?`Boss mất 25% máu · Khiên bật lại, bốn trụ hồi sinh · Boss ra chiêu dồn dập hơn · Còn ${left} đoạn máu`:`Guardian lost 25% health · Shield restored, four pillars rise again · It attacks faster · ${left} bars left`);
+      this.notifyHUD(); return true;
+    }
     this.finishBossHit(); return true;
   }
 
@@ -1652,11 +1675,16 @@ export class GameEngine {
     this.canvas?.removeEventListener('contextmenu', this.handleCanvasContextMenu);
   }
 
-  /** Which background track fits right now (files and naming: src/game/logic/music.ts). */
-  private musicScene(): MusicScene {
+  /**
+   * Which background track fits right now (files and naming: src/game/logic/music.ts). The
+   * loading screen is silent, so the theme starts again from its beginning on the screen after it.
+   */
+  private musicScene(): MusicScene | null {
     if (this.suspendVisuals) return 'intro';
     switch (this.screen) {
-      case 'playing': case 'paused': case 'victory': case 'forge': return this.boss ? 'boss' : 'level';
+      case 'loading': return null;
+      case 'playing': case 'paused': case 'victory': return this.boss ? 'boss' : 'level';
+      case 'forge': return this.boss ? 'boss' : 'menu';
       case 'defeat': return 'defeat';
       case 'ending': return 'ending';
       default: return 'menu';
@@ -1717,6 +1745,7 @@ export class GameEngine {
       offer('bossPatterns');
       if(this.echoes.length)offer('decoy');
       if(this.boss.armor===0)offer('vulnerable');
+      if(bossSegment(this.boss)>1)offer('shieldRestored');
       return;
     }
     if(this.currentLevel.id===5&&this.checkpointIndex>=3)offer('recycle');
@@ -2188,6 +2217,8 @@ export class GameEngine {
         volume: sounds.getVolume(),
         reducedMotion: this.reducedMotion,
         voiceVolume: sounds.getVoiceVolume(),
+        effectsVolume: sounds.getEffectsVolume(),
+        musicVolume: sounds.getMusicVolume(),
         showHints: this.showHints,
         devUnlocked: this.devUnlocked,
         language: this.language,
@@ -2207,6 +2238,7 @@ export class GameEngine {
         loadingFromMenu: this.loadingFromMenu,
         bossArmor: this.boss?.armor??0,
         pillarsRemaining: this.boss?.pillars.filter(p=>p.hp>0).length??0,
+        bossShieldAt: this.boss?bossShieldFloor(this.boss):0,
         activeBuff: this.hasteTime>0?`${this.language==='vi'?'Tốc chém':'Haste'} ${this.hasteTime.toFixed(1)}s`:this.stoneShield>0?`${this.language==='vi'?'Khiên đá':'Stone shield'} ${this.stoneShield} HP`:this.armorShield>0?`${this.language==='vi'?'Giáp':'Armor'} ${this.armorShield} HP`:'',
         skillDrop: this.skillDrop?.kind??null,
       });

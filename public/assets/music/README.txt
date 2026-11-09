@@ -8,13 +8,15 @@ có dấu hay không dấu đều được) và tự phát đúng cảnh. Không
   "intro", "mở đầu", "cinematic"                       -> phim mở đầu (thay nhạc tạo bằng code)
   "thua", "defeat", "game over"                        -> màn hình thua
   "ending", "kết thúc", "chiến thắng", "victory"       -> đoạn kết sau khi thắng boss
-  "level", "màn chơi", "gameplay", "trong màn"         -> các màn chơi thường
+  "level", "màn" (màn chơi, ở các màn...), "gameplay"   -> các màn chơi thường
   "theme", "menu", "sảnh", "lobby", "chủ đề", "main"   -> màn hình chính, sảnh, shop, chọn nhân vật
 
 Thứ tự kiểm tra từ trên xuống: "Nhạc trong màn đánh bos" có cả "trong màn" lẫn "bos"
 -> tính là nhạc boss.
 
-Không có nhạc màn chơi thường hoặc nhạc kết thúc -> dùng nhạc theme (phát tiếp, không phát lại từ đầu).
+Không có nhạc màn chơi thường -> các màn chơi thường im lặng (thêm file có chữ "level" là có nhạc).
+Không có nhạc kết thúc -> đoạn kết dùng nhạc theme.
+Màn hình loading luôn im lặng: vào sảnh (Echo Camp) sau loading thì nhạc theme phát lại từ đầu.
 Nhiều file cùng một cảnh -> mỗi lần vào cảnh chọn ngẫu nhiên một bài.
 File không khớp chữ nào ở trên -> bị bỏ qua.
 

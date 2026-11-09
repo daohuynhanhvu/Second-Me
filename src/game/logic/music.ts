@@ -8,11 +8,12 @@ import { sounds } from './sound.ts';
  *   intro   "intro" / "mở đầu" / "cinematic"                        cinematic intro (replaces the synth score)
  *   defeat  "thua" / "defeat" / "game over"                         defeat screen
  *   ending  "ending" / "kết thúc" / "chiến thắng" / "victory"       ending after the boss
- *   level   "level" / "màn chơi" / "gameplay" / "trong màn"         normal levels
+ *   level   "level" / "màn" (màn chơi, trong màn, các màn) / "gameplay"  normal levels
  *   menu    "theme" / "menu" / "sảnh" / "lobby" / "chủ đề" / "main"  title, lobby, shop, characters
  *
- * Checked top to bottom, so "Nhạc trong màn đánh bos" is boss music. Without a level track,
- * levels and the ending play the menu theme (continuing, not restarting). Several files for one
+ * Checked top to bottom, so "Nhạc trong màn đánh bos" is boss music. Without a level track the
+ * levels are silent; without an ending track the ending plays the menu theme. The loading screen
+ * is always silent, so the theme starts over on the screen after it. Several files for one
  * scene are picked at random each time the scene starts.
  * The folder listing comes from assets/music/index.json, which vite.config.ts serves live in dev
  * and writes at build time.
@@ -25,10 +26,10 @@ const RULES: [MusicScene, RegExp][] = [
   ['intro', /intro|mo dau|cinematic/],
   ['defeat', /thua|defeat|game ?over/],
   ['ending', /ending|ket thuc|chien thang|victory/],
-  ['level', /level|man choi|gameplay|trong man/],
+  ['level', /level|\bman\b|gameplay/],   // "màn" as a word: "màn chơi", "trong màn", "ở các màn"
   ['menu', /theme|menu|sanh|lobby|chu de|main/],
 ];
-const FALLBACK: Partial<Record<MusicScene, MusicScene>> = { level: 'menu', ending: 'menu' };
+const FALLBACK: Partial<Record<MusicScene, MusicScene>> = { ending: 'menu' };
 const LEVEL = 0.55;   // music sits under effects and voice
 const FADE = 1.2;
 /*
@@ -83,7 +84,7 @@ class MusicDirector {
     if (this.bus) return this.bus;
     this.bus = g.ctx.createGain(); this.bus.gain.value = this.level;
     this.speechDuck = g.ctx.createGain();
-    this.bus.connect(this.speechDuck); this.speechDuck.connect(g.master);
+    this.bus.connect(this.speechDuck); this.speechDuck.connect(g.music);
     return this.bus;
   }
   private setLevel(level: number) {
