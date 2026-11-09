@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { startPreload, startLevelPreload, type LevelLoadSpec } from '../game/loading/preloader.ts';
 import { LoadingScene, preloadLoadingArt, fogTile } from '../game/loading/loadingScene.ts';
-import layout from '../game/data/loadingLayout.json';
+import { layout } from '../game/loading/placement.ts';
 
 preloadLoadingArt();   // the screen's own art starts downloading with the app
 
@@ -19,7 +19,7 @@ const TEXT = {
 } as const;
 
 /**
- * Loading screen: painted forest, live portal / wizard / bar on one canvas
+ * Loading screen: a pixel forest drawn in code, live portal / wizard / bar on one canvas
  * (src/game/loading/loadingScene.ts), and the progress of real asset loading
  * (src/game/loading/preloader.ts). `level` null is the first load into the lobby (every
  * asset); a level loads just what that level uses. Once loading is done the portal
@@ -36,6 +36,9 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
   const percent = useRef<HTMLSpanElement>(null);
   const lines = useRef<(HTMLLIElement | null)[]>([]);
   const perf = useRef<HTMLPreElement>(null);
+  const forest = useRef<HTMLCanvasElement>(null);
+  const dim = useRef<HTMLDivElement>(null);
+  const vignette = useRef<HTMLDivElement>(null);
   const done = useRef(onDone);
   done.current = onDone;
   const reveal = useRef(onReveal);
@@ -57,10 +60,12 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
       root: root.current, percent: percent.current,
       lines: lines.current.filter((l): l is HTMLLIElement => !!l),
       perf: dev ? perf.current : undefined,
-    }, { reducedMotion, stress, hold, portal, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
+      forest: forest.current, dim: dim.current, vignette: vignette.current,
+    }, { reducedMotion, stress, hold, portal, language, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
     if (dev) (window as unknown as { __loadingScene?: LoadingScene }).__loadingScene = scene;
     const observer = new ResizeObserver(() => scene.resize());
     observer.observe(canvas.current);
+    observer.observe(root.current);   // a wider or taller screen shows more forest around the frame
     scene.start();
     return () => { scene.stop(); observer.disconnect(); };
   }, []);
@@ -68,11 +73,13 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
   const t = TEXT[language];
   return (
     <div ref={root} className={`loading-v2 overlay${reducedMotion ? ' still' : ''}`} data-phase="loading" role="progressbar" aria-label={t.loading} aria-valuemin={0} aria-valuemax={100}>
+      {/* The pixel forest (pixelForest.ts), screen-wide, and the layers that darken it as the
+          portal wakes; the scene paints and drives them. */}
+      <canvas ref={forest} className="lv-forest" aria-hidden="true"/>
+      <div ref={dim} className="lv-dim"/>
+      <div ref={vignette} className="lv-vignette"/>
       <div className="lv-frame">
       <div className="lv-world">
-        <img className="lv-bg" src={`${import.meta.env.BASE_URL}assets/loading/background.jpg`} alt="" draggable={false}/>
-        {/* Shown when the portal transition starts: the arch and bar are then canvas sprites. */}
-        <img className="lv-bg lv-bg-empty" src={`${import.meta.env.BASE_URL}assets/loading/background-empty.jpg`} alt="" draggable={false}/>
         {/* Slow ambient layers: compositor-animated (opacity / transform only). The wrappers
             fade them out during the transition (their own animations own `opacity`). */}
         <div className="lv-portal-light">
@@ -80,7 +87,6 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
         </div>
         <div className="lv-ambient">
           {[0, 1, 2].map(i => <div key={i} className={`lv-ray lv-ray-${i}`}/>)}
-          {layout.runes.map((r, i) => <div key={i} className="lv-rune" style={{ left: pct(r.x, layout.width), top: pct(r.y, layout.height), animationDelay: `${-i * 1.4}s` }}/>)}
           <div className="lv-fog lv-fog-a" style={{ backgroundImage: `url(${fogImage()})` }}/>
           <div className="lv-fog lv-fog-b" style={{ backgroundImage: `url(${fogImage()})` }}/>
         </div>

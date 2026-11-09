@@ -1,12 +1,18 @@
 # Loading screen art
 
+The forest behind everything is not an image: it is pixel art drawn in code
+(`src/game/loading/pixelForest.ts`) into its own canvas, screen-wide, so it runs on past the
+frame on any screen shape. The arch, the bar's stone channel and the title below are drawn on
+it while loading; the painting they were cut from (`background.jpg`) is not shown.
+
 | File | Made by | From |
 |---|---|---|
 | `background.jpg` | `tools/assets/prepare_loading_screen.py` | `tools/assets/source/loading-mockup.png` (painted mockup; the live UI is erased from it) |
 | `portal-swirl.png` | same script | the mockup's portal vortex, cut out (turned in the portal transition). The painted energy streaks right of the arch are removed from `background.jpg` |
-| `portal-vortex.png`, `portal-flow.png` | `tools/assets/prepare_portal_anim.py` | `tools/assets/source/portal-anim-sheet.png`: 10 hand-drawn vortex frames fitted to the painted arch's oval; `tools/assets/source/portal-flow-sheet.png`: 15 energy-streak frames (checkerboard keyed out, drawn additively, played 1→15→1 so the band rises and falls in a seamless loop); placement in `src/game/data/portalAnim.json` |
+| `portal-vortex.png` | `tools/assets/prepare_portal_anim.py` | `tools/assets/source/portal-anim-sheet.png`: 10 hand-drawn vortex frames fitted to the painted arch's oval; placement in `src/game/data/portalAnim.json` |
 | `wizard-run.png` | `tools/assets/prepare_wizard_run.py` | `tools/assets/source/wizard-run-sheet.png` (8-frame run cycle) |
 | `portal-arch.png`, `portal-front.png`, `bar-frame.png`, `title.png`, `background-empty.jpg` | `tools/assets/prepare_portal_transition.py` | `background.jpg`: the arch, the bar's stone channel and the title cut out as sprites, and the painting without them, for the portal transition |
+| `bar-frame.png` (cleaned in place) | `tools/assets/clean_bar_frame.py` | strips of the painting's forest left around the channel, removed so it sits on the pixel forest |
 
 The layout data lives in `src/game/data/loadingLayout.json` and `src/game/data/wizardRun.json`.
 The code is in `src/game/loading/` (scene, preloader) and `src/components/LoadingScreen.tsx`.
@@ -22,6 +28,7 @@ python -I -X utf8 tools/assets/prepare_wizard_run.py
 python -I -X utf8 tools/assets/prepare_loading_screen.py
 python -I -X utf8 tools/assets/prepare_portal_transition.py   # after prepare_loading_screen.py
 python -I -X utf8 tools/assets/prepare_portal_anim.py         # after prepare_loading_screen.py
+python -I -X utf8 tools/assets/clean_bar_frame.py             # after prepare_portal_transition.py
 ```
 
 ## Portal transition

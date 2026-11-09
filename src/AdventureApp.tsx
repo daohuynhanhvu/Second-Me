@@ -2,7 +2,7 @@ import './components/ForestDialogs.css';
 import {LandscapeGate} from './components/LandscapeGate.tsx';
 import {readLandscapeRequirement} from './game/logic/orientation.ts';
 import React, { useEffect, useRef, useState } from 'react';
-import { GameEngine, type HUDState } from './game/GameEngine.ts';
+import { GameEngine, readSavedSettings, type HUDState } from './game/GameEngine.ts';
 import { Intro, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
 import { CinematicIntro } from './components/CinematicIntro.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
@@ -16,7 +16,8 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   const [portraitBlocked,setPortraitBlocked]=useState(readLandscapeRequirement);
   const canvas = useRef<HTMLCanvasElement>(null);
   const ref = useRef<GameEngine | null>(null);
-  const [hud, setHud] = useState(initial);
+  // The saved language (and motion setting) from the first frame: the intro plays before the engine reports in.
+  const [hud, setHud] = useState<HUDState>(() => ({ ...initial, ...readSavedSettings() }));
   const [introRun, setIntroRun] = useState(1);
   const [portalFlash, setPortalFlash] = useState(0);   // the loading portal's closing flash, fading over the next screen // 0 = not playing; bump to (re)play the cinematic
   useEffect(() => {

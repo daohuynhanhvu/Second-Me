@@ -137,6 +137,19 @@ export interface HUDState {
   loadingFromMenu?: boolean;
 }
 
+const SETTINGS_KEY = 'second-me-settings-v1';
+
+/**
+ * The saved settings the first screen needs before the engine exists: the intro film starts on
+ * the app's first frame, so it must already speak the chosen language (and respect reduced motion).
+ */
+export function readSavedSettings(): { language: Language; reducedMotion: boolean } {
+  try {
+    const value = typeof localStorage === 'undefined' ? {} : JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
+    return { language: value.language === 'vi' ? 'vi' : 'en', reducedMotion: value.reducedMotion === true };
+  } catch { return { language: 'en', reducedMotion: false }; }
+}
+
 export class GameEngine {
   // Screen state
   public screen: GameScreen = 'intro';
@@ -324,7 +337,7 @@ export class GameEngine {
   private loadSettings() {
     try {
       if (typeof localStorage === 'undefined') return;
-      const value = JSON.parse(localStorage.getItem('second-me-settings-v1') ?? '{}');
+      const value = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
       sounds.setMuted(value.muted === true);
       sounds.setVolume(typeof value.volume === 'number' ? value.volume : 0.25);
       sounds.setVoiceVolume(typeof value.voiceVolume === 'number' ? value.voiceVolume : 1);
@@ -339,7 +352,7 @@ export class GameEngine {
   }
 
   private saveSettings() {
-    try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-settings-v1', JSON.stringify({
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem(SETTINGS_KEY, JSON.stringify({
       muted: sounds.getMuted(), volume: sounds.getVolume(), voiceVolume: sounds.getVoiceVolume(), reducedMotion: this.reducedMotion, showHints: this.showHints, language: this.language, characterClass: this.characterClass,
     })); } catch { /* Ignore unavailable storage. */ }
   }

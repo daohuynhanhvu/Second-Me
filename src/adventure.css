@@ -96,8 +96,7 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 /* Loading screen (src/components/LoadingScreen.tsx). Positions are fractions of the 1376x768 painting. */
 .loading-v2{z-index:35;container-type:inline-size;overflow:hidden;background:#071510;font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;transition:opacity .45s ease}
 .lv-world{position:absolute;inset:0}
-.lv-bg,.lv-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.lv-bg{object-fit:fill;user-select:none;-webkit-user-drag:none}
+.lv-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .lv-canvas{image-rendering:pixelated}
 /* Hard 1px-step outline, no blur: reads as pixel lettering on the painting. */
 .loading-v2 :is(.lv-lines li,.lv-footer strong,.lv-footer p){color:#f4e6bf;text-shadow:.13cqw 0 0 #0b1610,-.13cqw 0 0 #0b1610,0 .13cqw 0 #0b1610,0 -.13cqw 0 #0b1610,.13cqw .13cqw 0 #0b1610,.2cqw .26cqw 0 #050b08}
@@ -116,9 +115,6 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 .lv-perf{position:absolute;left:8px;top:8px;margin:0;padding:6px 8px;background:#000b;color:#9effc6;font:11px/1.35 ui-monospace,Consolas,monospace;white-space:pre;pointer-events:none;z-index:2}
 /* Portal transition (loadingScene.ts): move → activate → dive. From `move` on the canvas
    draws the arch and bar as sprites over a painting without them. */
-.lv-bg-empty{opacity:0}
-.loading-v2:is([data-phase=move],[data-phase=rotate],[data-phase=activate],[data-phase=dive],[data-phase=done]) .lv-bg-empty{opacity:1}
-.loading-v2:is([data-phase=move],[data-phase=rotate],[data-phase=activate],[data-phase=dive],[data-phase=done]) .lv-bg:not(.lv-bg-empty){opacity:0}
 .lv-portal-light,.lv-ambient{position:absolute;inset:0;pointer-events:none}
 .loading-v2:is([data-phase=move],[data-phase=rotate],[data-phase=activate],[data-phase=dive],[data-phase=done]) .lv-portal-light{opacity:0;transition:opacity .5s ease}
 .loading-v2:is([data-phase=activate],[data-phase=dive],[data-phase=done]) .lv-ambient{opacity:0;transition:opacity 1.1s ease}
@@ -191,6 +187,18 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 
 /* Loading art, canvas actors and progress labels share the authored 1376x768 frame. */
 .lv-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,calc(100dvh * 1376 / 768));aspect-ratio:1376/768;container-type:inline-size}
-.lv-frame .lv-bg{object-fit:contain}
+/* The pixel forest (pixelForest.ts) fills the whole screen, frame and beyond, under the frame's
+   layers; the scene paints it. The dim layers darken it as the portal wakes (the scene sets their
+   opacity); the vignette matches the canvas one: clear around the frame's centre, dark from about
+   half the frame's width out (--lv-f is the frame's width). Diving, the canvas draws the forest
+   itself, and the screen around the frame goes dark. */
+.lv-forest{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:pixelated;transition:opacity 1.2s ease}
+.lv-dim,.lv-vignette{position:absolute;inset:0;pointer-events:none;opacity:0}
+.lv-dim{background:#010806}
+.lv-vignette{--lv-f:min(100cqw,calc(100dvh * 1376 / 768));background:radial-gradient(circle at 50% 50%,#01080600 calc(var(--lv-f) * .087),#01080659 calc(var(--lv-f) * .297),#010806d9 calc(var(--lv-f) * .552))}
+.loading-v2:is([data-phase=dive],[data-phase=done]) .lv-forest{opacity:0}
+/* The fog and light layers stop at the frame; they fade out toward its sides. */
+.lv-world{overflow:hidden}
+.lv-ambient{-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
 .limit-ring-art{width:76px;height:76px;object-fit:contain;image-rendering:pixelated;flex:none}.limit-ring-icon{width:36px;height:36px;object-fit:contain;image-rendering:pixelated}.limit-ring-stock strong small{display:block;margin-top:4px;color:#a9baa5;font-size:10px;font-weight:400}.limit-ring-stock button{padding:8px;font-size:10px}
 .raccoon-coin{display:inline-block;width:21px;height:21px;object-fit:contain;image-rendering:pixelated;vertical-align:middle;flex:none}.shop-balance,.completion-rating>span{display:flex;align-items:center;gap:5px}.shop-item>.primary .raccoon-coin{width:18px;height:18px;margin-right:3px}.inventory-currency>.raccoon-coin{width:29px;height:29px}.hud-wallet .raccoon-coin{width:18px;height:18px;margin-right:4px}

@@ -1,20 +1,22 @@
 import { getWizardSheet } from '../rendering/wizardSprite.ts';
 /**
- * Animated layer of the loading screen: one canvas over the painted background
- * (public/assets/loading/background.jpg), one requestAnimationFrame loop, delta-time driven.
+ * Animated layer of the loading screen: one canvas over the forest (pixelForest.ts, drawn into
+ * its own canvas under the page's layers), one requestAnimationFrame loop, delta-time driven.
  *
  * Art space is the 1376x768 painting. The canvas is sized in device pixels; painted layers are
  * drawn through a scale transform, pixel sprites (wizard, dust, sparks) are snapped to whole
  * device pixels with nearest-neighbour scaling. Every pool, path and glow sprite is created
  * once in the constructor; the frame loop allocates nothing.
  */
-import layout from '../data/loadingLayout.json';
+import { layout, anim } from './placement.ts';
 import wizard from '../data/wizardRun.json';
-import anim from '../data/portalAnim.json';
 import type { Preload } from './preloader.ts';
 import { PortalTwist, type TwistParams } from './portalTwist.ts';
 import { sounds } from '../logic/sound.ts';
 import { loadSfxIndex } from '../logic/sfx.ts';
+import { paintForest, forestFrame, FOREST_W } from './pixelForest.ts';
+import { vietnameseTitle, type TitleLanguage } from './loadingTitle.ts';
+import { getWarpSheet, prepareWarpSheet, WARP_FRAMES, WARP_CELL, WARP_COLS, WARP_SCALE, WARP_PIVOT } from './warpSheet.ts';
 
 const ART_W = layout.width, ART_H = layout.height;
 const ASSET = `${import.meta.env?.BASE_URL ?? '/'}assets/loading/`;
@@ -58,6 +60,8 @@ const STRIPE = 26;                        // spacing of the light bands in the b
  *               its decaying tail runs on past the flash and fades over the next screen.
  */
 const FADE_S = 0.9;                       // the plain fade into a level (CSS .loading-v2 transition matches)
+const PULL_S = 1.8;                       // the wizard is lifted off the bar and pulled into the portal
+const PULL_LIFT = 0.25;                   // …the first part of it: lifted up, hanging in the pull
 const MOVE_S = 1.5;
 const ROTATE_S = 1.5;
 const SINK_S = 1.3;                       // the bar group is gone before the portal arrives
@@ -91,7 +95,6 @@ const SLICE = 3;                          // painting px per drawn column
  * eye's offset, in the unsquashed disc, plus the sprite's soft edge).
  */
 const SWIRL_COVER = 1.1 + Math.hypot((layout.portal.cx - layout.portal.eyeX) * layout.portal.ry / layout.portal.rx, layout.portal.cy - layout.portal.eyeY) / layout.portal.ry;
-const FLOW_FPS = 4;
 const STONE_FADE_IN = 0.15;               // s: portalMove fades in at the start of `move`
 const STONE_FADE_OUT = 0.03;              // s: …and cut the moment the arch faces the camera (no click)
 const OPEN_TAIL = 1.6;                    // s: portalOpen fades out after the flash
@@ -100,19 +103,17 @@ const OPEN_TAIL = 1.6;                    // s: portalOpen fades out after the f
 const STONE_LEVEL = 0.35;
 const OPEN_LEVEL = 0.3;
 
-type Art = 'bg' | 'bgEmpty' | 'wizard' | 'swirl' | 'vortex' | 'flow' | 'arch' | 'barFrame' | 'title' | 'front';
-const images: Record<Art, HTMLImageElement | null> = { bg: null, bgEmpty: null, wizard: null, swirl: null, vortex: null, flow: null, arch: null, barFrame: null, title: null, front: null };
+type Art = 'wizard' | 'swirl' | 'vortex' | 'arch' | 'barFrame' | 'title' | 'front';
+const images: Record<Art, HTMLImageElement | null> = { wizard: null, swirl: null, vortex: null, arch: null, barFrame: null, title: null, front: null };
 /** Starts loading the screen's own art; called at import so it is ready before the screen opens. */
 export function preloadLoadingArt() {
-  if (typeof Image === 'undefined' || images.bg) return;
+  if (typeof Image === 'undefined' || images.wizard) return;
   const load = (file: string) => { const i = new Image(); i.decoding = 'async'; i.src = ASSET + file; return i; };
-  images.bg = load('background.jpg');
   images.wizard = load(wizard.file);
   images.swirl = load('portal-swirl.png');
   images.vortex = load('portal-vortex.png');
-  images.flow = load('portal-flow.png');
-  // Portal transition (tools/assets/prepare_portal_transition.py).
-  images.bgEmpty = load('background-empty.jpg');
+  // The arch, bar channel and title, cut from the painting (tools/assets/prepare_portal_transition.py):
+  // on the forest while loading, then carried by the portal transition.
   images.arch = load('portal-arch.png');
   images.barFrame = load('bar-frame.png');
   images.title = load('title.png');
@@ -120,7 +121,7 @@ export function preloadLoadingArt() {
 }
 const ready = (i: HTMLImageElement | null): i is HTMLImageElement => !!i && i.complete && i.naturalWidth > 0;
 /** The portal transition needs its sprites; without them (a very slow connection) the screen just fades. */
-const transitionArtReady = () => ready(images.bgEmpty) && ready(images.arch) && ready(images.barFrame) && ready(images.title) && ready(images.swirl) && ready(images.front);
+const transitionArtReady = () => ready(images.arch) && ready(images.barFrame) && ready(images.title) && ready(images.swirl) && ready(images.front);
 
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: number; phase: number }
 const pool = (n: number): Particle[] => Array.from({ length: n }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 2, color: 0, phase: 0 }));
@@ -130,6 +131,14 @@ export interface SceneUI {
   percent: HTMLElement;         // "LOADING... XX%" number
   lines: HTMLElement[];         // the three status lines
   perf?: HTMLElement | null;    // dev-only overlay
+  /**
+   * The forest's canvas, covering the whole screen under the frame (the forest runs on past the
+   * frame's edges). While loading the arch, bar channel and title are drawn on it too.
+   */
+  forest?: HTMLCanvasElement | null;
+  /** Layers over the forest that darken it (flat, and a vignette) as the portal wakes. */
+  dim?: HTMLElement | null;
+  vignette?: HTMLElement | null;
 }
 export interface SceneOptions {
   /** `flash`: the screen ended on the portal's white flash (false after the plain fade). */
@@ -138,6 +147,8 @@ export interface SceneOptions {
   onReveal?: () => void;
   /** Dev only: stay on the loading screen after 100% (for profiling). */
   hold?: boolean;
+  /** The title's language (English: the painted title.png; Vietnamese: drawn, loadingTitle.ts). */
+  language?: TitleLanguage;
   /**
    * End with the portal transition (loads started from the main menu). Otherwise, and with
    * reduced motion, the screen fades out over FADE_S, uncovering what it loaded (onReveal is
@@ -147,7 +158,7 @@ export interface SceneOptions {
 }
 
 /** `fade` replaces the portal transition when reduced motion is on. */
-export type Phase = 'loading' | 'finishing' | 'move' | 'rotate' | 'activate' | 'dive' | 'fade' | 'done';
+export type Phase = 'loading' | 'finishing' | 'pull' | 'move' | 'rotate' | 'activate' | 'dive' | 'fade' | 'done';
 const TRANSITION: Phase[] = ['move', 'rotate', 'activate', 'dive'];
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -179,6 +190,9 @@ export class LoadingScene {
   private runClock = 0;                    // in frames
   private frame = 0;
   private cycles = 0;
+  /** He has been pulled into the portal (gone from the bar from `move` on). */
+  private flown = false;
+  private pullFrom = { x: 0, y: 0 };          // his body's centre when the pull starts (painting px)
 
   // pools
   private motes: Particle[];
@@ -296,6 +310,58 @@ export class LoadingScene {
     const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
     if (this.canvas.width !== w || this.canvas.height !== h) { this.canvas.width = w; this.canvas.height = h; }
     this.kx = w / ART_W; this.ky = h / ART_H;
+    const el = this.ui.forest;
+    if (el) {
+      const f = el.getBoundingClientRect();
+      const fw = Math.max(1, Math.round(f.width * dpr)), fh = Math.max(1, Math.round(f.height * dpr));
+      if (el.width !== fw || el.height !== fh) { el.width = fw; el.height = fh; }
+      this.forestAt = [(r.left - f.left) * dpr, (r.top - f.top) * dpr, r.width * dpr / FOREST_W];
+      this.forestFor = '';
+    }
+    this.syncForest();
+  }
+
+  /** The title in the screen's language (null until it is ready). */
+  private titleArt(): CanvasImageSource | null {
+    if (this.opts.language === 'vi') return vietnameseTitle();
+    return ready(images.title) ? images.title : null;
+  }
+
+  /** Where the frame sits on the forest's canvas: its top-left (device px) and device px per forest px. */
+  private forestAt = [0, 0, 1];
+  /** What the forest's canvas shows now (its size, place and whether the sprites are on it). */
+  private forestFor = '';
+
+  /**
+   * Paints the forest's canvas when what it should show has changed: the forest (in forest
+   * pixels over every column and row the screen shows, scaled up with nearest-neighbour), and,
+   * until the portal transition takes them over, the arch, bar channel and title on it.
+   */
+  private syncForest() {
+    const el = this.ui.forest;
+    if (!el) return;
+    const title = this.titleArt();
+    const props = !TRANSITION.includes(this.phase) && this.phase !== 'done' && ready(images.arch) && ready(images.barFrame) && !!title;
+    const [ox, oy, s] = this.forestAt;
+    const key = `${el.width}x${el.height}:${props}`;
+    if (key === this.forestFor) return;
+    this.forestFor = key;
+    const x0 = Math.floor(-ox / s), y0 = Math.floor(-oy / s);
+    const x1 = Math.ceil((el.width - ox) / s), y1 = Math.ceil((el.height - oy) / s);
+    const forest = paintForest(x0, y0, x1 - x0, y1 - y0);
+    const ctx = el.getContext('2d')!;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(forest, ox + x0 * s, oy + y0 * s, (x1 - x0) * s, (y1 - y0) * s);
+    if (props) {
+      const k = s / (ART_W / FOREST_W);
+      ctx.setTransform(k, 0, 0, k, ox, oy);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(images.arch!, layout.arch.x, layout.arch.y);
+      ctx.drawImage(images.barFrame!, layout.barFrame.x, layout.barFrame.y);
+      ctx.drawImage(title!, layout.title.x, layout.title.y);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
   }
 
   private tick = (now: number) => {
@@ -305,6 +371,7 @@ export class LoadingScene {
     this.last = now;
     const t0 = performance.now();
     this.update(dt);
+    this.syncForest();
     this.draw();
     if (this.ui.perf !== undefined) this.measure(frameMs, performance.now() - t0, dt);
   };
@@ -340,16 +407,19 @@ export class LoadingScene {
     if (nextFrame !== this.frame) {
       if (nextFrame === 0) this.cycles++;
       this.frame = nextFrame;
-      if (LANDING_FRAMES.includes(nextFrame)) this.kickDust();
+      if (LANDING_FRAMES.includes(nextFrame) && this.phase !== 'pull' && !this.flown) this.kickDust();
     }
 
-    // Phases: loading → (real 100%) finishing: let the wizard complete his stride →
-    // the portal transition (move → activate → dive) → done. Reduced motion: a short fade.
+    // Phases: loading → (real 100%) finishing: let the wizard complete his stride → pull: the
+    // portal lifts him off the bar and draws him in → the portal transition (move → activate →
+    // dive) → done. Reduced motion: a short fade.
     if (this.phase === 'loading' && this.shown >= 1 && !this.opts.hold) this.setPhase('finishing');
     else if (this.phase === 'finishing' && this.frame === 0 && this.phaseTime > 0.05) {
-      if (this.opts.portal && !this.opts.reducedMotion && transitionArtReady()) this.setPhase('move');
+      // (A load too quick for the warp sheet to be drawn meanwhile finishes it now.)
+      if (this.opts.portal && !this.opts.reducedMotion && transitionArtReady()) this.setPhase(prepareWarpSheet(WARP_FRAMES) ? 'pull' : 'move');
       else { this.setPhase('fade'); this.opts.onReveal?.(); }   // the level is set up under the fading screen
     }
+    else if (this.phase === 'pull' && this.phaseTime >= PULL_S) { this.flown = true; this.setPhase('move'); }
     else if (this.phase === 'move' && this.phaseTime >= MOVE_S) this.setPhase('rotate');
     else if (this.phase === 'rotate' && this.phaseTime >= ROTATE_S) this.setPhase('activate');
     else if (this.phase === 'activate' && this.phaseTime >= ACTIVATE_S) this.setPhase('dive');
@@ -371,12 +441,21 @@ export class LoadingScene {
       this.ensureLow();
     }
 
+    // The warp sheet (the pull at the end) is drawn a frame at a time while loading runs.
+    if (this.opts.portal && !this.opts.reducedMotion && (this.phase === 'loading' || this.phase === 'finishing')) prepareWarpSheet(1);
+
     this.updateParticles(dt);
     this.updateUI();
   }
 
   private setPhase(p: Phase) {
     this.phase = p; this.phaseTime = 0; this.ui.root.dataset.phase = p;
+    if (p === 'pull') {
+      const size = WIZARD_ART_HEIGHT * 1.15;     // his 256 px cell, in painting px (drawWizard)
+      this.pullFrom.x = this.wizX - size / 2 + WARP_PIVOT.x / 256 * size;
+      this.pullFrom.y = layout.bar.y - 12 - size * 0.9 + WARP_PIVOT.y / 256 * size;
+      this.kickDust(); this.kickDust();
+    }
     if (p === 'move') this.stoneCue = sounds.playCue('portalMove', STONE_FADE_IN, STONE_LEVEL);
     else if (p === 'activate') {
       this.openCue = sounds.playCue('portalOpen', 0, OPEN_LEVEL);
@@ -584,14 +663,14 @@ export class LoadingScene {
     ctx.setTransform(kx, 0, 0, ky, 0, 0);
     const t = this.time;
     if (TRANSITION.includes(this.phase)) { this.drawTransitionFrame(t); return; }
-    const surge = 0;
+    const surge = 0;   // the portal's extra brightness (pull adds to it below)
 
     const skip = this.skip;
     // Light shafts, rune glows, fog and the portal's reflected light are CSS layers
     // (LoadingScreen.tsx): they only change opacity / position, which the compositor
     // animates without repainting this canvas.
-    if (!skip?.has('portal')) this.drawPortal(t, surge);
-    if (!skip?.has('streaks')) this.drawFlow(t);
+    const pull = this.phase === 'pull' ? clamp01(this.phaseTime / PULL_S) : 0;
+    if (!skip?.has('portal')) this.drawPortal(t, surge + 0.8 * smooth(0, 0.4, pull) + 0.6 * smooth(0.85, 1, pull));
 
     if (!skip?.has('flies')) this.drawFlies(t);
     this.drawLeaves();
@@ -656,38 +735,43 @@ export class LoadingScene {
     }
 
     // While diving the canvas draws the whole frame itself (the page's layers cannot zoom).
-    if (z > 0 && ready(images.bgEmpty)) {
+    if (z > 0) {
       cam();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(images.bgEmpty, 0, 0, ART_W, ART_H);
+      ctx.drawImage(forestFrame(), 0, 0, ART_W, ART_H);
       ctx.setTransform(kx, 0, 0, ky, 0, 0);
     }
 
-    // The streaks fade out as the portal leaves.
-    const streakA = 1 - smooth(0, 0.35, mv);
-    if (streakA > 0) this.drawFlow(t, streakA);
     this.drawLeaves();
     if (a === 0) this.drawFlies(t);
     // The painted title sinks and fades before the portal crosses its place.
     const tk = this.phase === 'move' ? clamp01(this.phaseTime / TITLE_S) : 1;
-    if (tk < 1 && ready(images.title)) {
+    const title = this.titleArt();
+    if (tk < 1 && title) {
       ctx.globalAlpha = 1 - smooth(0.15, 1, tk);
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(images.title, layout.title.x, layout.title.y + 170 * tk * tk);
+      ctx.drawImage(title, layout.title.x, layout.title.y + 170 * tk * tk);
       ctx.globalAlpha = 1;
     }
 
     // The forest darkens around the portal: a little while it travels, deeply once it wakes.
+    // The page's dim layers darken the forest's canvas, screen-wide; once diving, this canvas
+    // draws the forest itself, so it darkens it here too.
     const dim = 0.16 * mv + (DIM_MAX - 0.16) * wake;
-    ctx.fillStyle = '#010806';
-    ctx.globalAlpha = dim;
-    ctx.fillRect(0, 0, ART_W, ART_H);
-    if (wake > 0) {
-      ctx.globalAlpha = wake;
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(this.vignette, 0, 0, ART_W, ART_H);
+    const { dim: dimEl, vignette: vigEl } = this.ui;
+    if (dimEl) dimEl.style.opacity = dim.toFixed(3);
+    if (vigEl) vigEl.style.opacity = wake.toFixed(3);
+    if (z > 0 || !dimEl) {
+      ctx.fillStyle = '#010806';
+      ctx.globalAlpha = dim;
+      ctx.fillRect(0, 0, ART_W, ART_H);
+      if (wake > 0) {
+        ctx.globalAlpha = wake;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(this.vignette, 0, 0, ART_W, ART_H);
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     // The tunnel opens behind the arch, which is drawn into it.
     if (z > 0) this.drawTunnel(z, zoom, false);
@@ -1024,24 +1108,6 @@ export class LoadingScene {
     ctx.drawImage(img, f * v.w, 0, v.w, v.h, cx + (v.x - p.cx) * sx, cy + (v.y - p.cy), v.w * sx, v.h);
   }
 
-  /** Energy streaks flying out of the portal: hand-drawn frames played forward and back, cross-faded. */
-  private drawFlow(t: number, alpha = 1) {
-    const img = images.flow;
-    if (!ready(img)) return;
-    const fl = anim.flow, ctx = this.ctx;
-    const last = fl.frames - 1, k = (t * FLOW_FPS) % (2 * last);
-    const pos = k <= last ? k : 2 * last - k;            // 0 → last → 0
-    const i = Math.min(Math.floor(pos), last - 1), j = i + 1, mix = pos - i;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = alpha * (1 - mix);
-    ctx.drawImage(img, i * fl.w, 0, fl.w, fl.h, fl.x, fl.y, fl.w, fl.h);
-    ctx.globalAlpha = alpha * mix;
-    ctx.drawImage(img, j * fl.w, 0, fl.w, fl.h, fl.x, fl.y, fl.w, fl.h);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
   /**
    * Fireflies as pixel glows: a 2 px core with a dimmer plus-shaped halo, all rectangles.
    * (Many small image draws cost far more than rects when the canvas falls back to CPU.)
@@ -1147,6 +1213,8 @@ export class LoadingScene {
       ctx.fillStyle = '#b9ab90';
       ctx.fillRect(Math.round(d.x), Math.round(d.y), d.size, d.size);
     }
+    if (this.phase === 'pull') { ctx.globalAlpha = 1; this.drawPull(); return; }
+    if (this.flown) { ctx.globalAlpha = 1; return; }
     ctx.globalAlpha = this.ga;                    // the bar group fades and sinks in the transition
     const aeris = getWizardSheet();
     if (aeris) {
@@ -1168,6 +1236,60 @@ export class LoadingScene {
     ctx.setTransform(this.kx, 0, 0, this.ky, 0, 0);
     ctx.globalAlpha = 1;
   }
+  /** Where he is `k` (0..1) into the pull: lifted up, then along a rising curve into the vortex's eye. */
+  private pullPoint(k: number, out: { x: number; y: number }) {
+    const S = this.pullFrom, p = layout.portal;
+    const Lx = S.x - 12, Ly = S.y - 48;
+    if (k < PULL_LIFT) {
+      const e = 1 - (1 - k / PULL_LIFT) ** 2;
+      out.x = S.x + (Lx - S.x) * e + Math.sin(k * 60) * 2 * e;   // trembling as he hangs in the pull
+      out.y = S.y + (Ly - S.y) * e;
+      return out;
+    }
+    const v = ((k - PULL_LIFT) / (1 - PULL_LIFT)) ** 1.7, u = 1 - v;     // faster and faster
+    const Cx = (Lx + p.eyeX) / 2, Cy = Math.min(Ly, p.eyeY) - 110;
+    out.x = u * u * Lx + 2 * u * v * Cx + v * v * p.eyeX;
+    out.y = u * u * Ly + 2 * u * v * Cy + v * v * p.eyeY;
+    return out;
+  }
+  private pp = { x: 0, y: 0 }; private pq = { x: 0, y: 0 };
+
+  /**
+   * The pull: his frame of the warp sheet (warpSheet.ts; his pose, glow and dissolving) carried
+   * along pullPoint, turned to face along his path once he is streaking in, with a stream of
+   * light running ahead of him into the portal.
+   */
+  private drawPull() {
+    const sheet = getWarpSheet();
+    if (!sheet) return;
+    const ctx = this.ctx, k = clamp01(this.phaseTime / PULL_S);
+    const at = this.pullPoint(k, this.pp);
+    // The stream: soft glows flowing along the rest of his path.
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 7; i++) {
+      const f = ((this.time * 1.6 + i / 7) % 1), q = this.pullPoint(k + (1 - k) * f, this.pq);
+      ctx.globalAlpha = 0.35 * smooth(0, 0.3, k) * Math.sin(Math.PI * f);
+      ctx.drawImage(this.glowTeal, q.x - 22, q.y - 22, 44, 44);
+    }
+    ctx.globalAlpha = 0.5 * smooth(0, 0.5, k) * (1 - smooth(0.8, 1, k));
+    ctx.drawImage(this.glowTeal, at.x - 70, at.y - 70, 140, 140);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    // His frame. The sheet's pull is to the left; once streaking, it turns to his heading.
+    const next = this.pullPoint(Math.min(1, k + 0.02), this.pq);
+    let heading = Math.atan2(next.y - at.y, next.x - at.x) - Math.PI;
+    heading = Math.atan2(Math.sin(heading), Math.cos(heading));
+    const turn = smooth(0.45, 0.7, k);
+    const i = Math.min(WARP_FRAMES - 1, Math.floor(k * WARP_FRAMES));
+    const size = WIZARD_ART_HEIGHT * 1.15 * this.ky;               // device px per 256 source px
+    const d = Math.round(WARP_CELL / WARP_SCALE / 256 * size);    // a cell on screen
+    ctx.setTransform(1, 0, 0, 1, Math.round(at.x * this.kx), Math.round(at.y * this.ky));
+    ctx.rotate(heading * turn);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sheet, (i % WARP_COLS) * WARP_CELL, Math.floor(i / WARP_COLS) * WARP_CELL, WARP_CELL, WARP_CELL, -d / 2, -d / 2, d, d);
+    ctx.setTransform(this.kx, 0, 0, this.ky, 0, 0);
+  }
+
 
   // ---------------------------------------------------------------- perf (dev)
 
