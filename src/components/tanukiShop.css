@@ -18,3 +18,6 @@
 .tanuki-turn-sprite{position:absolute;top:10%;left:5%;width:78%;aspect-ratio:1;background-repeat:no-repeat;background-size:400% 200%;image-rendering:pixelated}
 @media(max-width:760px){.tanuki-turn-sprite{width:65%;top:4%;left:8%}}
 .tanuki-turn-sprite{background-size:900% 500%}.tanuki-speech[hidden]{display:none}
+/* Keep the return control clear of the reward chest in every viewport. */
+.tanuki-shop .tanuki-back{position:absolute;top:16px;left:16px;bottom:auto;margin:0;order:initial;z-index:5}
+@media(max-width:760px){.tanuki-shop .tanuki-header{top:64px}.tanuki-shop .tanuki-back{top:10px;left:12px}.tanuki-shop .tanuki-speech{top:38%}}
