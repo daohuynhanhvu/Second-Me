@@ -125,7 +125,7 @@ export interface HUDState {
   echoLimit: number;
   limitRingActive: boolean;
   bestStars: Record<number, number>;
-  lastRating: { stars: number; coins: number } | null;
+  lastRating: { stars: number; coins: number; keys?:number } | null;
   skillCooldown: number;
   bossArmor: number;
   pillarsRemaining: number;
@@ -263,7 +263,7 @@ export class GameEngine {
   public devUnlocked = false;
   public language: Language = 'en';
   public characterClass: CharacterClass = 'mage';
-  public lastRating: { stars: number; coins: number } | null = null;
+  public lastRating: { stars: number; coins: number; keys?:number } | null = null;
   public skillCooldown = 0;
   public orbitOrbs: { angle:number; life:number; tick:number }[] = [];
   public lightCircle: { x:number; y:number; life:number; heal:number } | null = null;
@@ -672,7 +672,7 @@ export class GameEngine {
   }
 
   private finishBossHit() {
-    if (!this.boss) return;
+    if (!this.boss || this.bossDeathPending) return;
     this.renderer.emitMagic('sparkle', this.boss.x, this.boss.y, 80);
     sounds.playPlateActivate();
     if (this.boss.hp <= 0) {

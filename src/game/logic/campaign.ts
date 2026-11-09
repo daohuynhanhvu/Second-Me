@@ -93,14 +93,16 @@ export class Campaign {
     if(!((this.echoRunes[id]??0)>0))return false;
     this.echoRunes[id]=(this.echoRunes[id]??0)-1;this.save();return true;
   }
-  completeLevel(levelId: number, seconds: number) {
+  completeLevel(levelId: number, seconds: number, random:()=>number=Math.random) {
     this.lastRuneDrop=null;
     if(levelId>=1&&levelId<=5&&this.pendingRuneChoices.length===0)this.pendingRuneChoices=rollRuneChoices();
     const reward = levelRating(seconds,levelId);
+    const keys=levelId===6?3+Math.min(2,Math.floor(Math.max(0,random())*3)):levelId>=1&&levelId<=5&&reward.stars>0?reward.stars+2:0;
+    this.chestKeys+=keys;
     this.coins += reward.coins;
     this.bestStars[levelId] = Math.max(this.bestStars[levelId] ?? 0, reward.stars);
     this.save();
-    return reward;
+    return {...reward,keys};
   }
   openChest(count:1|10,random:()=>number=Math.random):ChestRewardId[]|null {
     if((count!==1&&count!==10)||this.chestKeys<count*5)return null;

@@ -1,3 +1,4 @@
+import {puzzleBalance} from './balance.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Campaign} from './campaign.ts';
@@ -20,4 +21,16 @@ test('keys and awarded rewards survive reload; old saves start with zero keys',t
  t.after(()=>old?Object.defineProperty(globalThis,'localStorage',old):Reflect.deleteProperty(globalThis,'localStorage'));
  const c=new Campaign();c.load();assert.equal(c.chestKeys,0);c.chestKeys=10;c.openChest(1,()=>.99);
  const loaded=new Campaign();loaded.load();assert.equal(loaded.chestKeys,5);assert.equal(loaded.limitRings,1);assert.deepEqual(loaded.lastChestRewards,['ring']);
+});
+test('trail stars award 5, 4, 3 keys; boss awards 3–5 independently of rating',()=>{
+ const c=new Campaign();
+ assert.equal(c.completeLevel(1,0).keys,5);
+ assert.equal(c.completeLevel(1,10000).keys,0);
+ assert.equal(c.completeLevel(6,10000,()=>0).keys,3);
+ assert.equal(c.completeLevel(6,0,()=>.5).keys,4);
+ assert.equal(c.completeLevel(6,0,()=>.99).keys,5);
+ const target=puzzleBalance(1).threeStars;
+ assert.equal(c.completeLevel(1,target*1.1).keys,4);
+ assert.equal(c.completeLevel(1,target*1.5).keys,3);
+ assert.equal(c.chestKeys,24);
 });
