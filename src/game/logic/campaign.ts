@@ -1,3 +1,4 @@
+import {ICE_BARRAGE} from './iceBarrage.ts';
 import {FROST_STRIKE,makeIceRays,insideIceRay,type IceRay} from './iceMagic.ts';
 export {TIME_ITEM_PRICE,TIME_ITEM_CAP} from './shopItems.ts';
 import {SHOP_ITEMS,emptySupplies,cleanSupplies,type ShopItemId} from './shopItems.ts';
@@ -166,6 +167,7 @@ export interface BossState {
   shieldBreak?: number;
   /** 1 → 0 just after the shield comes back up (the pillars rise again), for its effect. */
   shieldRaise?: number;
+  attackFacingRight?:boolean; recoveryDuration?:number;
   attack?:'triple'|'volley'|'melee'; attackIndex?:number; warningDuration?:number; strikeDuration?:number; safeAngle?:number;
   armor: number;
   burstCooldown: number; burstRemaining: number; burstPulse: number;
@@ -243,15 +245,13 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   if(boss.mode==='strike'&&boss.attack==='volley'){
     boss.burstPulse-=dt;
     if(boss.burstRemaining>0&&boss.burstPulse<=0){
-      const count=boss.phase===1?10:boss.phase===2?14:18;
-      const gap=boss.safeAngle??0;
+      const count=ICE_BARRAGE.COUNTS[boss.phase-1];
+      const wave=ICE_BARRAGE.WAVES[boss.phase-1]-boss.burstRemaining;
       for(let i=0;i<count;i++){
-        const angle=i*Math.PI*2/count;
-        const delta=Math.abs(Math.atan2(Math.sin(angle-gap),Math.cos(angle-gap)));
-        if(delta<.43)continue; // A visible, persistent escape lane for the entire volley.
-        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*(135+boss.phase*15),vy:Math.sin(angle)*(135+boss.phase*15),life:2.4});
+        const angle=(i+(wave%2)*.5)*Math.PI*2/count;
+        boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*ICE_BARRAGE.SPEEDS[boss.phase-1],vy:Math.sin(angle)*ICE_BARRAGE.SPEEDS[boss.phase-1],life:ICE_BARRAGE.LIFE});
       }
-      boss.burstRemaining--;boss.burstPulse=boss.phase===3?.32:.45;
+      boss.burstRemaining--;boss.burstPulse=ICE_BARRAGE.INTERVALS[boss.phase-1];
     }
   }
   let burstHit=false;
@@ -269,19 +269,19 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
       const sequence:NonNullable<BossState['attack']>[]=['triple','volley'];
       boss.attack=Math.hypot(player.x-boss.x,player.y-boss.y)<115&&index%3===2?'melee':sequence[index%sequence.length];boss.attackIndex=index+1;
       boss.mode='warning';boss.warningDuration=boss.phase===3?.9:1.15;
-      boss.timer=boss.warningDuration;boss.targetX=player.x;boss.targetY=player.y;
+      boss.timer=boss.warningDuration;boss.targetX=player.x;boss.targetY=player.y;boss.attackFacingRight=player.x>boss.x;
       boss.safeAngle=Math.atan2(defender.y-boss.y,defender.x-boss.x)+.38;
 
     }
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
-    boss.mode='strike';boss.strikeDuration=boss.attack==='melee'?.3:boss.attack==='volley'?2.2:FROST_STRIKE.LIFE+FROST_STRIKE.FADE;boss.timer=boss.strikeDuration;
-    if(boss.attack==='melee'){if(Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<65){hit=true;onPlayerHit?.(DAMAGE.bossSlam);}echoDefenders.forEach((e,i)=>{if(Math.hypot(e.x-boss.targetX,e.y-boss.targetY)<65)onEchoHit?.(i,DAMAGE.bossSlam);});}
+    boss.mode='strike';boss.strikeDuration=boss.attack==='melee'?.3:boss.attack==='volley'?ICE_BARRAGE.DURATION:FROST_STRIKE.LIFE+FROST_STRIKE.FADE;boss.timer=boss.strikeDuration;
+    if(boss.attack==='melee'){if(Math.hypot(defender.x-boss.x,defender.y-boss.y)<=135&&Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<65){hit=true;onPlayerHit?.(DAMAGE.bossSlam);}echoDefenders.forEach((e,i)=>{if(Math.hypot(e.x-boss.x,e.y-boss.y)<=135&&Math.hypot(e.x-boss.targetX,e.y-boss.targetY)<65)onEchoHit?.(i,DAMAGE.bossSlam);});}
     if(!boss.attack||boss.attack==='triple')boss.iceRays=makeIceRays({x:boss.x,y:boss.y},Math.atan2(boss.targetY-boss.y,boss.targetX-boss.x));
-    boss.burstRemaining=boss.attack==='volley'?boss.phase+1:0;
+    boss.burstRemaining=boss.attack==='volley'?ICE_BARRAGE.WAVES[boss.phase-1]:0;
     boss.burstPulse=.2;
   } else if (boss.mode === 'strike' && boss.timer <= 0) {
-    boss.mode='recover';boss.timer=(boss.phase===3?1.45:1.8)*bossTempo(boss).recover;
-    boss.projectiles=[];boss.iceRays=[];boss.burstRemaining=0;
+    boss.mode='recover';boss.recoveryDuration=(boss.phase===3?1.45:1.8)*bossTempo(boss).recover;boss.timer=boss.recoveryDuration;
+    boss.iceRays=[];boss.burstRemaining=0;
   } else if (boss.mode === 'recover' && boss.timer <= 0) {
     boss.mode='stalking';boss.timer=(boss.phase===1?1.1:boss.phase===2?.85:.65)*bossTempo(boss).pause;
   }

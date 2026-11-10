@@ -1,4 +1,5 @@
-import {drawGuardianCast} from './guardianCasting.ts';
+import {guardianCastAtlas} from './guardianCasting.ts';
+import {bossActionPose} from '../logic/bossAnimation.ts';
 import type { BossState } from '../logic/campaign.ts';
 
 // User-supplied Frost_Guardian_FREE_v1.0 sprite sheet: 192 × 128 cells.
@@ -44,11 +45,13 @@ export function drawFrostGuardian(
   const { row, frame } = frostGuardianFrame(boss, time, deathTime, walking);
   ctx.save();
   ctx.translate(Math.round(boss.x), Math.round(boss.y));
-  if (facingRight) ctx.scale(-1, 1); // Source art faces left.
+  const lockedFacing=boss.mode==='stalking'?facingRight:boss.attackFacingRight??facingRight;
+  if (lockedFacing) ctx.scale(-1, 1); // Source art faces left.
   ctx.imageSmoothingEnabled = false;
   if (boss.hitFlash > 0) { ctx.shadowColor = '#c4fbff'; ctx.shadowBlur = 18; }
-  if(boss.hp>0&&boss.hitFlash<=0&&(boss.attack==='volley'||boss.attack==='triple')&&(boss.mode==='warning'||boss.mode==='strike'))drawGuardianCast(ctx,sheet,boss);
-  else ctx.drawImage(sheet, frame * CELL_W, row * CELL_H, CELL_W, CELL_H, -149, -121, 298, 199);
+  const action=boss.hp>0?bossActionPose(boss):null;
+  if(action){const image=action.sheet==='cast'?guardianCastAtlas(sheet):sheet;ctx.drawImage(image,action.frame*CELL_W,action.row*CELL_H,CELL_W,CELL_H,-149,-121,298,199);}
+  else ctx.drawImage(sheet,frame*CELL_W,row*CELL_H,CELL_W,CELL_H,-149,-121,298,199);
   ctx.restore();
   return true;
 }

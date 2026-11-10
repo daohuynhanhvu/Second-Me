@@ -68,6 +68,7 @@ function assetIndex(): Plugin {
 
 export default defineConfig(() => {
   return {
+    build: {rollupOptions: {input: {main:path.resolve(__dirname,'index.html'),bossPreview:path.resolve(__dirname,'tools/preview/boss.html')}}},
     plugins: [react(), tailwindcss(), audioIndex('music'), audioIndex('sfx'), assetIndex()],
     resolve: {
       alias: {
