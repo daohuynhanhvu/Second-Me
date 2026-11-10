@@ -1,0 +1,12 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kiểm tra boss local</title>
+<style>body{margin:0;background:#071923;color:#d6f8ff;font:16px system-ui;text-align:center}nav{padding:12px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}button{background:#163e52;color:inherit;border:1px solid #68c9e8;padding:12px;cursor:pointer}canvas{display:block;width:min(100%,1280px);margin:auto;image-rendering:pixelated}p{margin:8px}#status{font-weight:bold}</style>
+<nav><button data-attack="melee">1 · Đấm cận chiến</button><button data-attack="volley">2 · Tụ lực bắn đạn băng</button><button data-attack="triple">3 · Tam trọng hàn kích</button><button id="fight">Đánh thử tự do</button></nav><p id="status">Đang tải…</p><canvas width="1280" height="720"></canvas><p>WASD: di chuyển · Shift: né · Chuột trái: đánh · Chuột phải: gai băng</p>
+<script type="module">
+import {GameEngine} from '/src/game/GameEngine.ts';
+const g=new GameEngine();window.bossPreview=g;g.tutorialEnabled=false;g.setCanvas(document.querySelector('canvas'));g.start();g.currentLevelIdx=5;g.restartLevel();g.beginBossFight();g.setLanguage('vi');g.enemies=[];g.invulnerability=999;g.skillDropTimer=Infinity;g.boss.x=740;g.boss.y=350;g.player.x=480;g.player.y=350;
+let fixture=null;g.onHUDChange=h=>{document.querySelector('#status').textContent=`${fixture??'Tự do'} · ${g.boss?.mode??''} · HP ${h.health} · Boss ${h.bossHp}`;};
+function cast(attack){g.screen='playing';g.health=100;g.boss.iceRays=[];g.boss.projectiles=[];g.boss.burstRemaining=0;g.boss.attack=attack;g.boss.mode='warning';g.boss.warningDuration=1.15;g.boss.timer=1.15;g.boss.attackFacingRight=false;g.boss.targetX=g.player.x;g.boss.targetY=g.player.y;g.boss.safeAngle=Math.atan2(g.player.y-g.boss.y,g.player.x-g.boss.x)+.38;}
+for(const b of document.querySelectorAll('[data-attack]'))b.onclick=()=>{fixture=b.dataset.attack;g.health=100;g.invulnerability=999;g.player.x=fixture==='melee'?640:480;g.player.y=350;g.boss.x=740;g.boss.y=350;cast(fixture);};
+document.querySelector('#fight').onclick=()=>{fixture=null;g.invulnerability=0;g.health=100;g.boss.mode='stalking';g.boss.timer=1;};
+setInterval(()=>{if(fixture&&g.boss.mode==='stalking')cast(fixture);},50);
+</script></html>
