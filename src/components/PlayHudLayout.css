@@ -123,3 +123,40 @@
 .adventure-app .adventure-hud .leg-clock p{display:block!important;font-size:11px!important;line-height:12px!important;height:12px;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;color:#d0d8b6}
 .adventure-app .adventure-hud .level-card{justify-content:center}.adventure-app .adventure-hud .hud-tools{align-items:center}
 @media(max-height:480px){.adventure-app .adventure-hud .leg-clock{top:13px!important;height:35px!important;max-height:35px!important;grid-template-rows:18px 3px 10px;gap:2px;padding:0 3px!important}.adventure-app .adventure-hud .leg-clock>div:first-child{height:18px}.adventure-app .adventure-hud .leg-clock>div:first-child>span{font-size:10px!important}.adventure-app .adventure-hud .leg-clock strong{font-size:19px!important;line-height:18px!important}.adventure-app .adventure-hud .leg-clock strong small{font-size:9px!important}.adventure-app .adventure-hud .leg-clock .leg-track{height:3px!important;min-height:3px}.adventure-app .adventure-hud .leg-clock p{font-size:9px!important;line-height:10px!important;height:10px}}
+
+/* The painted sheet has five slots, while ultimate adds a sixth. Draw one frame per action. */
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar{
+ display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-items:end;
+ padding:55px 29px 11px;gap:5px;
+}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar[data-action-count="5"]{grid-template-columns:repeat(5,minmax(0,1fr))}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar::before{
+ content:"";position:absolute;left:27px;right:27px;top:53px;bottom:9px;
+ background:#13291c;border:2px solid #827d52;box-shadow:inset 0 0 0 2px #213c2a;z-index:0;pointer-events:none;
+}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action{
+ display:grid;grid-template-rows:16px minmax(0,1fr) 15px;align-items:center;justify-items:center;
+ width:100%;height:72px;min-height:0;box-sizing:border-box;
+ padding:2px 2px 5px;gap:1px;border:2px solid #8b875c;
+ background:#1a3021;box-shadow:inset 0 0 0 1px #34523a;z-index:1;
+}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action:hover:not(:disabled){border:2px solid #e2ca7d;background:#29452c}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action kbd{
+ position:static;transform:none;display:block;max-width:100%;box-sizing:border-box;
+ overflow:hidden;text-overflow:ellipsis;text-align:center;white-space:nowrap;
+ font-size:9px!important;line-height:1;padding:1px 2px;
+}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-icon{height:29px;width:100%;min-width:0;transform:none}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1!important;font-size:11px!important}
+.adventure-app .game-stage[data-touch-controls=false] .combat-mana-cost{top:37px;right:1px;font-size:8px!important}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-charges{right:1px;bottom:0}
+@media(max-height:480px){
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar{padding:39px 22px 9px;gap:3px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar::before{left:20px;right:20px;top:37px;bottom:7px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action{height:53px;grid-template-rows:13px minmax(0,1fr) 12px;padding:1px 1px 3px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action kbd{font-size:7px!important;padding:0 1px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action-icon{height:20px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action-icon .combat-pixel-icon{width:19px;height:19px}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-action strong{font-size:9px!important}
+ .adventure-app .game-stage[data-touch-controls=false] .combat-mana-cost{top:29px;font-size:7px!important}
+}
