@@ -73,3 +73,11 @@
 
 /* Centre the badge exactly on its clearing point (was -35%, which sank it below). */
 .journey-lobby.journey-lobby .journey-stop{transform:translate(-50%,-50%);justify-content:center}
+/* Keep just the direct actions, with enough room for translated labels. */
+.journey-lobby.journey-lobby .integrated-camp .rest-kit{grid-template-columns:minmax(0,1fr) auto;padding:10px;gap:8px}
+.journey-lobby.journey-lobby .integrated-camp .rest-kit p{white-space:nowrap;font-size:17px;margin-top:5px}
+.journey-lobby.journey-lobby .integrated-camp .rest-kit>div>span{white-space:nowrap;font-size:13px;letter-spacing:.3px}
+.journey-lobby.journey-lobby .integrated-camp .rest-prepare{width:auto;min-width:100px;font-size:17px;padding:8px;min-height:42px;gap:6px}
+.journey-lobby.journey-lobby .integrated-camp .rest-scene-caption{padding-top:4px}
+.journey-lobby.journey-lobby .integrated-camp .rest-departure{padding:12px 10px}
+@media(max-height:480px){.journey-lobby.journey-lobby .integrated-camp .rest-kit{padding:6px;gap:5px}.journey-lobby.journey-lobby .integrated-camp .rest-kit p{font-size:15px}.journey-lobby.journey-lobby .integrated-camp .rest-prepare{min-width:91px;min-height:34px;font-size:15px;padding:5px}.journey-lobby.journey-lobby .integrated-camp .rest-departure{padding:8px}}

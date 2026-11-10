@@ -30,3 +30,12 @@
 @media(max-height:480px){.journey-lobby .integrated-camp .rest-scene{margin-top:0;margin-bottom:27px}.journey-lobby .integrated-camp .rest-progress{margin-bottom:0}.journey-lobby .integrated-camp .rest-kit{padding:5px 0}}
 @media(max-height:480px){.journey-lobby .integrated-camp .rest-scene{width:150px;align-self:center;margin-inline:0}.journey-lobby .integrated-camp .rest-scene-caption{left:-28px;right:-28px}.journey-lobby .integrated-camp .rest-heading{margin-bottom:0}}
 @media(max-height:480px){.journey-lobby .integrated-camp .rest-scene{width:126px}.journey-lobby .integrated-camp .rest-scene-caption{left:-40px;right:-40px}}
+/* Only align the lobby utility buttons and the camp action cluster. */
+.journey-lobby.journey-lobby .lobby-header nav{display:flex;align-items:center;gap:10px}
+.journey-lobby.journey-lobby .lobby-header nav button{width:43px;height:43px;min-height:43px;margin:0;box-sizing:border-box;display:grid;place-items:center}
+.journey-lobby .integrated-camp .rest-kit{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:10px;align-items:center}
+.journey-lobby .integrated-camp .rest-prepare{width:112px;min-height:40px;box-sizing:border-box;justify-content:center;padding:7px 8px;white-space:nowrap}
+.journey-lobby .integrated-camp .rest-scene-caption{grid-template-columns:minmax(0,1fr) 112px;align-items:center}
+.journey-lobby .integrated-camp .rest-scene-caption button{width:112px;min-height:34px;justify-content:center;padding:4px 0;box-sizing:border-box;white-space:nowrap}
+.journey-lobby .integrated-camp .camp-continue{box-sizing:border-box;width:100%;margin:0;align-items:center}
+@media(max-height:480px){.journey-lobby .integrated-camp .rest-kit{grid-template-columns:minmax(0,1fr) 104px;gap:6px}.journey-lobby .integrated-camp .rest-prepare{width:104px;min-height:34px;font-size:15px}.journey-lobby .integrated-camp .rest-scene{margin-bottom:40px}.journey-lobby .integrated-camp .rest-scene-caption{top:100%;bottom:auto;transform:none;grid-template-columns:minmax(0,1fr) 104px;grid-template-rows:32px;padding-top:0}.journey-lobby .integrated-camp .rest-scene-caption>span{display:none}.journey-lobby .integrated-camp .rest-scene-caption strong{font-size:22px;line-height:1}.journey-lobby .integrated-camp .rest-scene-caption button{width:104px;min-height:32px;font-size:15px;padding:3px 0}}

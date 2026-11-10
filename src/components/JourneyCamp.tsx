@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, Check, Flame, Lock, Play, RotateCcw, Snowflake, Users, Backpack, X, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Check, Flame, Lock, Play, Snowflake, Users, Backpack } from 'lucide-react';
 import type { GameEngine, HUDState } from '../game/GameEngine.ts';
 import { LEVELS } from '../game/logic/levels.ts';
-import { RuneLoadoutEditor, RuneStone } from './EchoRunes.tsx';
+import { RuneLoadoutEditor } from './EchoRunes.tsx';
 import './JourneyCamp.css';
 import './JourneyCampV2.css';
 import './JourneyCampScene.css';
@@ -20,23 +20,15 @@ const trailSegments = [
 ];
 // Centre of each clearing in the same native coordinates (= the trail ends above).
 const stops = [[215,725],[440,350],[690,630],[920,310],[1200,515],[1355,205]];
-export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number;traveler?:React.ReactNode;onNews?:()=>void}) {
+export function JourneyCamp({engine,hud,complete,next,traveler}:{engine:GameEngine|null;hud:HUDState;complete:boolean;next:number;traveler?:React.ReactNode;onNews?:()=>void}) {
   const vi=hud.language==='vi';
   const [runeEditor,setRuneEditor]=useState(false);
-  const [preparing,setPreparing]=useState(false);
-  useEffect(()=>{if(!preparing)return;const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();setPreparing(false);}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);},[preparing]);
   const [inspect,setInspect]=useState<number|null>(null);
   const [touchInspect,setTouchInspect]=useState<number|null>(null);
 
   const count=hud.completed.length+(complete?1:0);
   const unlocked=(i:number)=>hud.devUnlocked||complete||(i<=hud.completed.length&&(i<5||hud.forged));
   return <div className="journey-layout">{runeEditor&&<RuneLoadoutEditor hud={hud} engine={engine} close={()=>setRuneEditor(false)}/>}
-    {preparing&&<div className="modal-backdrop camp-prepare-backdrop" onClick={()=>setPreparing(false)}><section className="panel camp-preparation" data-lobby-dialog role="dialog" aria-modal="true" aria-label={vi?'Chuẩn bị hành trình':'Prepare for the trail'} onClick={e=>e.stopPropagation()}>
-      <button className="camp-prepare-close" aria-label={vi?'Đóng':'Close'} onClick={()=>setPreparing(false)}><X size={19}/></button><span className="eyebrow gold">{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</span><h2>{vi?'Chuẩn bị cho lối mòn':'Ready for the trail'}</h2>
-      <button className="camp-prepare-option" onClick={()=>{setPreparing(false);engine?.openCharacters();}}><span className="prepare-avatar">{traveler??<Users size={30}/>}</span><div><small>{vi?'NGƯỜI ĐỒNG HÀNH':'YOUR TRAVELER'}</small><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><p>{vi?'Chọn nhân vật và xem kỹ năng':'Choose a hero and explore their skills'}</p></div><ArrowRight size={18}/></button>
-      <button className="camp-prepare-option" onClick={()=>{setPreparing(false);setRuneEditor(true);}}><span className="prepare-rune"><RuneStone id={hud.runeLoadout?.[0]??'call'}/></span><div><small>{vi?'5 Ô RUNE':'FIVE RUNE SLOTS'}</small><strong>{vi?'Ấn nâng Echo':'Echo runes'}</strong><p>{hud.runeLoadout?.length??0} / 5 {vi?'ô đã chọn · Thay đổi bộ rune':'slots filled · Change your rune set'}</p></div><ArrowRight size={18}/></button>
-      <div className="camp-prepare-tools"><button onClick={()=>{setPreparing(false);onNews?.();}}><Bell size={14}/>{vi?'Tin mới':'News'}</button><button onClick={()=>{setPreparing(false);engine?.goToMainMenu();}}>{vi?'Menu chính':'Main menu'}</button><button onClick={()=>engine?.startGame()}><RotateCcw size={13}/>{vi?'Hành trình mới':'New journey'}</button></div>
-    </section></div>}
     <aside className="journey-camp integrated-camp">
       <header className="rest-heading"><span><Flame size={17}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</span><span>{count} / 6</span></header>
       <div className={`rest-scene${hud.reducedMotion?' rest-still':''}`}>
@@ -44,7 +36,7 @@ export function JourneyCamp({engine,hud,complete,next,traveler,onNews}:{engine:G
         <button className="rest-hero" onClick={()=>engine?.openCharacters()} aria-label={vi?'Đổi nhân vật':'Change character'}><span>{traveler??<Users size={50}/>}</span></button>
         <div className="rest-scene-caption"><span>{vi?'BÊN ÁNH LỬA TRẠI':'BY THE CAMPFIRE'}</span><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><button onClick={()=>engine?.openCharacters()}>{vi?'Đổi nhân vật':'Change hero'} <ArrowRight size={14}/></button></div>
       </div>
-      <div className="rest-kit"><div><span>{vi?'SẴN SÀNG LÊN ĐƯỜNG':'READY FOR THE TRAIL'}</span><p>{hud.runeLoadout?.length??0} / 5 {vi?'rune đã chọn':'runes equipped'}</p></div><button className="rest-prepare" onClick={()=>setPreparing(true)}><Backpack size={18}/>{vi?'Chuẩn bị':'Prepare'}</button></div>
+      <div className="rest-kit"><div><span>{vi?'BỘ RUNE':'RUNE LOADOUT'}</span><p>{hud.runeLoadout?.length??0} / 5 {vi?'ấn đã chọn':'equipped'}</p></div><button className="rest-prepare" onClick={()=>setRuneEditor(true)}><Backpack size={18}/>{vi?'Đổi rune':'Edit runes'}</button></div>
       <div className="rest-departure"><span>{complete?(vi?'HÀNH TRÌNH MỚI':'ANOTHER JOURNEY'):(vi?'ĐIỂM ĐẾN TIẾP THEO':'NEXT DESTINATION')}</span><div className="rest-destination"><b>{String((complete?0:next)+1).padStart(2,'0')}</b><strong>{translate(LEVELS[complete?0:next].subtitle,hud.language)}</strong></div>
         <button className="camp-continue" onClick={()=>complete?engine?.selectLevel(0):hud.completed.length?engine?.continueGame():engine?.selectLevel(0)}><Play size={19} fill="currentColor"/><span>{complete?(vi?'KHÁM PHÁ LẠI':'EXPLORE AGAIN'):hud.completed.length?(vi?'TIẾP TỤC HÀNH TRÌNH':'CONTINUE JOURNEY'):(vi?'LÊN ĐƯỜNG':'BEGIN JOURNEY')}</span><ArrowRight size={18}/></button>
       </div>
