@@ -100,7 +100,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
         const angle=boss.safeAngle??0;ctx.beginPath();ctx.moveTo(boss.x,boss.y);ctx.arc(boss.x,boss.y,180,angle-.43,angle+.43);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
       }
       if(boss.mode==='warning'||recover){
-        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='volley'?(vi?'BÃO ĐẠN · NÉ QUA KHE VÀNG':'ICE BARRAGE · GOLD ESCAPE LANE'):(vi?'TAM TRỌNG HÀN KÍCH · NÉ BA TIA BĂNG':'TRIPLE FROST STRIKE · EVADE THE THREE RAYS');
+        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='melee'?(vi?'CẬN CHIẾN · NÉ CÚ ĐẤM':'MELEE · EVADE THE PUNCH'):boss.attack==='volley'?(vi?'BÃO ĐẠN · NÉ QUA KHE VÀNG':'ICE BARRAGE · GOLD ESCAPE LANE'):(vi?'TAM TRỌNG HÀN KÍCH · NÉ BA TIA BĂNG':'TRIPLE FROST STRIKE · EVADE THE THREE RAYS');
         ctx.save();ctx.font='20px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.textBaseline='middle';const width=ctx.measureText(text).width+20,x=Math.max(width/2+45,Math.min(1235-width/2,boss.x)),y=Math.max(155,boss.y-96);ctx.fillStyle='#041623ee';ctx.fillRect(x-width/2,y-15,width,30);ctx.fillStyle=recover?'#baffbd':boss.attack==='volley'?'#ffe2a0':'#d4faff';ctx.fillText(text,x,y);ctx.restore();
       }
     }

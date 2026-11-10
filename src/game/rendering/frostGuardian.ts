@@ -1,3 +1,4 @@
+import {drawGuardianCast} from './guardianCasting.ts';
 import type { BossState } from '../logic/campaign.ts';
 
 // User-supplied Frost_Guardian_FREE_v1.0 sprite sheet: 192 × 128 cells.
@@ -12,7 +13,7 @@ export function loadFrostGuardian() {
 }
 
 export function frostGuardianFrame(
-  boss: Pick<BossState, 'hp' | 'hitFlash' | 'mode' | 'timer' | 'phase' | 'warningDuration' | 'strikeDuration'>,
+  boss: Pick<BossState, 'hp' | 'hitFlash' | 'mode' | 'timer' | 'phase' | 'warningDuration' | 'strikeDuration' | 'attack'>,
   time: number,
   deathTime = 0,
   walking = true,
@@ -46,7 +47,8 @@ export function drawFrostGuardian(
   if (facingRight) ctx.scale(-1, 1); // Source art faces left.
   ctx.imageSmoothingEnabled = false;
   if (boss.hitFlash > 0) { ctx.shadowColor = '#c4fbff'; ctx.shadowBlur = 18; }
-  ctx.drawImage(sheet, frame * CELL_W, row * CELL_H, CELL_W, CELL_H, -149, -121, 298, 199);
+  if(boss.hp>0&&boss.hitFlash<=0&&(boss.attack==='volley'||boss.attack==='triple')&&(boss.mode==='warning'||boss.mode==='strike'))drawGuardianCast(ctx,sheet,boss);
+  else ctx.drawImage(sheet, frame * CELL_W, row * CELL_H, CELL_W, CELL_H, -149, -121, 298, 199);
   ctx.restore();
   return true;
 }

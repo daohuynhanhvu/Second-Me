@@ -29,3 +29,11 @@ test('recovery never starts independent attacks and attack patterns alternate',(
  b.mode='stalking';b.timer=0;updateBoss(b,player,.01,false);assert.equal(b.attack,'volley');
  b.mode='stalking';b.timer=0;updateBoss(b,player,.01,false);assert.equal(b.attack,'triple');
 });
+
+test('melee is chosen only in close range and never emits ice rays or projectiles',()=>{
+ const b=createBoss();b.pillars=[];b.attackIndex=2;b.timer=0;const p={x:b.x+90,y:b.y};
+ updateBoss(b,p,.01,false);assert.equal(b.attack,'melee');assert.equal(b.mode,'warning');
+ let damage=0;updateBoss(b,p,1.16,false,p,[],undefined,n=>damage+=n);
+ assert.equal(damage,30);assert.equal(b.iceRays.length,0);assert.equal(b.burstRemaining,0);
+ const far=createBoss();far.attackIndex=2;far.timer=0;updateBoss(far,{x:100,y:600},.01,false);assert.notEqual(far.attack,'melee');
+});
