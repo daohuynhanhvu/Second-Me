@@ -1,3 +1,5 @@
+import type {Rarity} from './rarity.ts';
+
 export type OutfitHero='mage'|'swordsman';
 export type OutfitId='default'|'frost'|'woodland'|'ember'|'ice-knight'|'void-knight';
 export const OUTFITS=[
@@ -39,6 +41,9 @@ export const SHOP_OUTFITS = [
  {id:'void-knight',outfit:'void-knight',hero:'swordsman',price:100,cap:1,rarity:'refined',vi:'Kiếm sĩ Hắc Diệm',en:'Voidflame Knight',color:'#b773f4',detailVi:'Tóc bạc, giáp đen, áo choàng tím và kiếm hắc diệm. Đòn chém cùng kỹ năng mang sắc lửa tím.',detailEn:'Silver hair, black armor, purple cape and void blade. Slashes and skills share a purple flame palette.'},
 ] as const;
 export type ShopOutfitId=typeof SHOP_OUTFITS[number]['id'];
+export function characterOutfitRarity(hero:OutfitHero,outfit:OutfitId):Rarity {
+ return SHOP_OUTFITS.find(product=>product.hero===hero&&product.outfit===outfit)?.rarity??'common';
+}
 export const isShopOutfit=(id:unknown):id is 'ice-knight'|'void-knight'=>id==='ice-knight'||id==='void-knight';
 export const cleanOwnedOutfits=(value:unknown):ShopOutfitId[]=>Array.isArray(value)?[...new Set(value.filter((id):id is ShopOutfitId=>SHOP_OUTFITS.some(o=>o.id===id)))]:[];
 /** Owned first; the catalogue order is the order outfits were added to the game. */
