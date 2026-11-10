@@ -244,12 +244,10 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   if(boss.mode==='strike'&&boss.attack==='volley'){
     boss.burstPulse-=dt;
     if(boss.burstRemaining>0&&boss.burstPulse<=0){
-      const count=boss.phase===1?10:boss.phase===2?14:18;
-      const gap=boss.safeAngle??0;
+      const count=boss.phase===1?24:boss.phase===2?32:40;
+      const wave=(boss.phase+1)-boss.burstRemaining;
       for(let i=0;i<count;i++){
-        const angle=i*Math.PI*2/count;
-        const delta=Math.abs(Math.atan2(Math.sin(angle-gap),Math.cos(angle-gap)));
-        if(delta<.43)continue; // A visible, persistent escape lane for the entire volley.
+        const angle=(i+(wave%2)*.5)*Math.PI*2/count;
         boss.projectiles.push({x:boss.x,y:boss.y,vx:Math.cos(angle)*(135+boss.phase*15),vy:Math.sin(angle)*(135+boss.phase*15),life:2.4});
       }
       boss.burstRemaining--;boss.burstPulse=boss.phase===3?.32:.45;
