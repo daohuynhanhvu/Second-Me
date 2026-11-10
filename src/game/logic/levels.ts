@@ -61,7 +61,7 @@ fifth.exit={x:110,y:190,width:60,height:60,radius:36};
 export const LEVELS:LevelData[]=[first,second,third,fourth,fifth];
 for(const level of LEVELS)level.exitRequiredPlates=level.plates.map(p=>p.id);
 fifth.exitRequiredPlates=['ember_b','ember_c','ember_d','ember_e'];
-LEVELS.push({id:6,name:'LEVEL 06',subtitle:'FROST GUARDIAN',difficulty:6,description:'Use Echoes as decoys, replay attacks, and hold the central rune for empowered strikes. Break four pillars before attacking the Guardian.',playerSpawn:{x:640,y:580,direction:'up'},walls:perimeter.map(w=>({...w})),plates:[{...plate('boss_rune',600,340),width:64,height:64}],doors:[],exit:{x:610,y:140,width:60,height:60,radius:36}});
+LEVELS.push({id:6,name:'LEVEL 06',subtitle:'FROST GUARDIAN',difficulty:6,description:'Use Echoes as decoys and replay attacks. Break four pillars before attacking the Guardian.',playerSpawn:{x:640,y:580,direction:'up'},walls:perimeter.map(w=>({...w})),plates:[],doors:[],exit:{x:610,y:140,width:60,height:60,radius:36}});
 
 /**
  * Dev-only training ground (logic/training.ts): an open arena of dummies, never part of LEVELS,
