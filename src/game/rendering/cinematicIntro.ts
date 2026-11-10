@@ -1,4 +1,5 @@
 import { getWizardSheet } from './wizardSprite.ts';
+import { drawPfx, preloadPfx, type PfxDraw, type PfxName } from './pixelfx.ts';
 import { INTRO_VOICE } from '../logic/voice.ts';
 import { INTRO, BOSS_STEPS, clamp01, lerp, easeOutCubic, easeInCubic, easeInOutCubic, seg } from '../logic/introTimeline.ts';
 
@@ -44,6 +45,11 @@ class PixelLayer {
   }
 }
 
+/** pixelfx effects the film uses (INTRO_PLAN.md), loaded while the studio card is up. */
+const INTRO_PFX: PfxName[] = ['god-rays', 'fireflies', 'rune-circle', 'fog', 'magic-circle-cast', 'halo', 'snow',
+  'heavy-landing', 'frost-nova', 'blizzard', 'sword-slash', 'crit-hit', 'spell-charge', 'magic-missile', 'parry', 'collect-burst',
+  'shooting-stars', 'pixel-dissolve', 'shatter-wipe', 'star-iris'];
+
 export class CinematicIntro {
   private backdrop = load('assets/intro/woodland-story.png');
   private scene = new PixelLayer();
@@ -68,6 +74,7 @@ export class CinematicIntro {
     this.sold = { Idle: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Walk: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Attack01: sheet('assets/soldier/Kael_Attack.png', 256, 256, 8, 8) };
     this.runeSheet = sheet('assets/magic-effects/rune.png', 32, 32, 18, 18);
     this.buildVignette(); this.buildMist(); this.buildLogo();
+    preloadPfx(INTRO_PFX);
   }
 
   // ---------- one-time builds ----------
@@ -102,6 +109,21 @@ export class CinematicIntro {
     draw('ME', 276, '#a5c89b');
   }
   // ---------- helpers ----------
+  /** A pixelfx effect (INTRO_PLAN.md) `age` s in, on a layer in art pixels. False while it is loading, before it
+   *  starts or after it ends, so the caller can keep its hand-drawn version. */
+  private pfx(c: Ctx, name: PfxName, age: number, x: number, y: number, o: PfxDraw = {}) { return drawPfx(c, name, age, x, y, o); }
+  /** Full-screen weather (320 x 180 at 2 art px per pixel) from `from` to `to`, fading in and out. Not with reduced motion. */
+  private weather(c: Ctx, name: PfxName, from: number, to: number, t: number, alpha: number, floor = 170) {
+    if (this.reduced || t < from || t >= to) return;
+    const a = alpha * seg(t, from, from + .6) * (1 - seg(t, to - .6, to));
+    if (a > .01) this.pfx(c, name, t - from, 320, floor * 2, { scale: 2, alpha: a });
+  }
+  /** A full-screen transition on the screen itself, played `rate` times faster; `until` stops it at full cover. */
+  private wipe(ctx: Ctx, name: PfxName, start: number, t: number, rate = 1, until = Infinity, filter = 'none') {
+    const age = (t - start) * rate;
+    if (this.reduced || age < 0 || age >= until) return;
+    ctx.save(); ctx.filter = filter; this.pfx(ctx, name, age, 0, 0, { scale: 4 }); ctx.restore();
+  }
   private once(key: string, at: number, t: number, fn: () => void) { if (t >= at && !this.fired.has(key)) { this.fired.add(key); fn(); } }
   private shake(t: number, amp: number, decay = 5) { if (!this.reduced) this.shakes.push({ at: t, amp, decay }); }
   private doFlash(t: number, a: number, rgb: RGB = [235, 250, 255]) { this.flash = { at: t, a: this.reduced ? a * 0.35 : a, rgb }; }
@@ -253,6 +275,10 @@ export class CinematicIntro {
     const accent=mage?COL.cyan:COL.warm;
     this.glow(f,x,y-height*.45,height*.8,accent,alpha*.22,.8);
     this.ring(f,x,y+2,44,12,accent,alpha*.35);
+    // Effect pivots: magic-circle-cast's is the centre of its floor ring (drawn under her, on the scene layer);
+    // halo's is the wearer's feet, 45 px below its ring, so it is lifted to float a little over the hair.
+    if(mage)this.pfx(g,'magic-circle-cast',t-C.wizard,x,y-4,{alpha:Math.min(1,alpha*1.4)});
+    else this.pfx(f,'halo',t-C.draw,x,y-32,{scale:1.75,alpha});
     this.heroPortrait(g,mage?'aeris':'kael',x,y,height,alpha);
     for(let i=0;i<7;i++){
       const an=i*2.4+t*.45;
@@ -285,7 +311,12 @@ export class CinematicIntro {
     if(t<5){
       const x=750/px,y=355/px,open=seg(t,.9,2.2),out=1-seg(t,4.6,5);
       this.glow(f,x,y,70,COL.warm,.35*open*out,.45);
-      if(ready(this.runeSheet.img)){
+      this.weather(f,'god-rays',.8,5.2,t,.9);
+      this.weather(f,'fireflies',.8,5.2,t,.8,170);
+      // The stone circle wakes: a rune circle on it, flaring on each of the three rune beats.
+      const beat=Math.max(...[C.rune1,C.rune2,C.rune3].map(at=>Math.max(0,1-Math.abs(t-at)/.45)));
+      // The ring is centred on the stone circle (390, 178 in art px) and sized to its inner ring.
+      if(!this.pfx(f,'rune-circle',t-.9,390,184,{scale:2,alpha:(.5+.5*beat)*open*out})&&ready(this.runeSheet.img)){
         f.save();f.globalAlpha=.55*open*out;
         f.drawImage(this.runeSheet.img,Math.floor(t*8)%18*32,0,32,32,x-30,y-16,60,32);f.restore();
       }
@@ -296,6 +327,7 @@ export class CinematicIntro {
       this.once('shrine-wakes',C.rune2,t,()=>this.burst(750,350,18,55,COL.warm,1.5,-10));
     }else{
       const progress=seg(t,5.4,9.5),alpha=seg(t,5.2,5.9)*(1-seg(t,9.3,10));
+      this.weather(f,'fog',5,10,t,.55);
       // A remembered traveller follows the path, leaving footsteps that wake the ruins.
       for(let i=0;i<8;i++){
         const u=i/9,seen=seg(progress,u,u+.15)*(1-seg(progress,u+.35,u+.6));
@@ -324,21 +356,25 @@ export class CinematicIntro {
     this.actor(g,'aeris',mageX,y,0,'idle',alpha);
     this.actor(g,'kael',kaelX,y,clock,clip,alpha);
     const slash=seg(t,C.slash,C.impact+.2);
-    if(slash>0&&slash<1){
+    if(!this.pfx(f,'sword-slash',t-C.slash,kaelX,y,{alpha})&&slash>0&&slash<1){
       f.save();f.globalAlpha=alpha*(1-slash);f.strokeStyle='#fff0bd';f.lineWidth=3;
       f.beginPath();f.arc(kaelX+12,y-28,34,-1.8,-1.8+slash*3);f.stroke();f.restore();
     }
     this.once('mist-impact',C.impact,t,()=>{this.burst(995,455,28,150,COL.ice,.6,160);this.shake(t,3,7);});
+    this.pfx(f,'crit-hit',t-C.impact,995/px,(455+44)/px,{alpha});
     const charge=seg(t,C.cast,C.bolt)*(1-seg(t,C.bolt,C.clash));
     this.glow(f,mageX+22,y-35,18,COL.cyan,.8*charge*alpha);
+    if(t<C.bolt)this.pfx(f,'spell-charge',t-C.cast,mageX+6,y,{alpha});
     const bolt=seg(t,C.bolt,C.clash);
-    if(t>=C.bolt&&t<C.clash+.12){
+    // The missile weaves from her hand to the clash point, played faster to land on the clash.
+    if(!this.pfx(f,'magic-missile',(t-C.bolt)*1.6,mageX+4,y,{scale:1.5,alpha})&&t>=C.bolt&&t<C.clash+.12){
       const x=lerp(mageX+22,1040/px,bolt),by=lerp(y-35,400/px,bolt);
       f.save();f.globalAlpha=alpha;f.strokeStyle='#88dfff';f.lineWidth=3;
       f.beginPath();f.moveTo(x-40,by+5);f.lineTo(x-24,by-4);f.lineTo(x-9,by+2);f.lineTo(x,by);f.stroke();f.restore();
       this.star(f,x,by,3,COL.ice,alpha);this.glow(f,x,by,17,COL.cyan,.6*alpha);
     }
     this.once('mist-clash',C.clash,t,()=>{this.burst(1040,400,35,190,COL.ice,.8,60);this.shake(t,4,6);});
+    this.pfx(f,'parry',t-C.clash,1040/px,(400+56)/px,{alpha});
     // The unseen enemy retaliates. Kael guards while an Echo catches the returning frost.
     const wave=seg(t,21.12,21.65);
     if(t>=21.12){
@@ -368,6 +404,10 @@ export class CinematicIntro {
       f.save();f.globalAlpha=.23*u*out;f.fillStyle=i%3?'#83b8c6':'#c9e8eb';
       f.fillRect(Math.round(x),Math.round(y),2+i%3,1);f.fillRect(Math.round(x)+1,Math.round(y)-1,1,3);f.restore();
     }
+    this.weather(f,'snow',15,22,t,.8);
+    BOSS_STEPS.forEach((at,i)=>this.pfx(f,'heavy-landing',t-at,(1180-i*40)/px,(500+i*12)/px,{scale:1.4,alpha:out}));
+    this.pfx(f,'frost-nova',t-BOSS_STEPS[1],1050/px,480/px,{scale:1.1,alpha:.8*out});
+    this.weather(f,'blizzard',C.roar-.1,C.roar+2.9,t,.75);
     const pulse=Math.max(0,1-Math.abs(t-C.roar)/.55);
     this.glow(f,1060/px,400/px,110,COL.ice,.15*pulse*out,.6);
     for(let i=0;i<28;i++){
@@ -376,6 +416,15 @@ export class CinematicIntro {
     }
     BOSS_STEPS.forEach((at,i)=>this.once(`unseen-step-${i}`,at,t,()=>this.shake(t,2,6)));
     this.once('unseen-roar',C.roar,t,()=>this.shake(t,3,5));
+  }
+
+  /** The motes gather into a burst of light, a rune circle turns behind the title and stars fall overhead. */
+  private sceneTitle(f: Ctx, t: number, px: number) {
+    if (t < INTRO.s6) return;
+    this.weather(f, 'shooting-stars', INTRO.s6, INTRO.s7 + .6, t, .9, 180);
+    const ring = seg(t, C.logo, C.logo + .8) * (1 - seg(t, INTRO.s7, INTRO.s7 + .5));
+    if (ring > 0) this.pfx(f, 'rune-circle', t - C.logo, 640 / px, 560 / px, { scale: 2.5, alpha: .45 * ring });
+    this.pfx(f, 'collect-burst', t - C.logo, 640 / px, (345 + 80) / px, { scale: 2 });
   }
 
   // ---------- particles (fx layer) ----------
@@ -433,6 +482,7 @@ export class CinematicIntro {
     this.sceneHeroes(g, f, t, ta, px);
     this.sceneBoss(g, f, t, ta, px);
     this.sceneCombat(g, f, t, px);
+    this.sceneTitle(f, t, px);
 
     g.save(); g.imageSmoothingEnabled = true; g.drawImage(this.vignette, 0, 0, this.scene.w, this.scene.h); g.restore();
     this.particles(f, t, dt, px);
@@ -455,6 +505,11 @@ export class CinematicIntro {
     if (dip > 0) { ctx.fillStyle = `rgba(0,0,0,${dip})`; ctx.fillRect(0, 0, W, H); }
     const white = this.reduced ? 0 : .12 * seg(t, C.clash, C.clash + 0.1) * (1 - seg(t, C.clash + .1, C.clash + .45));
     if (white > 0) { ctx.fillStyle = `rgba(240,252,255,${white})`; ctx.fillRect(0, 0, W, H); }
+
+    // --- pixelfx transitions (INTRO_PLAN.md): dissolve into the path, shatter into the frozen wood, close on a star ---
+    this.wipe(ctx, 'pixel-dissolve', INTRO.s2 - .83 / 1.6, t, 1.6, Infinity, 'saturate(0) brightness(.75)');   // its pink outlines, made grey
+    this.wipe(ctx, 'shatter-wipe', INTRO.s4 - 1.03 / 1.4, t, 1.4);
+    this.wipe(ctx, 'star-iris', INTRO.s7 + .55 - .8, t, 1, .8);
 
     // --- typography ---
     this.nameCard(ctx, L.aeris, L.aerisSub, 640, 370, 10.3, 12.5, t, '#8fe3f2');

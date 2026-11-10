@@ -28,8 +28,31 @@ function image(hero: ComboHero) {
   return img.complete && img.naturalWidth ? img : null;
 }
 
+/** public/assets/effects/arcane-orb.png: pixelfx arcane/arcane-orb, each cell cropped to the orb
+ *  (tools/assets/source/pixelfx/SOURCE.md). The orb's radius is RADIUS px, its centre at CX, CY. */
+export const ARCANE_ORB = { W: 80, H: 68, COLUMNS: 8, FRAMES: 72, FPS: 30, CX: 40, CY: 44, RADIUS: 17 } as const;
+let orbImage: HTMLImageElement | undefined;
+function arcaneOrb() {
+  if (typeof Image === 'undefined') return null;
+  if (!orbImage) { orbImage = new Image(); orbImage.src = `${import.meta.env.BASE_URL}assets/effects/arcane-orb.png`; }
+  return orbImage.complete && orbImage.naturalWidth ? orbImage : null;
+}
+// Each bolt starts the loop at its own point, so a volley's orbs do not turn in step.
+const orbPhase = new WeakMap<object, number>();
+function drawArcaneOrb(ctx: CanvasRenderingContext2D, img: HTMLImageElement, shot: { x: number; y: number; radius: number }, time: number, still: boolean) {
+  const o = ARCANE_ORB;
+  let phase = orbPhase.get(shot);
+  if (phase === undefined) orbPhase.set(shot, phase = Math.floor(Math.random() * o.FRAMES));
+  const frame = still ? 0 : (Math.floor(time * o.FPS) + phase) % o.FRAMES;
+  const k = shot.radius * 1.6 / o.RADIUS;   // the orb's glass = the old glow's size
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(shot.x), Math.round(shot.y)); ctx.scale(k, k);
+  ctx.drawImage(img, (frame % o.COLUMNS) * o.W, Math.floor(frame / o.COLUMNS) * o.H, o.W, o.H, -o.CX, -o.CY, o.W, o.H);
+  ctx.restore();
+}
+
 /** Starts loading both strips (called when a level is built, so the first swing is ready). */
-export function preloadComboSprites() { image('swordsman'); image('mage'); }
+export function preloadComboSprites() { image('swordsman'); image('mage'); arcaneOrb(); }
 
 /** The combo frame to show for the hero now, or null (walk sprite instead). */
 export function comboPose(game: GameEngine): { hero: ComboHero; index: number } | null {
@@ -112,17 +135,20 @@ export function drawComboEffects(ctx: CanvasRenderingContext2D, game: GameEngine
     }
   }
   ctx.globalAlpha = 1;
-  // Spell projectiles: a bright core in a cyan glow, with a short trail.
+  // Aeris's spell bolts: the pixelfx arcane orb (violet glass, two orbiting rings) over a violet trail;
+  // plain circles until the sheet has loaded.
+  const orb = arcaneOrb();
   for (const shot of game.comboShots) {
     const back = Math.hypot(shot.vx, shot.vy) * 0.045;
     const ux = shot.vx / Math.hypot(shot.vx, shot.vy), uy = shot.vy / Math.hypot(shot.vx, shot.vy);
-    ctx.strokeStyle = 'rgba(90,220,255,.45)'; ctx.lineWidth = shot.radius * 1.2; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(178,110,255,.45)'; ctx.lineWidth = shot.radius * 1.2; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(shot.x, shot.y); ctx.lineTo(shot.x - ux * back, shot.y - uy * back); ctx.stroke();
-    ctx.fillStyle = 'rgba(80,210,255,.35)';
+    if (orb) { drawArcaneOrb(ctx, orb, shot, time, game.reducedMotion); continue; }
+    ctx.fillStyle = 'rgba(160,90,255,.35)';
     ctx.beginPath(); ctx.arc(shot.x, shot.y, shot.radius * 1.6, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#7fe8ff';
+    ctx.fillStyle = '#c58dff';
     ctx.beginPath(); ctx.arc(shot.x, shot.y, shot.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#f2fdff';
+    ctx.fillStyle = '#fbf4ff';
     ctx.beginPath(); ctx.arc(shot.x, shot.y, shot.radius * 0.45, 0, Math.PI * 2); ctx.fill();
   }
   // Damage numbers: rise and fade; the finisher's are larger and gold.

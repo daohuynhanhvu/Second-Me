@@ -31,10 +31,10 @@ test('locked mechanical class cannot be selected; purchased class gets its own s
 });
 test('ice magic warns before its single impact and consumes MP only on successful cast',t=>{
  const g=setup(t);const tick=(g as any).updatePersonalSkill.bind(g);
- g.useSkill();g.useSkill();assert.equal(g.frostZones.length,1);assert.equal(g.mana.value,75);
+ g.useSkill();g.useSkill();assert.equal(g.frostZones.length,1);assert.equal(g.mana.value,60);
  tick(.3);assert.equal(g.boss!.hp,240);tick(.31);assert.equal(g.boss!.hp,200);
  tick(.1);assert.equal(g.boss!.hp,200);tick(.3);assert.equal(g.frostZones.length,0);
- g.skillCooldown=0;g.mana.value=24;g.useSkill();assert.equal(g.frostZones.length,0);assert.equal(g.mana.value,24);
+ g.skillCooldown=0;g.mana.value=39;g.useSkill();assert.equal(g.frostZones.length,0);assert.equal(g.mana.value,39);
 });
 test('sanctuary heals and boosts damage only inside its fixed radius, and expires',t=>{
   const g=setup(t);g.currentLevel.walls=[];g.currentLevel.doors=[];g.characterClass='swordsman';g.health=40;g.player.x=500;g.player.y=300;

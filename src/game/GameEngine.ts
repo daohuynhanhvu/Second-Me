@@ -1,6 +1,6 @@
 import {restoreOutfits,getOutfits,equipOutfit,type OutfitHero,type OutfitId} from './logic/outfits.ts';
 import { SKILL_PICKUPS } from './logic/skillPickups.ts';
-import { ManaPool, MAX_MP, COMBO_MP, skillManaCost } from './logic/mana.ts';
+import { ManaPool, MAX_MP, comboManaCost, skillManaCost } from './logic/mana.ts';
 import {SHOP_ITEMS,type ShopItemId,type SupplyId,type Supplies} from './logic/shopItems.ts';
 import {enemyWaypoint} from './logic/enemyNavigation.ts';
 import { PLAYER_MAX_HP, DAMAGE, SHIELD, applyDamage, damagePoints } from './logic/damage.ts';
@@ -25,6 +25,9 @@ import {
   RecordingStatus,
   EchoStatus,
 } from './logic/types.ts';
+import { HitFeel, knockBack, slidePushed } from './logic/hitFeel.ts';
+import { pfxSeconds, preloadPfx, type PfxName, type PfxShot } from './rendering/pixelfx.ts';
+import { AERIS_ULT, RAGE, RagePool, icicleRain, insideBeam, ultimateVariant } from './logic/ultimate.ts';
 import { resolveMovement, getActiveObstacles, resolveSpawnPosition, rectIntersects, getCharacterBoundingBox } from './logic/collision.ts';
 import { trapEffects } from './logic/traps.ts';
 import {
@@ -108,7 +111,7 @@ export interface HUDState {
   health: number;
   maxHealth?:number;supplies?:Supplies;chanceCharges?:number;aidUnlocked?:boolean;usedSupplies?:SupplyId[];
   bossHp: number;
-  mana?:number;maxMana?:number;skillManaCost?:number;
+  mana?:number;maxMana?:number;skillManaCost?:number;rage?:number;maxRage?:number;hasUltimate?:boolean;
   bossPhase: number;
   bossIntroduction?: boolean;bossAction?:string;bossVulnerable?:boolean;
   attackCooldown: number;
@@ -333,6 +336,18 @@ export class GameEngine {
 
   // Rendering & audio
   public renderer = new GameRenderer();
+  /** Hit-stop, push-back and shake of landed combo hits (logic/hitFeel.ts). */
+  public hitFeel = new HitFeel();
+  /** pixelfx one-shots playing in the world (rendering/pixelfx.ts). */
+  public pfx: PfxShot[] = [];
+  /** Fills from landed hits and from being hurt; a full bar buys an Ultimate (logic/ultimate.ts). */
+  public rage = new RagePool();
+  /** Area hits waiting to land (seconds until they do), e.g. each icicle of Aeris's rain. */
+  private delayedHits: { in: number; x: number; y: number; radius: number; damage: number; heavy: boolean }[] = [];
+  /** Aeris's beam: charging, then firing from where she stood along `angle`. */
+  public ultBeam: { x: number; y: number; angle: number; t: number; ticks: number } | null = null;
+  /** Seconds left of Aeris's time stop: enemies, the boss and their shots stand still. */
+  public timeStop = 0;
   private gameTime = 0;
   private elapsedLevelTime = 0;
   /** Seconds since the level started (read-only; the training board times its DPS by it). */
@@ -610,8 +625,8 @@ export class GameEngine {
     this.bossIntroduction = !!this.boss;
     this.enemies=createEnemies(this.currentLevel);
     this.magicShots = [];
-    this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0;
-    preloadComboSprites();
+    this.combo?.cancel(); this.comboShots = []; this.comboFx = []; this.damageTexts = []; this.lunge.time = 0; this.hitFeel.reset(); this.pfx = []; this.rage.reset(); this.delayedHits = []; this.ultBeam = null; this.timeStop = 0;
+    preloadComboSprites(); preloadPfx(['hit-spark', 'crit-hit', 'shield-block', ...(this.characterClass === 'mage' ? ['icicle-fall', 'spell-charge', 'arcane-beam', 'time-stop'] as const : [])]);
     this.frostZones=[];this.frostSlow=0;this.cursorTarget=null; this.lightCircle = null; this.overdrive = 0;
     this.skillDrop = null; this.skillDropTimer = 5;
     this.stoneShield = this.armorShield = this.hasteTime = this.fireBurnTime = this.fireBurnTick = 0;
@@ -892,6 +907,7 @@ export class GameEngine {
     if(this.boss.pillars.some(p=>p.hp>0)) {
       this.renderer.emitMagic('sparkle',this.boss.x,this.boss.y,35);
       this.addDamageText(this.boss.x, this.boss.y - 60, 0, false, this.language==='vi'?'MIỄN':'IMMUNE');
+      if(!this.pfx.some(f=>f.name==='shield-block'&&f.age<.3))this.spawnPfx('shield-block',this.boss.x,this.boss.y+47,{mirror:source.x<this.boss.x,scale:1.5});   // the dome rises on the side the blow came from
       return false;
     }
     amount*=source===this.player?(this.boss.mode==='recover'?1.35:1):.5;
@@ -939,6 +955,23 @@ export class GameEngine {
    * the hero, nearest first, at most `max` of them, each at most once per hit (`group` holds
    * those already struck).
    */
+  /** A combo hit that landed: hold the fight a moment, push a living enemy back (not the dummy, not the boss). */
+  private landHit(t: CombatTarget, from: { x: number; y: number }, heavy: boolean) {
+    this.hitFeel.land(heavy);
+    this.rage.gain(heavy ? RAGE.HEAVY : RAGE.HIT);
+    // The spark flies along the blow from the near side of the target; the critical burst stands on its ground.
+    const a = Math.atan2(t.y - from.y, t.x - from.x);
+    if (heavy) this.spawnPfx('crit-hit', t.x, t.y + 22, { mirror: from.x > t.x, scale: .8 });
+    else this.spawnPfx('hit-spark', t.x - Math.cos(a) * 14, t.y - 14 - Math.sin(a) * 10, { angle: a, scale: .75 });
+    const enemy = this.enemies.find(e => e === t);
+    if (enemy && enemy.hp > 0 && enemy.kind !== 'dummy') knockBack(enemy, from, heavy);
+  }
+
+  public spawnPfx(name: PfxName, x: number, y: number, o: Partial<Omit<PfxShot, 'name' | 'x' | 'y'>> = {}) {
+    this.pfx.push({ name, x, y, age: 0, ...o });
+    if (this.pfx.length > 40) this.pfx.shift();
+  }
+
   private damageArea(x: number, y: number, radius: number, amount: number, group: Set<object>, max: number, heavy = false) {
     const walls = getActiveObstacles(this.currentLevel.walls, this.currentLevel.doors);
     const near = this.combatTargets()
@@ -950,7 +983,7 @@ export class GameEngine {
       if (hits >= max) break;
       if (group.has(t)) continue;
       group.add(t);
-      this.strike(t, amount, heavy);
+      if (this.strike(t, amount, heavy)) this.landHit(t, this.player, heavy);
       this.renderer.emitMagic('sparkle', t.x, t.y, heavy ? 70 : 40);
       hits++;
     }
@@ -1090,7 +1123,7 @@ export class GameEngine {
   private startComboHit(step: number) {
     const hero = this.comboHero();
     if (!hero) return;
-    if(!this.spendMana(COMBO_MP[step]??0)){this.combo?.cancel();this.attackCooldown=0;return;}
+    if(!this.spendMana(comboManaCost(hero, step))){this.combo?.cancel();this.attackCooldown=0;return;}
     const hit = COMBO_HITS[hero][step];
     this.recorder.recordEvent({kind:'attack',x:this.player.x,y:this.player.y,targetX:this.comboAim.x,targetY:this.comboAim.y});
     voice.say(this.voiceRole, 'attack');
@@ -1170,7 +1203,7 @@ export class GameEngine {
         .sort((p, q) => p.at - q.at);
       for (const { t, at } of hits) {
         shot.group.add(t);
-        this.strike(t, shot.amount, shot.heavy);
+        if (this.strike(t, shot.amount, shot.heavy)) this.landHit(t, a, shot.heavy);
         this.renderer.emitMagic('sparkle', a.x + (b.x - a.x) * at, a.y + (b.y - a.y) * at, 36);
         if (!shot.pierce) { shot.life = 0; break; }
       }
@@ -1190,6 +1223,73 @@ export class GameEngine {
     if(this.mana.spend(cost))return true;
     this.showBanner(this.language==='vi'?`Không đủ MP · Cần ${cost} MP`:`Not enough MP · Requires ${cost} MP`);this.notifyHUD();return false;
   }
+  /** Heroes with Ultimates so far (UPGRADE_PLAN.md §7). */
+  public get hasUltimate() { return this.characterClass === 'mage'; }
+
+  /** V / middle button / touch: spends a full rage bar on the hero's Ultimate, picked by how she is moving. */
+  public useUltimate(target?: { x: number; y: number }) {
+    if (this.orientationBlocked || this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0) return;
+    if (this.bossIntroduction || this.inventoryOpen || this.runeEditing || this.guides.blocking || !this.hasUltimate) return;
+    if (this.ultBeam || this.timeStop > 0 || !this.rage.full) return;
+    const aim = target ?? this.combatAim() ?? this.cursorTarget ?? { x: this.player.x + (this.player.direction === 'left' ? -200 : 200), y: this.player.y };
+    const variant = ultimateVariant(this.moveInput(), this.player, aim);
+    this.rage.spend();
+    this.combo?.cancel();
+    const vi = this.language === 'vi';
+    if (variant === 'forward') {
+      this.ultBeam = { x: this.player.x, y: this.player.y - 22, angle: Math.atan2(aim.y - this.player.y + 22, aim.x - this.player.x), t: 0, ticks: 0 };
+      this.spawnPfx('spell-charge', this.player.x + 14, this.player.y + 4, { life: AERIS_ULT.BEAM.CHARGE, mirror: aim.x < this.player.x });
+      this.showBanner(vi ? 'Tia bí thuật' : 'Arcane Beam', 2);
+    } else if (variant === 'back') {
+      this.timeStop = AERIS_ULT.STOP.TIME;
+      this.spawnPfx('time-stop', this.player.x, this.player.y + 20, { scale: 1.4 });
+      this.showBanner(vi ? 'Ngưng đọng thời gian' : 'Time Stop', 2);
+    } else {
+      for (const p of icicleRain(aim)) {
+        this.spawnPfx('icicle-fall', p.x, p.y, { age: -p.delay });
+        this.delayedHits.push({ in: p.delay + AERIS_ULT.RAIN.ICICLE_IMPACT, x: p.x, y: p.y, radius: AERIS_ULT.RAIN.HIT_RADIUS, damage: AERIS_ULT.RAIN.DAMAGE, heavy: false });
+      }
+      this.showBanner(vi ? 'Mưa băng' : 'Icicle Rain', 2);
+    }
+    voice.say(this.voiceRole, 'ultimate', { id: variant === 'forward' ? 'beam' : variant === 'back' ? 'timeStop' : 'icicleRain' });
+    sounds.playFinisher();
+    this.notifyHUD();
+  }
+
+  private updateUltimate(dt: number) {
+    this.timeStop = Math.max(0, this.timeStop - dt);
+    for (const h of this.delayedHits) {
+      h.in -= dt;
+      if (h.in > 0) continue;
+      for (const { t, r } of this.combatTargets()) if (Math.hypot(t.x - h.x, t.y - h.y) <= h.radius + r && this.strike(t, h.damage, h.heavy)) this.landHit(t, h, h.heavy);
+      sounds.playIceHit(false);
+    }
+    this.delayedHits = this.delayedHits.filter(h => h.in > 0);
+    const b = this.ultBeam, B = AERIS_ULT.BEAM;
+    if (!b) return;
+    const was = b.t; b.t += dt;
+    if (was < B.CHARGE && b.t >= B.CHARGE) this.spawnPfx('arcane-beam', b.x, b.y, { angle: b.angle, scale: B.LENGTH / B.BEAM_REACH, life: B.TIME });
+    // Ticks land evenly through the firing, the first as it starts; the last one is heavy.
+    while (b.ticks < B.TICKS && b.t >= B.CHARGE + b.ticks * B.TIME / B.TICKS) {
+      b.ticks++;
+      const last = b.ticks === B.TICKS;
+      for (const { t, r } of this.combatTargets()) if (insideBeam(b, b.angle, t, r) && this.strike(t, B.DAMAGE, last)) this.landHit(t, b, last);
+    }
+    if (b.t >= B.CHARGE + B.TIME) this.ultBeam = null;
+  }
+
+  /** The movement the player is asking for (keys, else the touch stick), unit length or zero. */
+  private moveInput() {
+    let x = 0, y = 0;
+    if (this.heldKeys.has('KeyW') || this.heldKeys.has('ArrowUp')) y -= 1;
+    if (this.heldKeys.has('KeyS') || this.heldKeys.has('ArrowDown')) y += 1;
+    if (this.heldKeys.has('KeyA') || this.heldKeys.has('ArrowLeft')) x -= 1;
+    if (this.heldKeys.has('KeyD') || this.heldKeys.has('ArrowRight')) x += 1;
+    if (!x && !y) { x = this.touchMove.x; y = this.touchMove.y; }
+    const d = Math.hypot(x, y);
+    return d ? { x: x / d, y: y / d } : { x: 0, y: 0 };
+  }
+
   public useSkill(_target?: { x: number; y: number }) {
     if(this.orientationBlocked)return;
     if (this.screen !== 'playing' || this.bossDeathPending || this.exitTravelRemaining > 0 || this.skillCooldown > 0) return;
@@ -1261,7 +1361,7 @@ export class GameEngine {
     this.incomingHits=this.incomingHits.slice(-12);
     sounds.playImpact(result.dealt===0);
     if(result.dealt===0){this.invulnerability=.3;this.notifyHUD();return;}
-    this.health=result.hp;this.hurtFlash=.28;
+    this.health=result.hp;this.hurtFlash=.28;this.rage.gain(RAGE.HURT);
     this.invulnerability = 1.3;
     this.combo?.cancel(); this.lunge.time = 0;           // staggered: the combo is lost
     this.renderer.particles.emit(this.player.x, this.player.y, 18, '#fb7185', 75, 4, 0.6);
@@ -1648,6 +1748,8 @@ export class GameEngine {
       if (/^(Digit|Numpad)[1-6]$/.test(code)) { this.selectEcho(Number(code.slice(-1)) - 1); return; }
       if (key === 'c') { this.pauseEcho(); return; }
       if (code === 'Space') { this.useSkill(); return; }
+      if (key === 'v') { this.useUltimate(); return; }
+      if (key === 'g' && this.isTraining) { this.rage.fill(); this.mana.reset(); this.notifyHUD(); return; }   // training: refill
       if (code === 'ShiftLeft' || code === 'ShiftRight') { this.dodge(); return; }
       if (key === 'r') { this.useTimeItem(); return; }  // F is full screen (FullscreenButton.tsx)
       if (key === 'e') {
@@ -1680,12 +1782,13 @@ export class GameEngine {
     if(bounds.width&&bounds.height)this.cursorTarget={x:(e.clientX-bounds.left)*this.canvas.width/bounds.width,y:(e.clientY-bounds.top)*this.canvas.height/bounds.height};
   };
   private handleCanvasMouseDown = (e: MouseEvent) => {
-    if ((e.button !== 0 && e.button !== 2) || !this.canvas || this.screen !== 'playing') return;
+    if ((e.button !== 0 && e.button !== 1 && e.button !== 2) || !this.canvas || this.screen !== 'playing') return;
     const bounds = this.canvas.getBoundingClientRect();
     const target = { x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
       y: (e.clientY - bounds.top) * this.canvas.height / bounds.height };
     if (e.shiftKey && this.echo) { this.pingTarget={...target,life:4}; this.showBanner(this.language==='vi'?'Echo ưu tiên mục tiêu đã đánh dấu.':'Echo target marked.'); return; }
-    if (e.button === 2) { e.preventDefault(); this.useSkill(target); }
+    if (e.button === 1) { e.preventDefault(); this.useUltimate(target); }
+    else if (e.button === 2) { e.preventDefault(); this.useSkill(target); }
     else this.attack(target);
   };
   private handleCanvasContextMenu = (e: MouseEvent) => { if (this.screen === 'playing') e.preventDefault(); };
@@ -1757,6 +1860,15 @@ export class GameEngine {
       this.backdropFor = null;
       if (!this.suspendVisuals) this.render();
     }
+    // Heavy-hit shake moves the canvas element, so nothing drawn on it needs to know.
+    if (this.canvas) {
+      const o = this.screen === 'playing' ? this.hitFeel.offset(this.elapsedLevelTime, this.reducedMotion) : { x: 0, y: 0 };
+      const shake = o.x || o.y ? `translate(${o.x}px,${o.y}px)` : '';
+      if (this.canvas.style.transform !== shake) this.canvas.style.transform = shake;
+      // Time stop: the world loses its colour until it runs again.
+      const tint = this.screen === 'playing' && this.timeStop > 0 ? 'grayscale(.65) brightness(.92)' : '';
+      if (this.canvas.style.filter !== tint) this.canvas.style.filter = tint;
+    }
     music.set(this.musicScene(), this.screen === 'paused');
 
     // Check throttled HUD update
@@ -1815,6 +1927,10 @@ export class GameEngine {
       }
       return;
     }
+    if (this.hitFeel.hold(dt)) return;   // hit-stop: the whole fight holds, timers included
+    for (const fx of this.pfx) fx.age += dt;
+    this.pfx = this.pfx.filter(fx => fx.age < (fx.life ?? pfxSeconds(fx.name)));
+    this.updateUltimate(dt);
     this.mana.update(dt);
     // Expire before accepting a checkpoint: arriving after zero cannot rescue a run.
     if (this.legTimeRemaining !== null) {
@@ -1891,7 +2007,8 @@ export class GameEngine {
     this.updateMagicShots(dt);
     this.updateSupport(dt);
     const enemyEchoes=[...this.echoes];
-    updateEnemies(this.enemies,this.currentLevel,this.player,[...enemyEchoes,...(this.supportAlly?[this.supportAlly]:[])],dt,(target,damage)=>{
+    if(this.enemies.some(e=>e.push)){const walls=getActiveObstacles(this.currentLevel.walls,this.currentLevel.doors);slidePushed(this.enemies,dt,(e,x,y)=>{const r=resolveMovement(e.x,e.y,x,y,30,30,walls);e.x=r.x;e.y=r.y;});}
+    if(this.timeStop<=0)updateEnemies(this.enemies,this.currentLevel,this.player,[...enemyEchoes,...(this.supportAlly?[this.supportAlly]:[])],dt,(target,damage)=>{
       if(target.echoIndex===null)this.takeDamage(damage);
       else if(target.echoIndex>=enemyEchoes.length)this.hitSupport(damage);
       else {const echo=enemyEchoes[target.echoIndex];if(echo)this.hitEcho(echo,damage);}
@@ -1932,6 +2049,7 @@ export class GameEngine {
       const length = Math.hypot(this.touchMove.x, this.touchMove.y);
       if (length > 0) { moveX = this.touchMove.x / length; moveY = this.touchMove.y / length; }
     }
+    if (this.ultBeam) { moveX = 0; moveY = 0; }   // planted while she fires the beam
     if (this.dodgeTime > 0) {
       if (!moveX && !moveY) {
         moveX = this.player.direction === 'right' ? 1 : this.player.direction === 'left' ? -1 : 0;
@@ -2133,7 +2251,7 @@ export class GameEngine {
       const echoTarget = (Math.floor((boss.attackIndex??0)/2)%2===0?bossEchoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0]??null;
       const burstBefore = boss.burstRemaining;
       let bossDamage=0;
-      const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
+      const bossHit = this.timeStop > 0 ? false : updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
         if(index>=normalBossEchoes.length)this.hitSupport(damage);else{const echo=normalBossEchoes[index];if(echo)this.hitEcho(echo,damage);}
       }, damage=>{bossDamage=Math.max(bossDamage,damage);},()=>{this.frostSlow=FROST_STRIKE.SLOW_TIME;},this.dodgeTime>0);
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
@@ -2272,7 +2390,7 @@ export class GameEngine {
         limitRingActive: this.limitRingActive,
         bestStars: { ...this.campaign.bestStars },
         lastRating: this.lastRating,
-        skillCooldown: this.skillCooldown,mana:this.mana.value,maxMana:MAX_MP,skillManaCost:skillManaCost(this.characterClass),
+        skillCooldown: this.skillCooldown,mana:this.mana.value,maxMana:MAX_MP,skillManaCost:skillManaCost(this.characterClass),rage:this.rage.value,maxRage:RAGE.MAX,hasUltimate:this.hasUltimate,
         mechanicalOwned: this.campaign.mechanicalOwned,
         loadingLevel: this.pendingLevel ? levelAt(this.pendingLevel.idx).id : null,
         loadingFromMenu: this.loadingFromMenu,

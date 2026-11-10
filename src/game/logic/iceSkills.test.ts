@@ -9,7 +9,7 @@ test('ice magic prioritizes boss, then living enemies, then cursor; hits once',(
  g.useSkill({x:12,y:34});assert.equal(g.frostZones[0].x,g.boss.x);g.useSkill();assert.equal(g.frostZones.length,1);
  (g as any).updatePersonalSkill(.61);assert.equal(g.boss.hp,200);(g as any).updatePersonalSkill(.1);assert.equal(g.boss.hp,200);
  g.boss=null;g.skillCooldown=0;g.useSkill();assert.ok(g.enemies.some(e=>e.x===g.frostZones.at(-1)!.x));
- g.enemies=[];g.skillCooldown=0;g.useSkill({x:12,y:34});assert.equal(g.frostZones.at(-1)!.x,12);assert.equal(g.frostZones.at(-1)!.y,34);
+ g.enemies=[];g.skillCooldown=0;g.mana.reset();g.useSkill({x:12,y:34});   // targeting is the point here; a third 40 MP cast needs a refillassert.equal(g.frostZones.at(-1)!.x,12);assert.equal(g.frostZones.at(-1)!.y,34);
 });
 test('guardian casts three ground rays, slows on contact and expires',()=>{
  const b=createBoss();b.pillars=[];b.mode='warning';b.timer=.01;b.burstCooldown=100;b.targetX=b.x+100;b.targetY=b.y;

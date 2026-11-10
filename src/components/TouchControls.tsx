@@ -49,7 +49,7 @@ export function TouchJoystick({ engine, vi }: { engine: GameEngine | null; vi: b
   </div>;
 }
 
-export type TouchAction = { id: string; name: string; icon: React.ReactNode; cooldown: number; max: number; disabled: boolean; run: () => void };
+export type TouchAction = { id: string; name: string; icon: React.ReactNode; cooldown: number; max: number; disabled: boolean; run: () => void; badge?: number };
 
 const HOLD_REPEAT_MS = 170; // holding Cast re-presses at a mashing pace; the combo buffers the presses
 
@@ -64,7 +64,7 @@ export function TouchSkills({ actions, mana, maxMana, manaCost, charges, recordi
     <div className="touch-mana" role="meter" aria-label="MP" aria-valuenow={Math.floor(mana)} aria-valuemin={0} aria-valuemax={maxMana}>
       <i style={{ width: `${mana / maxMana * 100}%` }}/><span>MP {Math.floor(mana)}</span>
     </div>
-    {actions.map(a => <button key={a.id} type="button" className={`touch-skill skill-${a.id}${a.cooldown > 0 ? ' is-recovering' : ''}`} disabled={a.disabled}
+    {actions.map(a => <button key={a.id} type="button" className={`touch-skill skill-${a.id}${a.cooldown > 0 ? ' is-recovering' : ''}${a.badge !== undefined && !a.disabled ? ' is-ready' : ''}`} disabled={a.disabled}
       style={{ '--cd': a.cooldown > 0 ? Math.min(1, a.cooldown / a.max) : 0 } as React.CSSProperties}
       aria-label={`${a.name}${a.cooldown > 0 ? ` · ${a.cooldown.toFixed(1)}s` : ''}`}
       onPointerDown={e => {
@@ -78,6 +78,7 @@ export function TouchSkills({ actions, mana, maxMana, manaCost, charges, recordi
       <span className="touch-skill-icon">{a.icon}</span><span className="touch-skill-label">{a.name}</span>
       {a.cooldown > 0 && <b className="touch-skill-timer">{a.cooldown.toFixed(a.cooldown < 1 ? 1 : 0)}</b>}
       {a.id === 'echo' && <b className="touch-skill-badge">{charges}</b>}
+      {a.badge !== undefined && a.disabled && <b className="touch-skill-badge">{a.badge}</b>}
       {a.id === 'skill' && <small className="touch-skill-cost">{manaCost}</small>}
     </button>)}
   </div>;

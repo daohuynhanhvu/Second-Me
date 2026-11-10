@@ -1,0 +1,613 @@
+{
+ "hit-spark": {
+  "id": "impacts/hit-spark",
+  "w": 122,
+  "h": 71,
+  "frames": 16,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 4,
+  "pivot": [
+   34,
+   56
+  ]
+ },
+ "crit-hit": {
+  "id": "impacts/crit-hit",
+  "w": 174,
+  "h": 131,
+  "frames": 28,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 5,
+  "pivot": [
+   77,
+   102
+  ]
+ },
+ "shield-block": {
+  "id": "impacts/shield-block",
+  "w": 111,
+  "h": 78,
+  "frames": 34,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 5,
+  "pivot": [
+   19,
+   64
+  ]
+ },
+ "parry": {
+  "id": "impacts/parry",
+  "w": 173,
+  "h": 100,
+  "frames": 31,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 5,
+  "pivot": [
+   84,
+   85
+  ]
+ },
+ "ground-slam": {
+  "id": "impacts/ground-slam",
+  "w": 244,
+  "h": 173,
+  "frames": 97,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 9,
+  "pivot": [
+   122,
+   130
+  ]
+ },
+ "spin-slash": {
+  "id": "melee/spin-slash",
+  "w": 183,
+  "h": 101,
+  "frames": 25,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 4,
+  "pivot": [
+   79,
+   82
+  ]
+ },
+ "heavy-cleave": {
+  "id": "melee/heavy-cleave",
+  "w": 154,
+  "h": 107,
+  "frames": 58,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   50,
+   87
+  ]
+ },
+ "dash-strike": {
+  "id": "moves/dash-strike",
+  "w": 217,
+  "h": 123,
+  "frames": 70,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   -52,
+   104
+  ]
+ },
+ "energy-disc": {
+  "id": "projectiles/energy-disc",
+  "w": 97,
+  "h": 48,
+  "frames": 15,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 3,
+  "pivot": [
+   72,
+   24
+  ]
+ },
+ "heal-aoe": {
+  "id": "holy/heal-aoe",
+  "w": 234,
+  "h": 117,
+  "frames": 88,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   117,
+   86
+  ]
+ },
+ "holy-pillar": {
+  "id": "holy/holy-pillar",
+  "w": 192,
+  "h": 230,
+  "frames": 106,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 12,
+  "pivot": [
+   96,
+   204
+  ]
+ },
+ "sunburst": {
+  "id": "holy/sunburst",
+  "w": 110,
+  "h": 110,
+  "frames": 120,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 11,
+  "pivot": [
+   55,
+   55
+  ]
+ },
+ "smite": {
+  "id": "holy/smite",
+  "w": 180,
+  "h": 175,
+  "frames": 85,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 10,
+  "pivot": [
+   90,
+   147
+  ]
+ },
+ "divine-shield": {
+  "id": "holy/divine-shield",
+  "w": 72,
+  "h": 76,
+  "frames": 72,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 9,
+  "pivot": [
+   36,
+   62
+  ]
+ },
+ "spell-charge": {
+  "id": "arcane/spell-charge",
+  "w": 104,
+  "h": 82,
+  "frames": 48,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 7,
+  "pivot": [
+   44,
+   77
+  ]
+ },
+ "mana-burst": {
+  "id": "arcane/mana-burst",
+  "w": 178,
+  "h": 147,
+  "frames": 55,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   90,
+   122
+  ]
+ },
+ "blink-out": {
+  "id": "arcane/blink-out",
+  "w": 114,
+  "h": 91,
+  "frames": 49,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   54,
+   76
+  ]
+ },
+ "blink-in": {
+  "id": "arcane/blink-in",
+  "w": 100,
+  "h": 88,
+  "frames": 43,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   50,
+   73
+  ]
+ },
+ "arcane-beam": {
+  "id": "arcane/arcane-beam",
+  "w": 235,
+  "h": 89,
+  "frames": 36,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 4,
+  "pivot": [
+   15,
+   74
+  ]
+ },
+ "time-stop": {
+  "id": "arcane/time-stop",
+  "w": 180,
+  "h": 134,
+  "frames": 109,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 10,
+  "pivot": [
+   90,
+   117
+  ]
+ },
+ "frost-nova": {
+  "id": "ice/frost-nova",
+  "w": 255,
+  "h": 142,
+  "frames": 103,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 8,
+  "pivot": [
+   126,
+   101
+  ]
+ },
+ "ice-lance": {
+  "id": "ice/ice-lance",
+  "w": 142,
+  "h": 50,
+  "frames": 24,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 3,
+  "pivot": [
+   129,
+   25
+  ]
+ },
+ "icicle-fall": {
+  "id": "ice/icicle-fall",
+  "w": 131,
+  "h": 118,
+  "frames": 79,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 9,
+  "pivot": [
+   65,
+   99
+  ]
+ },
+ "ice-shatter": {
+  "id": "ice/ice-shatter",
+  "w": 189,
+  "h": 110,
+  "frames": 85,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 8,
+  "pivot": [
+   60,
+   88
+  ]
+ },
+ "blizzard-vortex": {
+  "id": "ice/blizzard-vortex",
+  "w": 94,
+  "h": 113,
+  "frames": 60,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 9,
+  "pivot": [
+   50,
+   100
+  ]
+ },
+ "rage": {
+  "id": "status/rage",
+  "w": 58,
+  "h": 63,
+  "frames": 36,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 7,
+  "pivot": [
+   29,
+   55
+  ]
+ },
+ "haste": {
+  "id": "status/haste",
+  "w": 84,
+  "h": 48,
+  "frames": 36,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 5,
+  "pivot": [
+   59,
+   44
+  ]
+ },
+ "burning": {
+  "id": "status/burning",
+  "w": 46,
+  "h": 68,
+  "frames": 36,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   23,
+   64
+  ]
+ },
+ "frozen": {
+  "id": "status/frozen",
+  "w": 63,
+  "h": 60,
+  "frames": 60,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   30,
+   54
+  ]
+ },
+ "fireball": {
+  "id": "fire/fireball",
+  "w": 117,
+  "h": 54,
+  "frames": 36,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 5,
+  "pivot": [
+   94,
+   27
+  ]
+ },
+ "lightning-strike": {
+  "id": "lightning/lightning-strike",
+  "w": 237,
+  "h": 262,
+  "frames": 91,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 11,
+  "pivot": [
+   119,
+   227
+  ]
+ },
+ "god-rays": {
+  "id": "weather/god-rays",
+  "w": 320,
+  "h": 168,
+  "frames": 84,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 7,
+  "pivot": [
+   160,
+   170
+  ]
+ },
+ "fireflies": {
+  "id": "weather/fireflies",
+  "w": 320,
+  "h": 150,
+  "frames": 84,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 7,
+  "pivot": [
+   160,
+   170
+  ]
+ },
+ "fog": {
+  "id": "weather/fog",
+  "w": 320,
+  "h": 87,
+  "frames": 84,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 5,
+  "pivot": [
+   160,
+   77
+  ]
+ },
+ "snow": {
+  "id": "weather/snow",
+  "w": 320,
+  "h": 158,
+  "frames": 114,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   160,
+   170
+  ]
+ },
+ "blizzard": {
+  "id": "weather/blizzard",
+  "w": 320,
+  "h": 158,
+  "frames": 45,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 5,
+  "pivot": [
+   160,
+   170
+  ]
+ },
+ "shooting-stars": {
+  "id": "weather/shooting-stars",
+  "w": 320,
+  "h": 180,
+  "frames": 99,
+  "fps": 15.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   160,
+   180
+  ]
+ },
+ "rune-circle": {
+  "id": "arcane/rune-circle",
+  "w": 118,
+  "h": 96,
+  "frames": 120,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 10,
+  "pivot": [
+   59,
+   76
+  ]
+ },
+ "magic-circle-cast": {
+  "id": "arcane/magic-circle-cast",
+  "w": 192,
+  "h": 220,
+  "frames": 118,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 12,
+  "pivot": [
+   96,
+   192
+  ]
+ },
+ "halo": {
+  "id": "holy/halo",
+  "w": 39,
+  "h": 40,
+  "frames": 60,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   18,
+   65
+  ]
+ },
+ "heavy-landing": {
+  "id": "impacts/heavy-landing",
+  "w": 136,
+  "h": 42,
+  "frames": 49,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 4,
+  "pivot": [
+   69,
+   28
+  ]
+ },
+ "sword-slash": {
+  "id": "melee/sword-slash",
+  "w": 130,
+  "h": 102,
+  "frames": 24,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 5,
+  "pivot": [
+   44,
+   91
+  ]
+ },
+ "magic-missile": {
+  "id": "projectiles/magic-missile",
+  "w": 178,
+  "h": 81,
+  "frames": 58,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 6,
+  "pivot": [
+   18,
+   74
+  ]
+ },
+ "collect-burst": {
+  "id": "pickups/collect-burst",
+  "w": 78,
+  "h": 88,
+  "frames": 42,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   36,
+   81
+  ]
+ },
+ "pixel-dissolve": {
+  "id": "transitions/pixel-dissolve",
+  "w": 320,
+  "h": 180,
+  "frames": 67,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   0,
+   0
+  ]
+ },
+ "shatter-wipe": {
+  "id": "transitions/shatter-wipe",
+  "w": 320,
+  "h": 180,
+  "frames": 85,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   0,
+   0
+  ]
+ },
+ "star-iris": {
+  "id": "transitions/star-iris",
+  "w": 320,
+  "h": 180,
+  "frames": 67,
+  "fps": 30.0,
+  "loop": false,
+  "columns": 7,
+  "pivot": [
+   0,
+   0
+  ]
+ }
+}

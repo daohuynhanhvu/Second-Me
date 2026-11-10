@@ -1,6 +1,9 @@
 export const MAX_MP=100;
-export const COMBO_MP=[0,6,9,16] as const;
-export const skillManaCost=(hero:string)=>hero==='mage'?25:30;
+/** MP per combo hit (index = hit). Aeris's ranged combo costs more than Kael's: she was too strong (a full
+ *  combo 50 MP, so two from a full pool, against Kael's 31). */
+export const COMBO_MP={swordsman:[0,6,9,16],mage:[0,10,15,25]} as const;
+export const comboManaCost=(hero:keyof typeof COMBO_MP,step:number)=>COMBO_MP[hero][step]??0;
+export const skillManaCost=(hero:string)=>hero==='mage'?40:30;
 export class ManaPool {
  value=MAX_MP;
  private delay=0;

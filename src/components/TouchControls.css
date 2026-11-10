@@ -49,3 +49,8 @@
 /* Short phones (landscape ~390-430px tall): shrink the whole cluster from its corner. */
 @media(max-height:440px){.touch-skills{transform:scale(.8);right:8px;bottom:8px}}
 @media(prefers-reduced-motion:reduce){.is-recording .skill-record .touch-skill-icon{animation:none}}
+/* Ultimate: on the outer ring, left of Dodge; it glows when the rage bar is full. */
+.skill-ultimate{left:-12px;top:124px;width:56px;height:56px;color:#e2b8ff;box-shadow:inset 0 0 0 3px #8a5cc0,inset 0 -7px 0 #121c14,0 4px 0 #050d08aa}
+.skill-ultimate.is-ready{animation:ultimate-ready 1s ease-in-out infinite alternate}
+@keyframes ultimate-ready{to{box-shadow:inset 0 0 0 3px #f2d8ff,inset 0 -7px 0 #121c14,0 0 16px #c78dff}}
+@media(prefers-reduced-motion:reduce){.skill-ultimate.is-ready{animation:none;box-shadow:inset 0 0 0 3px #f2d8ff,inset 0 -7px 0 #121c14,0 0 16px #c78dff}}

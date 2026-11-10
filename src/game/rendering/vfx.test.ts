@@ -44,3 +44,20 @@ test('the hex shield assembles, rests, sweeps every three seconds, and breaks wh
   assert.equal(hexShieldFrame(7.3, true), 9, 'reduced motion: the whole bubble, still');
   assert.deepEqual([hexShieldBreakFrame(0), hexShieldBreakFrame(0.1), hexShieldBreakFrame(0.2)], [16, 17, null]);
 });
+
+test('the boss rays use the ice-spikes sheet exactly as exported', async () => {
+  const { ICE_SPIKES: s } = await import('./tripleFrost.ts');
+  const json = JSON.parse(readFileSync(new URL('../../../tools/assets/source/pixelfx/ice-spikes.json', import.meta.url), 'utf8')).meta.pixelfx;
+  assert.deepEqual([json.frames, json.fps, json.columns, ...json.frameSize, ...json.pivot], [s.FRAMES, s.FPS, s.COLUMNS, s.W, s.H, s.PIVOT_X, s.PIVOT_Y]);
+  const png = readFileSync(new URL('../../../public/assets/effects/ice-spikes.png', import.meta.url));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [s.W * s.COLUMNS, s.H * Math.ceil(s.FRAMES / s.COLUMNS)]);
+  assert.ok(s.HOLD < s.FRAMES);
+});
+
+test("Aeris's bolts use the arcane-orb sheet, cropped to the orb", async () => {
+  const { ARCANE_ORB: o } = await import('./comboSprites.ts');
+  const json = JSON.parse(readFileSync(new URL('../../../tools/assets/source/pixelfx/arcane-orb.json', import.meta.url), 'utf8')).meta.pixelfx;
+  assert.deepEqual([json.frames, json.fps, json.loop], [o.FRAMES, o.FPS, true]);
+  const png = readFileSync(new URL('../../../public/assets/effects/arcane-orb.png', import.meta.url));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [o.W * o.COLUMNS, o.H * Math.ceil(o.FRAMES / o.COLUMNS)]);
+});

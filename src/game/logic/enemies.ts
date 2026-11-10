@@ -5,7 +5,7 @@ import type { LevelData } from './types.ts';
 import { DUMMY_RESET } from './training.ts';
 /** 'dummy': the dev training ground's target (logic/training.ts): never moves, attacks or dies. */
 export type EnemyKind='goblin'|'bear'|'skull'|'shaman'|'minotaur'|'dummy';
-export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;targetEcho?:{x:number;y:number;aggroTime?:number};
+export interface Enemy {id:string;kind:EnemyKind;x:number;y:number;homeX:number;homeY:number;hp:number;maxHp:number;mode:'idle'|'chase'|'warning'|'recover';timer:number;targetX:number;targetY:number;facingLeft:boolean;hitFlash:number;deathAge:number;targetId:number|null;attackFx?:number;/** Push-back still to slide (logic/hitFeel.ts). */push?:{x:number;y:number};targetEcho?:{x:number;y:number;aggroTime?:number};
  /** The Echo this enemy was drawn to, and how long it keeps after it once out of sight (s). */
  lureEcho?:{x:number;y:number};lureTime?:number}
 /**

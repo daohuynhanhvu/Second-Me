@@ -18,6 +18,7 @@ import { drawTimeRelic } from './timeRelic.ts';
 import { drawPillars, drawCombatHits } from './bossFeedback.ts';
 import {drawTripleFrost} from './tripleFrost.ts';
 import { drawVfx, drawHexShield } from './vfx.ts';
+import { drawPfxShots } from './pixelfx.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9a8d4'];
 
@@ -130,6 +131,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.restore();
   }
   drawVfx(ctx, game.vfx, game.player, true);    // on the ground, under the hero: heal ring, time clock
+  drawPfxShots(ctx, game.pfx, true);
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   for(const zone of game.frostZones)drawBossFrostZone(ctx,zone.x,zone.y,zone.radius,zone.struck,time,game.reducedMotion,Math.max(0,-zone.timer));
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
@@ -154,6 +156,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     drawMageStaff(ctx, game.player.x, game.player.y, game.player.direction);
   }
   drawComboEffects(ctx, game, time);
+  drawPfxShots(ctx, game.pfx, false);
   for (const shot of game.magicShots) {
     const t = Math.min(1, shot.age / (shot.duration ?? .3));
     const x = shot.x + (shot.targetX - shot.x) * t, y = shot.y + (shot.targetY - shot.y) * t;
