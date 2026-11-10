@@ -7,3 +7,17 @@
 .fullscreen-toggle.is-floating:hover{background:#3a4d38;color:#fff0b0}
 .fullscreen-toggle.is-floating:active{transform:translateY(2px);box-shadow:inset 3px 3px 0 #121c14,inset -3px -3px 0 #5d7556}
 .fullscreen-toggle.is-floating:focus-visible{outline:none;border-color:#e6c46e}  /* an outline would be cut by the notched clip-path */
+
+/* iPhone "Add to Home Screen" hint: a small pixel stone dialog. */
+.fullscreen-hint-backdrop{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:#020806b3}
+.fullscreen-hint{position:relative;width:min(420px,100%);box-sizing:border-box;padding:18px 20px;color:#e9dfbc;background:#13231a;
+  border:4px solid #050d08;box-shadow:inset 0 0 0 2px #5d7556,0 6px 0 #050d08aa}
+.fullscreen-hint h2{margin:0 28px 10px 0;font-size:24px;color:#f0d390;text-shadow:2px 2px 0 #050d08}
+.fullscreen-hint p{margin:0 0 12px;font-size:17px;line-height:1.35;color:#c8d2b4}
+.fullscreen-hint ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:step}
+.fullscreen-hint li{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:18px;background:#0a1610;border:3px solid #050d08;box-shadow:inset 0 2px 0 #3f6a3a;counter-increment:step}
+.fullscreen-hint li::before{content:counter(step);display:grid;place-items:center;width:24px;height:24px;flex:none;background:#e6c46e;color:#2a1d08;border:2px solid #050d08}
+.fullscreen-hint li svg{flex:none;color:#9fd8ff}
+.fullscreen-hint-close{position:absolute;top:8px;right:8px;width:32px;height:32px;display:grid;place-items:center;padding:0;color:#f4d49b;background:#613f2b;border:2px solid #050d08;cursor:pointer}
+/* Portalled into body, outside #root: give it the game's pixel font (pixelTypography.css) itself. */
+.fullscreen-hint-backdrop,.fullscreen-hint-backdrop *{font-family:'Second Me Pixel',monospace!important;letter-spacing:.02em}

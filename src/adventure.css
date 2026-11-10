@@ -190,6 +190,12 @@ body{font-family:'Segoe UI',Arial,sans-serif!important;background:#09130f!import
 
 /* Loading art, canvas actors and progress labels share the authored 1376x768 frame. */
 .lv-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,calc(100dvh * 1376 / 768));aspect-ratio:1376/768;container-type:inline-size}
+/* From the portal's activation the frame zooms to cover the screen (--lv-cover, LoadingScreen.tsx): the forest around
+   it fades for the dive, and on screens of another shape the frame's edges would show as dark bars. */
+.lv-frame{transition:transform 1.1s ease-in-out}
+/* A level picked in the lobby loads without the portal (loadingScene.ts), so without its reflected light too. */
+.loading-v2.no-portal .lv-portal-light{display:none}
+.loading-v2:is([data-phase=activate],[data-phase=dive],[data-phase=done],[data-phase=fade]) .lv-frame{transform:translate(-50%,-50%) scale(var(--lv-cover,1))}
 /* The pixel forest (pixelForest.ts) fills the whole screen, frame and beyond, under the frame's
    layers; the scene paints it. The dim layers darken it as the portal wakes (the scene sets their
    opacity); the vignette matches the canvas one: clear around the frame's centre, dark from about

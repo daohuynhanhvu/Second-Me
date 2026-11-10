@@ -1,0 +1,10 @@
+{
+  "name": "SECOND ME — The Emberforge",
+  "short_name": "Second Me",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#071510",
+  "theme_color": "#071510",
+  "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

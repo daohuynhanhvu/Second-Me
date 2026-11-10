@@ -10,8 +10,6 @@
 .plasma-wave{transform-box:view-box;transform-origin:309px 445px;animation:plasma-inward 3.9s linear infinite}
 .portal-core{transform-box:view-box;transform-origin:309px 445px;animation:plasma-core 3.9s ease-in-out infinite}
 .portal-motes circle{filter:drop-shadow(0 0 4px #7effd9);animation:portal-mote-inward var(--mote-duration) ease-in var(--mote-delay) infinite}
-.rune-glow{opacity:.35;filter:drop-shadow(0 0 7px #49f9e6);animation:rune-pulse 3.5s ease-in-out infinite}
-.rune-three{animation-delay:-2.2s}
 .intro-fireflies circle{opacity:.2;filter:drop-shadow(0 0 5px var(--fly-color));animation:firefly-float var(--fly-duration) ease-in-out var(--fly-delay) infinite,firefly-twinkle var(--twinkle-duration) ease-in-out var(--fly-delay) infinite}
 .intro-foliage-patch{position:absolute;inset:0;background:url('/assets/menu/second-me-forest-clean.png') center / 100% 100% no-repeat;opacity:.9;animation:foliage-sway 5.8s ease-in-out infinite alternate}
 .foliage-left{clip-path:polygon(0 70%,12% 70%,12% 100%,0 100%);mask-image:radial-gradient(ellipse 8% 18% at 4% 91%,#000 16%,transparent 100%);transform-origin:4% 100%}
@@ -21,7 +19,6 @@
 @keyframes plasma-core{0%,100%{transform:scale(.72);opacity:.28}45%{opacity:.48}78%{transform:scale(1.08);opacity:.7}}
 @keyframes portal-mote-inward{0%{transform:translate(0,0) scale(.9);opacity:0}20%{opacity:.75}72%{opacity:.55}100%{transform:translate(var(--mote-x),var(--mote-y)) scale(.4);opacity:0}}
 @keyframes portal-breathe{50%{opacity:.5}}
-@keyframes rune-pulse{0%,100%{opacity:.18}50%{opacity:.76}}
 @keyframes firefly-float{0%,100%{transform:translate(0,0)}26%{transform:translate(var(--fly-x1),var(--fly-y1))}57%{transform:translate(var(--fly-x2),var(--fly-y2))}81%{transform:translate(var(--fly-x3),var(--fly-y3))}}
 @keyframes firefly-twinkle{0%,100%{opacity:.12}22%{opacity:.88}49%{opacity:.26}72%{opacity:1}88%{opacity:.2}}
 body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:none}
@@ -31,15 +28,15 @@ body.reduced-motion .intro-fireflies,body.reduced-motion .portal-motes{display:n
 body.reduced-motion .portal-swirl{animation:none}
 @media(prefers-reduced-motion:reduce){.portal-swirl{animation:none}}
 /* R rune strokes, no halo: from min up to max, slowly fully off, back to max, ease down to min (loops from there). */
-.rune-r-lit{animation:rune-blink 9s ease-in-out infinite}
+.rune-lit{animation:rune-blink 9s ease-in-out infinite}
 @keyframes rune-blink{0%,100%{opacity:.6}10%{opacity:1}45%,52%{opacity:0}66%{opacity:1}}
 /* Wizard dips gently, squashing from the feet. */
 .menu-wizard image{image-rendering:pixelated}
 /* Idle bob once she has arrived: squash from the feet (local origin = the game's feet anchor; soles 22.6 units lower). */
 .menu-wizard.is-idle{transform-box:view-box;transform-origin:0 22.6px;animation:wizard-bob 1.6s ease-in-out infinite}
 @keyframes wizard-bob{50%{transform:scale(1.03,.95)}}
-body.reduced-motion :is(.rune-r-lit,.menu-wizard.is-idle){animation:none}
-@media(prefers-reduced-motion:reduce){:is(.rune-r-lit,.menu-wizard.is-idle){animation:none}}
+body.reduced-motion :is(.rune-lit,.menu-wizard.is-idle){animation:none}
+@media(prefers-reduced-motion:reduce){:is(.rune-lit,.menu-wizard.is-idle){animation:none}}
 @keyframes foliage-sway{from{transform:translateX(-1px) rotate(-.16deg)}to{transform:translateX(2px) rotate(.23deg)}}
 .intro-accessible-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .intro-mobile-title{display:none}

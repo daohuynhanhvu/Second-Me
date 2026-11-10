@@ -83,16 +83,14 @@ export function IntroEffects() {
           } as CSSProperties}/>)}
         </g>
       </g>
-      <g className="rune-glow rune-one" fill="none" stroke="#86fff0" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M63 548 L53 508 L69 521 M55 518 L67 525"/>
-      </g>
+      {/* The ᚠ at the far left: like the R and the ᛟ, its strokes alone light up, in step with them. */}
+      <image className="rune-lit" href="/assets/menu/rune-fehu-lit.png" x="42" y="494" width="48" height="80" preserveAspectRatio="none"/>
       {/* Painting's R is baked unlit (tools/assets/prepare_menu_wizard_rune.py); this is the original lit R. */}
-      <image className="rune-r-lit" href="/assets/menu/rune-r-lit.png" x="548" y="484" width="52" height="82" preserveAspectRatio="none"/>
+      <image className="rune-lit" href="/assets/menu/rune-r-lit.png" x="548" y="484" width="52" height="82" preserveAspectRatio="none"/>
       {/* The in-game Aeris walks out of the portal to where the painted wizard stood. */}
       <MenuWizard/>
-      <g className="rune-glow rune-three" fill="none" stroke="#86fff0" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M1299 521 L1312 487 L1291 501 L1307 510 M1301 520 L1288 537"/>
-      </g>
+      {/* The ᛟ by the menu frame works like the R (same script): its strokes alone light up, in step with the R. */}
+      <image className="rune-lit" href="/assets/menu/rune-othala-lit.png" x="1274" y="476" width="50" height="58" preserveAspectRatio="none"/>
       <g className="intro-fireflies">
         {fireflies.map(([x, y, kind], index) => <circle key={index} cx={x} cy={y} r={kind === 'gold' ? 2.2 + index % 3 * .5 : 1.7 + index % 3 * .45} fill={kind === 'gold' ? '#ffe887' : '#83ffe1'} style={{
           '--fly-color': kind === 'gold' ? '#ffe078' : '#53f6d5',

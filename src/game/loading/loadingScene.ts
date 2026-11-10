@@ -359,7 +359,7 @@ export class LoadingScene {
       const k = s / (ART_W / FOREST_W);
       ctx.setTransform(k, 0, 0, k, ox, oy);
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(images.arch!, layout.arch.x, layout.arch.y);
+      if (this.opts.portal) ctx.drawImage(images.arch!, layout.arch.x, layout.arch.y);   // no portal for lobby level loads
       ctx.drawImage(images.barFrame!, layout.barFrame.x, layout.barFrame.y);
       ctx.drawImage(title!, layout.title.x, layout.title.y);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -672,7 +672,8 @@ export class LoadingScene {
     // (LoadingScreen.tsx): they only change opacity / position, which the compositor
     // animates without repainting this canvas.
     const pull = this.phase === 'pull' ? clamp01(this.phaseTime / PULL_S) : 0;
-    if (!skip?.has('portal')) this.drawPortal(t, surge + 0.8 * smooth(0, 0.4, pull) + 0.6 * smooth(0.85, 1, pull));
+    // Only loads that end in the portal dive (from the main menu) show the portal; a level picked in the lobby fades in.
+    if (this.opts.portal && !skip?.has('portal')) this.drawPortal(t, surge + 0.8 * smooth(0, 0.4, pull) + 0.6 * smooth(0.85, 1, pull));
 
     if (!skip?.has('flies')) this.drawFlies(t);
     this.drawLeaves();

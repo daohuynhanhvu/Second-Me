@@ -63,7 +63,16 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
       forest: forest.current, dim: dim.current, vignette: vignette.current,
     }, { reducedMotion, stress, hold, portal, language, onReveal: () => reveal.current?.(), onFinished: flash => done.current(flash) });
     if (dev) (window as unknown as { __loadingScene?: LoadingScene }).__loadingScene = scene;
-    const observer = new ResizeObserver(() => scene.resize());
+    // How much the 1376:768 frame must grow to cover the whole screen; the portal dive zooms it to that
+    // (adventure.css), so screens wider or taller than the frame show no dark bars once the forest fades.
+    const rootEl = root.current;
+    const fitCover = () => {
+      const { width: w, height: h } = rootEl.getBoundingClientRect();
+      const frameW = Math.min(w, h * 1376 / 768), frameH = frameW * 768 / 1376;
+      if (frameW > 0) rootEl.style.setProperty('--lv-cover', String(Math.max(w / frameW, h / frameH)));
+    };
+    fitCover();
+    const observer = new ResizeObserver(() => { scene.resize(); fitCover(); });
     observer.observe(canvas.current);
     observer.observe(root.current);   // a wider or taller screen shows more forest around the frame
     scene.start();
@@ -72,7 +81,7 @@ export function LoadingScreen({ language, reducedMotion, level = null, portal = 
 
   const t = TEXT[language];
   return (
-    <div ref={root} className={`loading-v2 overlay${reducedMotion ? ' still' : ''}`} data-phase="loading" role="progressbar" aria-label={t.loading} aria-valuemin={0} aria-valuemax={100}>
+    <div ref={root} className={`loading-v2 overlay${reducedMotion ? ' still' : ''}${portal ? '' : ' no-portal'}`} data-phase="loading" role="progressbar" aria-label={t.loading} aria-valuemin={0} aria-valuemax={100}>
       {/* The pixel forest (pixelForest.ts), screen-wide, and the layers that darken it as the
           portal wakes; the scene paints and drives them. */}
       <canvas ref={forest} className="lv-forest" aria-hidden="true"/>
