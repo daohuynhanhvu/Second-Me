@@ -27,7 +27,7 @@ export function MechanicGuide({engine,hud}:{engine:GameEngine|null;hud:HUDState}
   const topic=hud.guideTopic,copy=topic?GUIDE_TOPICS[topic][vi?'vi':'en']:null;
   return <div className={`mechanic-guide-backdrop ${hud.guideLibrary?'is-library':''}`}>
     <div ref={ref} className="mechanic-guide" role="dialog" aria-modal="true" aria-labelledby="mechanic-guide-title">
-      <header><span><BookOpen size={15}/>{vi?'SỔ TAY TIẾNG VỌNG':'THE ECHO FIELD GUIDE'}</span><button aria-label={vi?'Đóng hướng dẫn':'Close guide'} onClick={()=>topic?engine?.dismissGuide():engine?.closeGuide()}><X size={18}/></button></header>
+      <header><span><BookOpen size={15}/>{vi?'SỔ TAY TIẾNG VỌNG':'THE ECHO FIELD GUIDE'}</span></header>
       {copy?<>
         <div className="guide-kicker">{vi?'CƠ CHẾ MỚI · GAME ĐANG TẠM DỪNG':'NEW MECHANIC · GAME PAUSED'}</div>
         <h2 id="mechanic-guide-title">{copy[0]}</h2>

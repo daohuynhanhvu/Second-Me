@@ -11,3 +11,16 @@
 @media(max-width:620px){.mechanic-guide-backdrop{padding:10px;justify-content:center}.mechanic-guide{padding:14px 17px;max-height:calc(100% - 10px)}.mechanic-guide h2{font-size:19px}.mechanic-guide p{font-size:12px;line-height:1.7}.guide-topic-list{grid-template-columns:1fr}.guide-ack{font-size:9px;padding:10px}.mechanic-guide footer{gap:8px}}
 @media(max-height:430px){.mechanic-guide-backdrop{align-items:center}.mechanic-guide{width:600px}.guide-link-diagram{display:none}.mechanic-guide p{margin-block:8px}.mechanic-guide footer{margin-top:12px}.guide-kicker{margin-top:10px}}
 @media(max-width:620px){.mechanic-guide-backdrop{position:fixed;inset:0;align-items:center;background:#03100aba}.mechanic-guide{max-height:calc(100dvh - 32px)}}
+/* Field guide: only topics scroll; heading and return action remain visible. */
+.mechanic-guide-backdrop.is-library{position:fixed;inset:0;z-index:100;padding:22px}
+.is-library .mechanic-guide{width:min(900px,94vw);max-width:none;height:min(760px,92dvh);max-height:92dvh;display:flex;flex-direction:column;overflow:hidden;padding:25px 30px;border:5px solid #768066;background:linear-gradient(135deg,#283c2c,#142b21);box-shadow:0 0 0 2px #ada176,0 0 0 6px #182b20,inset 0 0 0 2px #13271c}
+.mechanic-guide header{flex:none}.mechanic-guide header>span{font-size:16px!important;line-height:1.3!important;color:#e3cd93}
+.mechanic-guide .guide-kicker{font-size:13px!important;line-height:1.4!important;flex:none;margin:15px 0 8px}
+.mechanic-guide #mechanic-guide-title{font-size:28px!important;line-height:1.3!important;flex:none}
+.is-library .guide-topic-list{flex:1;min-height:0;overflow:auto;align-content:start;padding-right:10px;scrollbar-width:thin;scrollbar-color:#acac77 #183024;margin:10px 0 0;gap:10px}
+.guide-topic-list button{font-size:17px!important;line-height:1.5!important;min-height:62px;padding:13px 15px;border:2px solid #68775a;background:#263e2c;box-shadow:inset 0 0 0 1px #172d21}
+.guide-topic-list button svg{flex:none;width:18px;height:18px;color:#d8cd92}
+.mechanic-guide footer{flex:none;margin-top:17px;padding-top:12px;border-top:1px solid #74835b66}.mechanic-guide footer small{font-size:12px!important}
+.mechanic-guide .guide-ack{background:var(--control-gold) center/100% 100% no-repeat;border:0;color:#3d321a;font-size:17px!important;line-height:1.3!important;min-height:45px;padding:9px 20px}
+.mechanic-guide p{font-size:17px!important;line-height:1.6!important}.mechanic-guide .guide-control-note{font-size:15px!important;line-height:1.5!important}
+@media(max-height:480px){.mechanic-guide-backdrop.is-library{padding:12px}.is-library .mechanic-guide{height:92dvh;padding:14px 20px}.mechanic-guide header>span{font-size:12px!important}.mechanic-guide .guide-kicker{font-size:10px!important;margin:8px 0 4px}.mechanic-guide #mechanic-guide-title{font-size:20px!important;margin-bottom:5px!important}.guide-topic-list button{font-size:13px!important;min-height:45px;padding:8px 10px}.mechanic-guide footer{margin-top:8px;padding-top:7px}.mechanic-guide .guide-ack{font-size:13px!important;min-height:31px;padding:5px 13px}.mechanic-guide footer small{font-size:10px!important}.mechanic-guide p{font-size:13px!important}.mechanic-guide .guide-control-note{font-size:12px!important}}

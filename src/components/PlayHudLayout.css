@@ -77,3 +77,49 @@
 .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana)>i{position:absolute;inset:0 auto 0 0;height:100%;z-index:1;background:linear-gradient(90deg,#ad443a,#69a668);transition:width .15s}
 .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar .combat-mana>i{background:linear-gradient(90deg,#426baf,#76bdd1)}
 @media(max-height:480px){.adventure-app .game-stage[data-touch-controls=false]:is([data-screen=playing],[data-screen=paused],[data-screen=victory],[data-screen=defeat],[data-screen=ending]){--control-footer:104px}.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar{height:100px;width:460px;padding:39px 18px 6px;gap:4px}.adventure-app .game-stage[data-touch-controls=false] .combat-action{height:55px;min-height:55px}.adventure-app .game-stage[data-touch-controls=false] .combat-health{top:5px}.adventure-app .game-stage[data-touch-controls=false] .combat-mana{top:22px}.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana){height:14px;left:33px;right:32px}.adventure-app .game-stage[data-touch-controls=false] .combat-action strong{font-size:11px!important}.adventure-app .adventure-hud .hud-top{padding:5px 10px}.adventure-app .adventure-hud .hud-tools{gap:3px}.adventure-app .adventure-hud .hud-tools button{width:28px;height:28px;min-width:28px;min-height:28px}}
+/* Painted pixel HUD, replacing the flat prototype borders. */
+.adventure-app .adventure-hud:before{background:url('../../public/assets/ui/hud-forest-top.png') center 42%/100% 260% no-repeat;image-rendering:pixelated;height:var(--status-rail)}
+.adventure-app .adventure-hud .hud-top{padding:9px 19px}
+.adventure-app .adventure-hud .level-card{width:210px;padding:3px 5px}
+.adventure-app .adventure-hud :is(.leg-clock,.boss-bar){left:49%;width:25%;top:4px;height:calc(var(--status-rail) - 8px);max-height:calc(var(--status-rail) - 8px);background:none;border:0;box-shadow:none;padding:7px 9px}
+.adventure-app .adventure-hud .leg-clock{display:flex;flex-direction:column;justify-content:center}
+.adventure-app .adventure-hud .leg-clock strong{font-size:26px!important}
+.adventure-app .adventure-hud .leg-clock p{font-size:11px!important;line-height:1.1!important}
+.adventure-app .adventure-hud .boss-bar>div:first-child{font-size:13px!important}
+.adventure-app .adventure-hud .boss-bar small{font-size:12px!important;line-height:1.1!important}
+.adventure-app .adventure-hud .boss-armor{font-size:10px!important}
+.adventure-app .adventure-hud .hud-tools{gap:5px;max-width:35%}
+.adventure-app .adventure-hud .hud-tools button{width:30px;min-width:30px;height:32px;min-height:32px;padding:6px}
+.adventure-app .adventure-hud .hud-wallet{font-size:11px!important;padding:5px 7px;max-width:135px;overflow:hidden}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar{background:url('../../public/assets/ui/hud-forest-actions.png') center/100% 100% no-repeat;padding:55px 35px 15px;gap:9px;height:140px;width:570px;bottom:1px;image-rendering:pixelated}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action{position:relative;height:69px;min-height:69px;background:none;border:0;box-shadow:none;padding:5px 1px 3px;justify-content:flex-end;gap:2px}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action:hover:not(:disabled){background:#9daf6b1a;border:0;filter:brightness(1.2)}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action kbd{position:absolute;top:2px;left:1px;background:#384a36;box-shadow:1px 1px #11251a;border:1px solid #adb18b;border-radius:0;padding:2px;font-size:9px!important}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action strong{font-size:12px!important;line-height:1.1!important;color:#e6dda8}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-icon{height:29px;transform:none}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-icon .combat-pixel-icon{width:29px;height:29px;filter:drop-shadow(1px 2px #15261b)}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-track{left:4px;right:4px;bottom:0;height:3px}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana){left:61px;right:61px;border:0;height:11px;background:#142c28}
+.adventure-app .game-stage[data-touch-controls=false] .combat-health{top:21px}
+.adventure-app .game-stage[data-touch-controls=false] .combat-mana{top:38px}
+.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana)>span{font-size:12px!important;line-height:1!important}
+.adventure-app .game-stage[data-touch-controls=false] .combat-mana-cost{font-size:9px!important;top:23px;right:0}
+@media(max-height:480px){.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar{height:101px;width:440px;padding:39px 27px 10px;gap:7px}.adventure-app .game-stage[data-touch-controls=false] .combat-action{height:52px;min-height:52px;padding-top:3px}.adventure-app .game-stage[data-touch-controls=false] .combat-action-icon,.adventure-app .game-stage[data-touch-controls=false] .combat-action-icon .combat-pixel-icon{width:22px;height:22px}.adventure-app .game-stage[data-touch-controls=false] .combat-action strong{font-size:10px!important}.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana){left:46px;right:46px;height:8px}.adventure-app .game-stage[data-touch-controls=false] .combat-health{top:15px}.adventure-app .game-stage[data-touch-controls=false] .combat-mana{top:27px}.adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana)>span{font-size:9px!important}.adventure-app .adventure-hud .hud-tools{gap:3px}.adventure-app .adventure-hud .hud-tools button{width:24px;min-width:24px;height:26px;min-height:26px;padding:4px}.adventure-app .adventure-hud .level-card{width:150px}.adventure-app .adventure-hud .level-card>strong{font-size:14px!important}.adventure-app .adventure-hud :is(.leg-clock,.boss-bar){padding:4px 7px}.adventure-app .adventure-hud .leg-clock strong{font-size:20px!important}.adventure-app .adventure-hud .boss-bar small{font-size:10px!important}.adventure-app .adventure-hud .boss-armor{font-size:9px!important}}
+.adventure-app .adventure-hud .boss-bar{display:flex;flex-direction:column;justify-content:center;gap:3px;text-align:center;padding:9px 10px 7px}
+.adventure-app .adventure-hud .boss-bar>div:first-child{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:16px!important;line-height:1.1!important}
+.adventure-app .adventure-hud .boss-bar>div:first-child>span{font-size:15px!important;line-height:1.1!important}
+.adventure-app .adventure-hud .boss-bar small{font-size:13px!important;line-height:1.1!important;white-space:nowrap}
+.adventure-app .adventure-hud .boss-bar .health-track{height:5px;flex:none;margin:0}
+.adventure-app .adventure-hud .boss-armor{font-size:11px!important;line-height:1.1!important;margin:0!important}
+@media(max-height:480px){.adventure-app .adventure-hud .boss-bar{padding:5px 7px;gap:2px}.adventure-app .adventure-hud .boss-bar>div:first-child>span{font-size:12px!important}.adventure-app .adventure-hud .boss-bar small{font-size:10px!important}.adventure-app .adventure-hud .boss-armor{font-size:9px!important}}
+/* Place the countdown inside the painted plaque's green well, not its stone rim. */
+.adventure-app .adventure-hud .leg-clock{top:18px!important;height:45px!important;max-height:45px!important;width:24%!important;left:49%!important;padding:0 6px!important;display:grid!important;grid-template-rows:23px 4px 12px;gap:3px;align-content:center;overflow:hidden;background:none!important;border:0!important;box-shadow:none!important}
+.adventure-app .adventure-hud .leg-clock>div:first-child{height:23px;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:8px;overflow:hidden}
+.adventure-app .adventure-hud .leg-clock>div:first-child>span{font-size:13px!important;line-height:1.1!important;letter-spacing:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adventure-app .adventure-hud .leg-clock strong{font-size:25px!important;line-height:23px!important;white-space:nowrap;flex:none;margin:0}
+.adventure-app .adventure-hud .leg-clock strong small{font-size:11px!important;line-height:1!important;margin-left:2px}
+.adventure-app .adventure-hud .leg-clock .leg-track{height:4px!important;min-height:4px;margin:0!important;overflow:hidden;width:100%;background:#384e35}
+.adventure-app .adventure-hud .leg-clock .leg-track i{height:100%;display:block}
+.adventure-app .adventure-hud .leg-clock p{display:block!important;font-size:11px!important;line-height:12px!important;height:12px;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0;color:#d0d8b6}
+.adventure-app .adventure-hud .level-card{justify-content:center}.adventure-app .adventure-hud .hud-tools{align-items:center}
+@media(max-height:480px){.adventure-app .adventure-hud .leg-clock{top:13px!important;height:35px!important;max-height:35px!important;grid-template-rows:18px 3px 10px;gap:2px;padding:0 3px!important}.adventure-app .adventure-hud .leg-clock>div:first-child{height:18px}.adventure-app .adventure-hud .leg-clock>div:first-child>span{font-size:10px!important}.adventure-app .adventure-hud .leg-clock strong{font-size:19px!important;line-height:18px!important}.adventure-app .adventure-hud .leg-clock strong small{font-size:9px!important}.adventure-app .adventure-hud .leg-clock .leg-track{height:3px!important;min-height:3px}.adventure-app .adventure-hud .leg-clock p{font-size:9px!important;line-height:10px!important;height:10px}}

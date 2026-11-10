@@ -32,3 +32,8 @@
 :is(.adventure-app,.modal-backdrop) .setting-row.switch-row>i:before{border-radius:0!important;background:#a29c75!important;border:1px solid #d2bf85!important;box-shadow:1px 1px #283421}
 :is(.adventure-app,.modal-backdrop) .setting-row.switch-row>input:checked+i{background:#ad9445!important;border-color:#ebce80!important}
 :is(.adventure-app,.modal-backdrop) .setting-row.switch-row>input:checked+i:before{background:#f1d584!important}
+/* Painted menu slabs cover the shared button fill: keep their live labels light. */
+.adventure-app .intro-menu-item,.adventure-app .intro-menu-item.selected,.adventure-app .intro-menu-item:hover:not(:disabled),.adventure-app .intro-menu-item:focus-visible{background:none!important;background-image:none!important;color:#f2e3aa!important;-webkit-text-fill-color:#f2e3aa!important;-webkit-text-stroke:0!important;text-shadow:0 2px #14251b!important;font-weight:400!important;filter:none}
+.adventure-app .intro-menu-item.selected,.adventure-app .intro-menu-item:hover:not(:disabled){color:#fff0b4!important;-webkit-text-fill-color:#fff0b4!important;text-shadow:0 2px #14251b!important}
+.adventure-app .intro-menu-item.selected .intro-menu-face,.adventure-app .intro-menu-item:hover:not(:disabled) .intro-menu-face{filter:brightness(1.12)}
+.adventure-app .intro-menu-item:disabled{color:#aaa78c!important;-webkit-text-fill-color:#aaa78c!important;filter:none}
