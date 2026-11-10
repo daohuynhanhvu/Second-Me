@@ -48,3 +48,37 @@ export function TouchJoystick({ engine, vi }: { engine: GameEngine | null; vi: b
     </div>
   </div>;
 }
+
+export type TouchAction = { id: string; name: string; icon: React.ReactNode; cooldown: number; max: number; disabled: boolean; run: () => void };
+
+const HOLD_REPEAT_MS = 170; // holding Cast re-presses at a mashing pace; the combo buffers the presses
+
+/** Round skill buttons for phones: a big Cast button in the corner, the others on a quarter arc around it. */
+export function TouchSkills({ actions, mana, maxMana, manaCost, charges, recording, vi }: {
+  actions: TouchAction[]; mana: number; maxMana: number; manaCost: number; charges: number; recording: boolean; vi: boolean;
+}) {
+  const hold = useRef<number | undefined>(undefined);
+  const stop = () => { window.clearInterval(hold.current); hold.current = undefined; };
+  useEffect(() => stop, []);
+  return <div className={`touch-skills${recording ? ' is-recording' : ''}`} role="group" aria-label={vi ? 'Chiêu và điều khiển chiến đấu' : 'Combat abilities and controls'}>
+    <div className="touch-mana" role="meter" aria-label="MP" aria-valuenow={Math.floor(mana)} aria-valuemin={0} aria-valuemax={maxMana}>
+      <i style={{ width: `${mana / maxMana * 100}%` }}/><span>MP {Math.floor(mana)}</span>
+    </div>
+    {actions.map(a => <button key={a.id} type="button" className={`touch-skill skill-${a.id}${a.cooldown > 0 ? ' is-recovering' : ''}`} disabled={a.disabled}
+      style={{ '--cd': a.cooldown > 0 ? Math.min(1, a.cooldown / a.max) : 0 } as React.CSSProperties}
+      aria-label={`${a.name}${a.cooldown > 0 ? ` · ${a.cooldown.toFixed(1)}s` : ''}`}
+      onPointerDown={e => {
+        // Act on touch-down, like a game pad; keep the press away from the canvas (tap-to-attack) and the stick.
+        e.preventDefault(); e.stopPropagation();
+        a.run();
+        if (a.id === 'attack') { stop(); hold.current = window.setInterval(a.run, HOLD_REPEAT_MS); e.currentTarget.setPointerCapture(e.pointerId); }
+      }}
+      onPointerUp={stop} onPointerCancel={stop} onLostPointerCapture={stop}
+      onClick={e => { if (e.detail === 0) a.run(); }}>
+      <span className="touch-skill-icon">{a.icon}</span>
+      {a.cooldown > 0 && <b className="touch-skill-timer">{a.cooldown.toFixed(a.cooldown < 1 ? 1 : 0)}</b>}
+      {a.id === 'echo' && <b className="touch-skill-badge">{charges}</b>}
+      {a.id === 'skill' && <small className="touch-skill-cost">{manaCost}</small>}
+    </button>)}
+  </div>;
+}

@@ -7,6 +7,15 @@
     -webkit-user-select: none;
   }
 
+  /* The page itself never scrolls, rubber-bands or double-tap zooms: only the game moves. */
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
   body {
     margin: 0;
     padding: 0;

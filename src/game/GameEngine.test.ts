@@ -126,7 +126,7 @@ test('holding E cannot stop and restart a recording through key repeat', () => {
   assert.equal(engine.recorder.getStatus(), 'recorded');
 });
 
-test('E records, Q summons, Space uses skill, and F spends one time item', t => {
+test('E records, Q summons, Space uses skill, and R spends one time item', t => {
   mockDocument(t);
   const { engine, controls } = setup();
   engine.restartLevel();
@@ -141,7 +141,7 @@ test('E records, Q summons, Space uses skill, and F spends one time item', t => 
   assert.ok(engine.skillCooldown > 0);
   engine.campaign.timeItems=1;
   const before=engine.legTimeRemaining!;
-  press('f','KeyF');
+  press('r','KeyR');
   assert.equal(engine.campaign.timeItems,0);
   assert.equal(engine.legTimeRemaining,before+2);
   press('j','KeyJ');

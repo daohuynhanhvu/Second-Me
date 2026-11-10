@@ -1,6 +1,7 @@
 import './components/ForestDialogs.css';
 import {LandscapeGate} from './components/LandscapeGate.tsx';
 import {readLandscapeRequirement} from './game/logic/orientation.ts';
+import { installScreenControls, FullscreenButton } from './components/FullscreenButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, readSavedSettings, type HUDState } from './game/GameEngine.ts';
 import { Intro, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
@@ -14,6 +15,7 @@ const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:
   completed:[], forged:false, lastReward:null, health:100, bossHp:0, bossPhase:0, attackCooldown:0, dodgeCooldown:0, legTimeRemaining:null, checkpointIndex:0, checkpointCount:0, slowed:false, defeatReason:'damage', volume:.25, effectsVolume:1, musicVolume:1, voiceVolume:1, reducedMotion:false, showHints:true, devUnlocked:false, language:'en', characterClass:'mage', weapon:'staff', coins:0, timeItems:0, limitRings:0, chestKeys:0, echoLimit:4, limitRingActive:false, bestStars:{}, lastRating:null, skillCooldown:0, bossArmor:0, pillarsRemaining:0, activeBuff:'', skillDrop:null, mechanicalOwned:false };
 export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngine) => void } = {}) {
   const [portraitBlocked,setPortraitBlocked]=useState(readLandscapeRequirement);
+  useEffect(() => installScreenControls(), []);
   const canvas = useRef<HTMLCanvasElement>(null);
   const ref = useRef<GameEngine | null>(null);
   // The saved language (and motion setting) from the first frame: the intro plays before the engine reports in.
@@ -54,6 +56,8 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     {hud.screen === 'victory' && <Completion engine={engine} hud={hud}/>}
     {hud.screen === 'forge' && <Forge engine={engine} hud={hud}/>}
     {(hud.screen === 'ending' || hud.screen === 'defeat') && <EndScreen engine={engine} hud={hud}/>}
+    {/* Lobby and play have it in their toolbars; the loading transition stays clean (F still works). */}
+    {!['lobby', 'playing', 'loading'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
     {hud.screen === 'paused' && <div className="modal-backdrop"><div className="panel pause-panel"><span className="eyebrow gold">MỘT KHOẢNG LẶNG</span><h2>Tạm dừng</h2><button className="primary" onClick={()=>engine?.resumeGame()}>TIẾP TỤC</button><button className="secondary" onClick={()=>engine?.restartLevel()}>CHƠI LẠI MÀN</button><button className="text-button" onClick={()=>engine?.goToLobby()}>VỀ SẢNH</button></div></div>}
   </div></main>);
 }

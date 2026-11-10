@@ -1634,7 +1634,7 @@ export class GameEngine {
       if (key === 'c') { this.pauseEcho(); return; }
       if (code === 'Space') { this.useSkill(); return; }
       if (code === 'ShiftLeft' || code === 'ShiftRight') { this.dodge(); return; }
-      if (key === 'f') { this.useTimeItem(); return; }
+      if (key === 'r') { this.useTimeItem(); return; }  // F is full screen (FullscreenButton.tsx)
       if (key === 'e') {
         this.toggleRecording();
       } else if (key === 'q') {

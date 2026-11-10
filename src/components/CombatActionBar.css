@@ -10,10 +10,3 @@
 @media(max-height:480px),(max-width:760px){.combat-action-bar{right:7px;bottom:7px;gap:4px;padding:4px}.combat-action{width:70px;min-height:62px;padding:3px 2px 6px}.combat-action kbd{font-size:10px!important}.combat-action strong{font-size:14px!important}.combat-action-icon{height:21px}.combat-action-icon>svg{width:19px;height:19px}.combat-action-timer{font-size:20px}}
 .combat-action-bar{padding-top:27px}.combat-mana{position:absolute;top:5px;left:6px;right:6px;height:17px;background:#07131e;border:1px solid #507c9b;overflow:hidden}.combat-mana>i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#2356a6,#57b3df);z-index:0}.combat-mana>span{position:relative;display:block;z-index:1;text-align:center;font-size:16px;line-height:15px;color:#f1faff;text-shadow:1px 1px #061629}.combat-mana b{font-weight:400;color:#e3faff}.combat-mana-cost{font-size:13px;line-height:1;color:#9ed9fa}.combat-action{min-height:82px}@media(max-height:480px),(max-width:760px){.combat-action-bar{padding-top:24px}.combat-mana{height:15px}.combat-mana>span{font-size:14px;line-height:13px}.combat-action{min-height:70px}.combat-mana-cost{font-size:12px}}
 
-/* Touch: no key hints (the room they took above the slots goes too); the record slot glows red while recording. */
-.combat-action-bar.is-touch{padding-top:5px}
-.combat-action-bar.is-touch .combat-action{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.combat-action-bar.is-recording .action-record{border-color:#e05a4a;color:#ffd0c8}
-.combat-action-bar.is-recording .action-record .combat-action-icon{color:#ff6a55;animation:record-blink 1s steps(1) infinite}
-@keyframes record-blink{50%{opacity:.35}}
-@media(prefers-reduced-motion:reduce){.combat-action-bar.is-recording .action-record .combat-action-icon{animation:none}}

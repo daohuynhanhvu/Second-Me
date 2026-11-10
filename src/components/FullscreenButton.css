@@ -1,0 +1,9 @@
+/* Floating full-screen toggle for screens without a toolbar (main menu, hero select, shop, pause, results).
+   Top-left corner, above their panels and modals; same pixel stone as the lobby buttons. */
+.fullscreen-toggle.is-floating{position:fixed;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));z-index:70;
+  width:40px;height:40px;display:grid;place-items:center;padding:0;cursor:pointer;color:#efe3bd;background:#2b3a2ce6;border:3px solid #050d08;border-radius:0;
+  box-shadow:inset 3px 3px 0 #5d7556,inset -3px -3px 0 #121c14;
+  clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))}
+.fullscreen-toggle.is-floating:hover{background:#3a4d38;color:#fff0b0}
+.fullscreen-toggle.is-floating:active{transform:translateY(2px);box-shadow:inset 3px 3px 0 #121c14,inset -3px -3px 0 #5d7556}
+.fullscreen-toggle.is-floating:focus-visible{outline:none;border-color:#e6c46e}  /* an outline would be cut by the notched clip-path */
