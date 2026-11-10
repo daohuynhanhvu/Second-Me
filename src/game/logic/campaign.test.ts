@@ -240,10 +240,10 @@ test('boss volleys have a warning, multiple waves and a safe recovery',()=>{
  const boss=createBoss(),player={x:300,y:350};boss.attackIndex=1;boss.timer=0;
  updateBoss(boss,player,.05,false);assert.equal(boss.attack,'volley');assert.equal(boss.mode,'warning');assert.equal(boss.projectiles.length,0);
  updateBoss(boss,player,1.2,false);assert.equal(boss.mode,'strike');
- updateBoss(boss,player,.21,false);const first=boss.projectiles.length;assert.equal(first,24);assert.equal(boss.iceRays.length,0);
+ updateBoss(boss,player,.21,false);const first=boss.projectiles.length;assert.equal(first,36);assert.equal(boss.iceRays.length,0);
  updateBoss(boss,player,.46,false);assert.ok(boss.projectiles.length>first);
- for(let i=0;i<35;i++)updateBoss(boss,player,.05,false);
- assert.equal(boss.mode,'recover');assert.equal(boss.projectiles.length,0);assert.equal(boss.burstRemaining,0);
+ for(let i=0;i<48;i++)updateBoss(boss,player,.05,false);
+ assert.equal(boss.mode,'recover');assert.ok(boss.projectiles.length>0,'far-traveling missiles persist during recovery');assert.equal(boss.burstRemaining,0);
 });
 
 test('combat Echo pursues and automatically damages an exposed boss',t=>{

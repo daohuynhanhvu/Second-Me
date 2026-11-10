@@ -1,3 +1,4 @@
+import {drawGuardianShield} from './guardianShield.ts';
 import {drawIceProjectile} from './iceProjectile.ts';
 import { drawSkillPickup } from './skillPickup.ts';
 import {drawWizardSprite} from './wizardSprite.ts';
@@ -107,8 +108,9 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
     const bossTarget = (Math.floor((boss.attackIndex??0)/2)%2===0?game.echoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player;
     const walking = boss.mode === 'stalking' && Math.hypot(bossTarget.x - boss.x, bossTarget.y - boss.y) > 85;
+    drawGuardianShield(ctx,boss,time,game.reducedMotion,false);
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, bossTarget.x > boss.x, walking);
-    if(boss.armor>0) {ctx.strokeStyle='#91e8ff';ctx.lineWidth=4;ctx.beginPath();ctx.arc(boss.x,boss.y,64,0,Math.PI*2);ctx.stroke();}
+    drawGuardianShield(ctx,boss,time,game.reducedMotion,true);
 
   }
     if (game.characterClass === 'swordsman' && game.attackFlash > 0) {
