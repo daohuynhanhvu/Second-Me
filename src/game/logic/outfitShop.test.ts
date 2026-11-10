@@ -29,3 +29,16 @@ test('engine enforces shop purchase and outfit equip boundaries',()=>{
  const e=new GameEngine();e.campaign.coins=200;e.campaign.ownedOutfits=[];e.screen='playing';assert.equal(e.buyOutfit('ice-knight'),false);assert.equal(e.setCharacterOutfit('swordsman','ice-knight'),false);
  e.screen='shop';assert.equal(e.setCharacterOutfit('swordsman','ice-knight'),false);assert.equal(e.buyOutfit('ice-knight'),true);assert.equal(e.setCharacterOutfit('mage','ice-knight'),false);assert.equal(e.setCharacterOutfit('swordsman','ice-knight'),true);assert.equal(e.buyOutfit('ice-knight'),false);assert.equal(e.campaign.coins,100);e.setCharacterOutfit('swordsman','default');
 });
+
+test('legacy Frostbound and Ember require separate purchases for each hero while Woodland stays gifted',()=>{
+ const c=new Campaign();c.coins=240;
+ for(const hero of ['mage','swordsman'] as const){
+  assert.equal(canWearOutfit(hero,'default',c.ownedOutfits),true);
+  assert.equal(canWearOutfit(hero,'woodland',c.ownedOutfits),true);
+  assert.equal(canWearOutfit(hero,'frost',c.ownedOutfits),false);
+  assert.equal(canWearOutfit(hero,'ember',c.ownedOutfits),false);
+ }
+ for(const id of ['mage-frost','mage-ember','swordsman-frost','swordsman-ember'] as const){assert.equal(c.buyOutfit(id),true);assert.equal(c.buyOutfit(id),false);}
+ assert.equal(c.coins,0);
+ for(const hero of ['mage','swordsman'] as const)for(const outfit of ['frost','ember'] as const)assert.equal(canWearOutfit(hero,outfit,c.ownedOutfits),true);
+});
