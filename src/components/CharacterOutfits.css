@@ -15,3 +15,11 @@
 .outfit-large-preview>div{padding-top:8px;box-sizing:border-box;overflow:hidden}
 .outfit-large-preview>div>canvas{height:calc(100% - 16px);max-height:100%;object-fit:contain}
 @media(max-height:480px){.outfit-large-preview>div{padding-top:5px}.outfit-large-preview>div>canvas{height:calc(100% - 10px)}}
+/* Keep outfit cards inside the illustrated frame and match the inventory scroller. */
+.outfit-collection{padding:12px 13px 14px}
+.outfit-options{grid-template-rows:none;grid-auto-rows:minmax(96px,1fr);align-content:start;gap:9px;overflow-y:auto;overflow-x:hidden;min-height:0;padding:4px 12px 10px 4px;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#b3a26c #2d3227;overscroll-behavior:contain}
+.outfit-options::-webkit-scrollbar{width:10px}
+.outfit-options::-webkit-scrollbar-track{background:#2d3227;border:1px solid #536047}
+.outfit-options::-webkit-scrollbar-thumb{background:#b3a26c;border:2px solid #2d3227;border-radius:6px}
+.outfit-options::-webkit-scrollbar-thumb:hover{background:#d1be80}
+@media(max-height:480px){.outfit-collection{padding:7px 9px 10px}.outfit-options{grid-auto-rows:minmax(75px,1fr);gap:6px;padding:3px 9px 8px 3px}}
