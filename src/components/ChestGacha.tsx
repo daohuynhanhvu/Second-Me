@@ -32,7 +32,7 @@ export function ChestGacha({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   const draw=(count:1|10)=>{
     if(busy.current||!engine)return;
     const rewards=engine.openChest(count);if(!rewards)return;
-    busy.current=true;setResults(rewards);setTier(rewards.includes('ring')?'fire':'gold');setOpening(true);setRun(n=>n+1);
+    busy.current=true;setResults(rewards);setTier(rewards.some(id=>CHEST_POOL.find(item=>item.id===id)?.tier==='fire')?'fire':'gold');setOpening(true);setRun(n=>n+1);
   };
   return <>
     <button className="shop-reward-chest" ref={trigger} aria-label={vi?'Mở rương thưởng':'Open reward chest'} onClick={()=>setOpen(true)}><ChestSprite/></button>

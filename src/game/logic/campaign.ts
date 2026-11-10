@@ -137,7 +137,14 @@ export class Campaign {
     if((count!==1&&count!==10)||this.chestKeys<count*5)return null;
     const rewards=Array.from({length:count},()=>rollChest(random));
     this.chestKeys-=count*5;
-    for(const id of rewards){if(id==='coins5')this.coins+=5;else if(id==='coins15')this.coins+=15;else if(id==='time')this.timeItems++;else this.limitRings++;}
+    for(const id of rewards){
+      if(id==='coins5')this.coins+=5;
+      else if(id==='coins15')this.coins+=15;
+      else if(id==='coins30')this.coins+=30;
+      else if(id==='coins100')this.coins+=100;
+      else if(id==='time')this.timeItems++;
+      else this.supplies[id]++;
+    }
     this.lastChestRewards=rewards;this.save();return [...rewards];
   }
   recordHeroClear(hero:string,level:number){

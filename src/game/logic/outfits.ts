@@ -31,12 +31,12 @@ export function outfitPixel(r:number,g:number,b:number,hero:OutfitHero,id:Outfit
 }
 
 export const SHOP_OUTFITS = [
- {id:'mage-frost',outfit:'frost',hero:'mage',price:60,cap:1,rarity:'basic',vi:'Pháp sư Băng giá',en:'Mage Frostbound',color:'#8cdef1',detailVi:'Trang phục Băng giá dành cho Pháp sư.',detailEn:'Frostbound outfit for the Mage.'},
- {id:'mage-ember',outfit:'ember',hero:'mage',price:60,cap:1,rarity:'basic',vi:'Pháp sư Than hồng',en:'Mage Ember',color:'#edaa7e',detailVi:'Trang phục Than hồng dành cho Pháp sư.',detailEn:'Ember outfit for the Mage.'},
- {id:'swordsman-frost',outfit:'frost',hero:'swordsman',price:60,cap:1,rarity:'basic',vi:'Kiếm sĩ Băng giá',en:'Swordsman Frostbound',color:'#8cdef1',detailVi:'Trang phục Băng giá dành cho Kiếm sĩ.',detailEn:'Frostbound outfit for the Swordsman.'},
- {id:'swordsman-ember',outfit:'ember',hero:'swordsman',price:60,cap:1,rarity:'basic',vi:'Kiếm sĩ Than hồng',en:'Swordsman Ember',color:'#edaa7e',detailVi:'Trang phục Than hồng dành cho Kiếm sĩ.',detailEn:'Ember outfit for the Swordsman.'},
- {id:'ice-knight',outfit:'ice-knight',hero:'swordsman',price:100,cap:1,rarity:'intermediate',vi:'Kiếm sĩ Băng Lam',en:'Iceblade Knight',color:'#8cdef1',detailVi:'Tóc vàng, giáp băng xanh, áo choàng navy và kiếm băng. Đòn chém cùng kỹ năng mang sắc băng lam.',detailEn:'Blond hair, icy blue armor, navy cape and ice sword. Slashes and skills share an icy blue palette.'},
- {id:'void-knight',outfit:'void-knight',hero:'swordsman',price:100,cap:1,rarity:'intermediate',vi:'Kiếm sĩ Hắc Diệm',en:'Voidflame Knight',color:'#b773f4',detailVi:'Tóc bạc, giáp đen, áo choàng tím và kiếm hắc diệm. Đòn chém cùng kỹ năng mang sắc lửa tím.',detailEn:'Silver hair, black armor, purple cape and void blade. Slashes and skills share a purple flame palette.'},
+ {id:'mage-frost',outfit:'frost',hero:'mage',price:60,cap:1,rarity:'common',vi:'Pháp sư Băng giá',en:'Mage Frostbound',color:'#8cdef1',detailVi:'Trang phục Băng giá dành cho Pháp sư.',detailEn:'Frostbound outfit for the Mage.'},
+ {id:'mage-ember',outfit:'ember',hero:'mage',price:60,cap:1,rarity:'common',vi:'Pháp sư Than hồng',en:'Mage Ember',color:'#edaa7e',detailVi:'Trang phục Than hồng dành cho Pháp sư.',detailEn:'Ember outfit for the Mage.'},
+ {id:'swordsman-frost',outfit:'frost',hero:'swordsman',price:60,cap:1,rarity:'common',vi:'Kiếm sĩ Băng giá',en:'Swordsman Frostbound',color:'#8cdef1',detailVi:'Trang phục Băng giá dành cho Kiếm sĩ.',detailEn:'Frostbound outfit for the Swordsman.'},
+ {id:'swordsman-ember',outfit:'ember',hero:'swordsman',price:60,cap:1,rarity:'common',vi:'Kiếm sĩ Than hồng',en:'Swordsman Ember',color:'#edaa7e',detailVi:'Trang phục Than hồng dành cho Kiếm sĩ.',detailEn:'Ember outfit for the Swordsman.'},
+ {id:'ice-knight',outfit:'ice-knight',hero:'swordsman',price:100,cap:1,rarity:'refined',vi:'Kiếm sĩ Băng Lam',en:'Iceblade Knight',color:'#8cdef1',detailVi:'Tóc vàng, giáp băng xanh, áo choàng navy và kiếm băng. Đòn chém cùng kỹ năng mang sắc băng lam.',detailEn:'Blond hair, icy blue armor, navy cape and ice sword. Slashes and skills share an icy blue palette.'},
+ {id:'void-knight',outfit:'void-knight',hero:'swordsman',price:100,cap:1,rarity:'refined',vi:'Kiếm sĩ Hắc Diệm',en:'Voidflame Knight',color:'#b773f4',detailVi:'Tóc bạc, giáp đen, áo choàng tím và kiếm hắc diệm. Đòn chém cùng kỹ năng mang sắc lửa tím.',detailEn:'Silver hair, black armor, purple cape and void blade. Slashes and skills share a purple flame palette.'},
 ] as const;
 export type ShopOutfitId=typeof SHOP_OUTFITS[number]['id'];
 export const isShopOutfit=(id:unknown):id is 'ice-knight'|'void-knight'=>id==='ice-knight'||id==='void-knight';
