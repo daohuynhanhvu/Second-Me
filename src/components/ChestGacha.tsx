@@ -44,11 +44,10 @@ export function ChestGacha({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
       <div className="chest-draw-buttons"><button disabled={opening||hud.chestKeys<5} onClick={()=>draw(1)}><span className="chest-draw-title">{vi?'MỞ':'OPEN'} ×1</span><span className="chest-draw-cost"><ChestKeyIcon size={20}/>5 {vi?'chìa khóa':'keys'}</span></button><button disabled={opening||hud.chestKeys<50} onClick={()=>draw(10)}><span className="chest-draw-title">{vi?'MỞ':'OPEN'} ×10</span><span className="chest-draw-cost"><ChestKeyIcon size={20}/>50 {vi?'chìa khóa':'keys'}</span></button></div>
       {hud.chestKeys<5&&<p>{vi?'Chưa đủ chìa khóa để mở rương.':'Not enough keys to open the chest.'}</p>}
       <button className="chest-rate-toggle" type="button" aria-expanded={showRates} aria-controls="chest-rates" onClick={()=>setShowRates(value=>!value)}>{vi?(showRates?'Ẩn tỉ lệ':'Xem tỉ lệ'):(showRates?'Hide rates':'View rates')}</button>
-      {showRates&&<aside className="chest-rates" id="chest-rates" aria-label={vi?'Tỉ lệ phần thưởng':'Reward probabilities'}>
+    </section>{showRates&&<aside className="chest-rates" id="chest-rates" aria-label={vi?'Tỉ lệ phần thưởng':'Reward probabilities'} onClick={e=>e.stopPropagation()}>
         <strong>{vi?'Tỉ lệ thưởng':'Drop rates'}</strong>
         <ul>{CHEST_POOL.filter(item=>item.weight>0).map(item=><li key={item.id}><span>{vi?item.vi:item.en}</span><b>{item.weight}%</b></li>)}</ul>
         <small>{vi?'Mỗi lượt tính riêng, kể cả mở ×10.':'Each draw rolls separately, including ×10.'}</small>
-      </aside>}
-    </section></div>}
+      </aside>}</div>}
   </>;
 }
