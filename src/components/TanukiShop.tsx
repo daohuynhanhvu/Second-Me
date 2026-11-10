@@ -7,7 +7,6 @@ import {rarityName,RARITY_COLORS} from '../game/logic/rarity.ts';
 import type {GameEngine,HUDState} from '../game/GameEngine.ts';
 import './tanukiTradingPost.css';
 const displayItems=[...SHOP_ITEMS.filter(i=>i.id==='time'||i.id==='ring'),...SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring'&&i.id!=='aid')];
-const poseOffsets=[[0,0],[18,-2],[7,6],[18,6]];
 const shopGreetings={
  vi:[
   'Xin chào! Bạn muốn mua gì nào?',
@@ -54,26 +53,36 @@ export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
  useEffect(()=>{
   let mounted=true;
   const load=(src:string)=>new Promise<void>(resolve=>{const image=new Image();image.onload=()=>resolve();image.onerror=()=>resolve();image.src=src;if(image.complete)resolve();});
-  void Promise.all([load(asset('tanuki-market-sunset.png')),load(asset('tanuki-merchant-poses.png'))]).then(()=>{if(mounted)setReady(true);});
+  void Promise.all([load(asset('tanuki-market-sunset.png')),load(asset('tanuki-merchant-expressions.png'))]).then(()=>{if(mounted)setReady(true);});
   return()=>{mounted=false;};
  },[]);
  useEffect(()=>{
   if(!ready)return;
   setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;
-  setPose(hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:2);
+  setPose(hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:6);
  },[ready]);
- useEffect(()=>{if(!ready||hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;let tick=0;const interval=window.setInterval(()=>{tick++;if(performance.now()>=reactionUntil.current)setPose(tick%32===30?1:0);},160);return()=>window.clearInterval(interval);},[ready,hud.reducedMotion]);
+ useEffect(()=>{
+  if(!ready)return;
+  const interval=window.setInterval(()=>{
+   const idleMs=performance.now()-reactionUntil.current;
+   if(idleMs<0)return;
+   if(hud.reducedMotion||window.matchMedia('(prefers-reduced-motion: reduce)').matches){setPose(0);return;}
+   const beat=Math.floor(idleMs/160)%170;
+   setPose(beat<60?(beat%26===24?1:0):beat<100?(beat>=86&&beat<94?3:2):beat<130?4:beat<160?5:0);
+  },160);
+  return()=>window.clearInterval(interval);
+ },[ready,hud.reducedMotion]);
  useEffect(()=>{if(!ready||!speech)return;const timeout=window.setTimeout(()=>setSpeech(false),7000);return()=>window.clearTimeout(timeout);},[ready,speech,message,greetingRun]);
  useEffect(()=>{if(!confirm)return;dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}else if(e.key==='Tab'){const nodes=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input')??[]),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);},[confirm]);
  const select=(id:ShopItemId)=>{setSelected(id);setQuantity(1);setMessage('');};
  const purchase=()=>{
   if(selected==='aid'||!unlocked||quantity<1||quantity>maxQuantity||!engine?.buyShopItem(selected,quantity)){setMessage(vi?'Không thể mua. Kiểm tra xu và chỗ trống trong túi.':'Cannot purchase. Check your coins and inventory capacity.');setSpeech(true);setGreetingRun(n=>n+1);return;}
-  setMessage(vi?`Đã nhận ${quantity} × ${item.vi}. Cảm ơn bạn!`:`Received ${quantity} × ${item.en}. Thank you!`);reactionUntil.current=performance.now()+1500;setPose(3);setSpeech(true);setGreetingRun(n=>n+1);close();
+  setMessage(vi?`Đã nhận ${quantity} × ${item.vi}. Cảm ơn bạn!`:`Received ${quantity} × ${item.en}. Thank you!`);reactionUntil.current=performance.now()+1500;setPose(7);setSpeech(true);setGreetingRun(n=>n+1);close();
  };
  return <div className="tanuki-trading-shop" ref={viewport}><div className="trading-world" style={{transform:`translate(-50%,-50%) scale(${scale})`}}>
   <img className="trading-background" src={asset('tanuki-market-sunset.png')} alt=""/>
   <div className="trading-fireflies" aria-hidden="true"><i/><i/><i/><i/></div>
-  <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setGreetingIndex(index=>(index+1+Math.floor(Math.random()*(shopGreetings.vi.length-1)))%shopGreetings.vi.length);setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(2);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-poses.png')})`,backgroundPosition:`${pose%2*100}% ${Math.floor(pose/2)*100}%`,transform:`translate(${poseOffsets[pose][0]}px,${poseOffsets[pose][1]}px)`}}/></button>
+  <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setGreetingIndex(index=>(index+1+Math.floor(Math.random()*(shopGreetings.vi.length-1)))%shopGreetings.vi.length);setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(6);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-expressions.png')})`,backgroundPosition:`${pose%4*100/3}% ${Math.floor(pose/4)*100}%`}}/></button>
   {/* The counter in front of Tanuki: the same painting, cut to the counter, so Tanuki stands behind it. */}
   <div className="trading-counter-front" aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-market-sunset.png')})`}}/>
   {ready&&speech&&<div className="trading-speech" role="status">{message||(vi?shopGreetings.vi[greetingIndex]:shopGreetings.en[greetingIndex])}</div>}
