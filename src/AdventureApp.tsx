@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, readSavedSettings, type HUDState } from './game/GameEngine.ts';
 import { Intro, Lobby, Shop, Characters, AdventureHUD, Completion, Forge, EndScreen } from './components/CampaignUI.tsx';
 import { CinematicIntro } from './components/CinematicIntro.tsx';
+import { StudioSplash } from './components/StudioSplash.tsx';
 import { LoadingScreen } from './components/LoadingScreen.tsx';
 import { localize } from './localize.tsx';
 import { MechanicGuide } from './components/MechanicGuide.tsx';
@@ -21,6 +22,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   // The saved language (and motion setting) from the first frame: the intro plays before the engine reports in.
   const [hud, setHud] = useState<HUDState>(() => ({ ...initial, ...readSavedSettings() }));
   const [introRun, setIntroRun] = useState(1);
+  const [splash, setSplash] = useState(true);   // the studio card, once per page load, before the intro film
   const [portalFlash, setPortalFlash] = useState(0);   // the loading portal's closing flash, fading over the next screen // 0 = not playing; bump to (re)play the cinematic
   useEffect(() => {
     const engine = new GameEngine(); ref.current = engine;
@@ -37,13 +39,14 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     const media=window.matchMedia('(pointer: coarse)');window.addEventListener('resize',update);window.addEventListener('orientationchange',update);media.addEventListener('change',update);
     return()=>{window.removeEventListener('resize',update);window.removeEventListener('orientationchange',update);media.removeEventListener('change',update);};
   },[]);
-  const filmPlaying = hud.screen === 'intro' && introRun > 0;
+  const filmPlaying = hud.screen === 'intro' && (splash || introRun > 0);
   useEffect(() => { if (ref.current) ref.current.suspendVisuals = filmPlaying; }, [filmPlaying]);
   const engine = ref.current;
   const lang = hud.language === 'vi' ? 'vi' : 'en';
   return localize(<main className="adventure-app" lang={hud.language} translate="no">{portraitBlocked&&<LandscapeGate vi={hud.language==='vi'}/>}<div className="game-stage" data-screen={hud.screen} inert={portraitBlocked}><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
     {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
-    {hud.screen === 'intro' && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} paused={portraitBlocked} onDone={() => setIntroRun(0)}/>}
+    {hud.screen === 'intro' && splash && <StudioSplash paused={portraitBlocked} onDone={() => setSplash(false)}/>}
+    {hud.screen === 'intro' && !splash && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} paused={portraitBlocked} onDone={() => setIntroRun(0)}/>}
     {hud.screen === 'loading' && <LoadingScreen key={hud.loadingLevel ?? 'lobby'} language={lang} reducedMotion={hud.reducedMotion}
       level={hud.loadingLevel == null ? null : { levelId: hud.loadingLevel, character: hud.characterClass, lang }} portal={!!hud.loadingFromMenu}
       onReveal={() => ref.current?.revealLoadedLevel()} onDone={flash => { if (flash) setPortalFlash(n => n + 1); ref.current?.finishLoading(); }}/>}

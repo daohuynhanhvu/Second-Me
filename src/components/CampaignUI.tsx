@@ -76,7 +76,7 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
     // Capture phase, so Enter opens the chosen item instead of the engine's "Enter = start".
     const onKey = (event: KeyboardEvent) => {
       const m = menu.current;
-      if (m.panel !== 'none' || document.querySelector('.cinematic-intro')) return;
+      if (m.panel !== 'none' || document.querySelector('.cinematic-intro, .studio-splash')) return;
       const step = event.key === 'ArrowDown' || event.key === 's' ? 1 : event.key === 'ArrowUp' || event.key === 'w' ? -1 : 0;
       if (step) {
         event.preventDefault();

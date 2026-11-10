@@ -1,0 +1,9 @@
+/* Studio card (StudioSplash.tsx). The screen is the logo picture's own near-black, and the picture's edges are
+   feathered into it, so no rectangle shows around the logo on any screen shape. */
+.studio-splash{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:#030a13;cursor:pointer;
+  user-select:none;-webkit-user-select:none;touch-action:none}
+.studio-splash img{width:min(100vw,calc(100dvh * 1376 / 768));height:auto;opacity:0;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);
+  mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);
+  transition:opacity var(--fade-out) ease-in}
+.studio-splash.is-shown img{opacity:1;transition:opacity var(--fade-in) ease-out}

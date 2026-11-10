@@ -26,8 +26,8 @@ export function MenuWizard() {
     played = true;
     let frame = 0, start = 0;
     const tick = (now: number) => {
-      // The menu mounts under the cinematic intro (AdventureApp); start the clock once the film is gone.
-      if (!start && document.querySelector('.cinematic-intro')) { apply(wizardPose(0)); frame = requestAnimationFrame(tick); return; }
+      // The menu mounts under the studio card and the intro film (AdventureApp); start the clock once both are gone.
+      if (!start && document.querySelector('.cinematic-intro, .studio-splash')) { apply(wizardPose(0)); frame = requestAnimationFrame(tick); return; }
       start ||= now;
       const p = wizardPose((now - start) / 1000);
       apply(p);
