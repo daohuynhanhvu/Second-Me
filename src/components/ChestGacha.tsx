@@ -35,8 +35,8 @@ export function ChestGacha({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   };
   return <>
     <button className="shop-reward-chest" ref={trigger} aria-label={vi?'Mở rương đỏ':'Open red chest'} onClick={()=>setOpen(true)}><ChestSprite/><span>{vi?'RƯƠNG ĐỎ':'RED CHEST'}</span></button>
-    {open&&<div className="chest-backdrop" onClick={close}><section className="chest-panel" role="dialog" aria-modal="true" aria-labelledby="red-chest-heading" onClick={e=>e.stopPropagation()}>
-      <header><h2 id="red-chest-heading">{vi?'RƯƠNG ĐỎ':'RED CHEST'}</h2><button ref={closeButton} aria-label={vi?'Đóng rương':'Close chest'} onClick={close}>×</button></header>
+    {open&&<div className="chest-backdrop" onClick={close}><section className="chest-panel" role="dialog" aria-modal="true" aria-label={vi?'Rương thưởng':'Reward chest'} onClick={e=>e.stopPropagation()}>
+      <header><button ref={closeButton} aria-label={vi?'Đóng rương':'Close chest'} onClick={close}>×</button></header>
       <p className="chest-key-balance"><ChestKeyIcon size={28}/> {hud.chestKeys} {vi?'chìa khóa':'keys'}</p>
       <div className="chest-display"><ChestSprite key={run} tier={tier} reducedMotion={hud.reducedMotion}/></div>
       <div className="chest-results" aria-live="polite">{opening?<p>{vi?'Đang mở rương…':'Opening…'}</p>:results.length?<><p>{vi?'Đã nhận vào túi đồ':'Added to your inventory'}</p><ul>{CHEST_POOL.map(item=>{const count=results.filter(id=>id===item.id).length;return count?<li key={item.id} className={`chest-tier-${item.tier}`}>{vi?item.vi:item.en} ×{count}</li>:null;})}</ul></>:<p>{vi?'Mỗi lượt nhận một phần thưởng.':'One reward per draw.'}</p>}</div>
