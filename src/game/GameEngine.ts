@@ -377,7 +377,7 @@ export class GameEngine {
     for(const hero of ['mage','swordsman'] as const)if(!canWearOutfit(hero,getOutfits()[hero],this.campaign.ownedOutfits))equipOutfit(hero,'default');
     this.loadSettings();
     setCurrentLanguage(this.language);
-    if (typeof document !== 'undefined') document.title = this.language === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge';
+    if (typeof document !== 'undefined') document.title = 'SECOND ME — Vọng Ảnh';
     this.currentLevel = this.cloneLevel(LEVELS[0]);
     this.initPlayer();
   }
@@ -713,7 +713,7 @@ export class GameEngine {
     this.saveSettings(); this.notifyHUD();
   }
   public setShowHints(value: boolean) { this.showHints = value; this.saveSettings(); this.notifyHUD(); }
-  public setLanguage(value: Language) { this.language = value; setCurrentLanguage(value); voice.lang = value; if (typeof document !== 'undefined') document.title = value === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge'; this.saveSettings(); this.notifyHUD(); }
+  public setLanguage(value: Language) { this.language = value; setCurrentLanguage(value); voice.lang = value; if (typeof document !== 'undefined') document.title = 'SECOND ME — Vọng Ảnh'; this.saveSettings(); this.notifyHUD(); }
 
   public unlockDevMode() {
     this.devUnlocked = true;
