@@ -9,3 +9,12 @@
 .chest-draw-buttons button:disabled{opacity:.6}
 .chest-results{min-height:60px}
 @media(max-width:480px){.chest-draw-buttons{gap:12px}.chest-draw-buttons button{padding:12px 8px;min-height:78px}.chest-draw-title{font-size:15px}.chest-draw-cost{font-size:11px;gap:5px}}
+.chest-panel{position:relative;padding-bottom:62px}
+.chest-panel .chest-rate-toggle{position:absolute;left:24px;bottom:16px;padding:6px 11px;font-size:15px;line-height:1.2;white-space:nowrap}
+.chest-rates{position:absolute;left:24px;top:118px;width:150px;box-sizing:border-box;padding:12px;background:#211f19;border:2px solid #857651;box-shadow:inset 0 0 0 2px #353b2b;text-align:left;color:#e6d49c;overflow-wrap:anywhere}
+.chest-rates>strong{display:block;font-size:16px;line-height:1.2;margin-bottom:10px}
+.chest-rates ul{list-style:none;padding:0;margin:0 0 9px;display:grid;gap:8px}
+.chest-rates li{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.2}
+.chest-rates li b{font-size:16px;color:#f3cf82}
+.chest-rates small{display:block;border-top:1px solid #6a684c;padding-top:8px;font-size:12px;line-height:1.35;color:#c5c6a9}
+@media(max-width:600px),(max-height:540px){.chest-panel .chest-rate-toggle{position:static;display:block;margin:8px 0 0}.chest-rates{position:static;width:100%;margin-top:10px}.chest-panel{padding-bottom:20px}}
