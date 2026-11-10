@@ -37,3 +37,6 @@
 .adventure-app .intro-menu-item.selected,.adventure-app .intro-menu-item:hover:not(:disabled){color:#fff0b4!important;-webkit-text-fill-color:#fff0b4!important;text-shadow:0 2px #14251b!important}
 .adventure-app .intro-menu-item.selected .intro-menu-face,.adventure-app .intro-menu-item:hover:not(:disabled) .intro-menu-face{filter:brightness(1.12)}
 .adventure-app .intro-menu-item:disabled{color:#aaa78c!important;-webkit-text-fill-color:#aaa78c!important;filter:none}
+/* The illustrated Back button brightens on hover without a second rectangular outline. */
+.adventure-app .hero-select-back:hover{outline:none;outline-offset:0;filter:brightness(1.18)}
+.adventure-app .hero-select-back:focus-visible{outline:2px solid #e7d399;outline-offset:3px;filter:brightness(1.18)}
