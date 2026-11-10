@@ -63,3 +63,30 @@
 .adventure-app .adventure-hud .hud-top .leg-clock>div:first-child{width:100%;display:flex;justify-content:space-between}
 .adventure-app .adventure-hud .hud-top .leg-clock.run-clock{grid-template-rows:26px 14px;gap:5px}
 .adventure-app .adventure-hud .hud-top .leg-clock.run-clock p{grid-row:2}
+
+/* Desktop trial: reclaim the bottom rail and place the controls beside the arena. */
+@media (min-width: 1200px) and (min-height: 650px) {
+  .adventure-app .game-stage[data-touch-controls=false]:is([data-screen=playing],[data-screen=paused],[data-screen=victory],[data-screen=defeat],[data-screen=ending]) {
+    --control-footer:0px;
+    --control-right:250px;
+    width:min(calc(100vw / var(--desktop-scale, 1)), calc((100dvh / var(--desktop-scale, 1) - var(--status-rail)) * 16 / 9 + var(--control-right)));
+    height:min(calc(100dvh / var(--desktop-scale, 1)), calc((100vw / var(--desktop-scale, 1) - var(--control-right)) * 9 / 16 + var(--status-rail)));
+  }
+  .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar {
+    left:auto;right:0;top:var(--status-rail);bottom:0;transform:none;
+    width:var(--control-right);height:auto;box-sizing:border-box;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:repeat(3,84px);align-content:center;align-items:stretch;
+    gap:8px;padding:58px 12px 12px;
+    background:#10231a;border-left:2px solid #7b805a;box-shadow:inset 4px 0 #1b3927;
+  }
+  .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar::before {display:none}
+  .adventure-app .game-stage[data-touch-controls=false] .combat-action {
+    height:84px;min-height:0;padding:4px 2px 5px;
+  }
+  .adventure-app .game-stage[data-touch-controls=false] .combat-action-bar :is(.combat-health,.combat-mana) {
+    left:12px;right:12px;height:16px;
+  }
+  .adventure-app .game-stage[data-touch-controls=false] .combat-health {top:13px}
+  .adventure-app .game-stage[data-touch-controls=false] .combat-mana {top:35px}
+}
