@@ -1,0 +1,99 @@
+/* Pixel-art UI materials. Bitmap borders use nine slices; content keeps its own layout. */
+:root{
+ --forest-stone:url('/assets/ui/forest-panel-pixel.png');
+ --forest-card:url('/assets/ui/stone-card-pixel.png');
+ --forest-ink:#34372b;--forest-gold:#ead394;--forest-rune:#b9c999;
+}
+html body :is(.adventure-app,.modal-backdrop,.pause-menu-backdrop) :is(
+ .panel.panel.panel:not(.completion-panel):not(.forge-panel),
+ .mechanic-guide,.chest-panel,.trading-confirm,.fullscreen-hint,.outfit-collection
+),html body .rune-loadout-editor.panel,html body .fullscreen-hint{
+ border-style:solid!important;border-image:var(--forest-stone) 16% fill / 36px / 4px stretch!important;
+ border-radius:0!important;background:#34372b!important;color:#e5d4a0!important;
+ box-shadow:0 14px 48px #0008!important;
+}
+/* Remove prototype corner ornaments where the new bitmap already provides foliage. */
+html body .rune-loadout-editor.panel::before,html body .rune-loadout-editor.panel::after{display:none!important}
+/* Inset material is the same chipped stone, with much quieter moss. */
+html body :is(.adventure-app,.modal-backdrop) :is(
+ .inventory-supplies article,.inventory-rune-description,.inventory-rune-slots>button,
+ .setting-row,.loadout-slots>button,.loadout-library>button,.loadout-description,
+ .rune-choice-grid>button,.reward-three>button,.reward-totals,.chest-results li,
+ .outfit-large-preview,.hero-roster,.outfit-options>button,
+ .trading-items>button,.trading-product-info,.rune-function-tip
+),html body .rune-function-tip{
+ border-image:var(--forest-card) 12% fill / 10px / 0 stretch!important;
+ background:#424536!important;border-radius:0!important;
+ box-shadow:none!important;color:#e5d39c;
+}
+html body .adventure-app .adventure-hud .hud-top :is(.level-card,.leg-clock,.boss-bar){
+ border-image:var(--forest-card) 12% fill / 8px / 0 stretch!important;
+ background:#3c4032!important;border-radius:0!important;
+}
+html body :is(.inventory-rune-slots>button.inspecting,.loadout-slots>button[aria-pressed=true],.outfit-options>button.outfit-selected){
+ outline:2px solid #d7ba6e;outline-offset:-3px;
+ box-shadow:inset 0 0 20px #c7ac4833!important;
+}
+html body :is(.inventory-modal,.settings-panel,.mechanic-guide,.rune-loadout-editor,.chest-panel,.trading-confirm,.fullscreen-hint){color:#e6d49c}
+html body :is(.inventory-modal,.settings-panel,.mechanic-guide,.rune-loadout-editor,.chest-panel,.trading-confirm,.fullscreen-hint) :is(h2,h3,strong,b){color:#eed89a}
+html body :is(.inventory-modal,.settings-panel,.mechanic-guide,.rune-loadout-editor) :is(p,small,.inventory-usage-note){color:#c9bd94!important}
+html body .adventure-app .inventory-modal .trail-inventory{background:transparent!important}
+html body .adventure-app .inventory-modal .inventory-footer{background:#303426!important;border-color:#83764e}
+html body .adventure-app .inventory-modal :is(.inventory-heading,.inventory-scroll){background:transparent!important}
+html body .adventure-app .inventory-modal .inventory-rune-slots>button{clip-path:none}
+html body .adventure-app .inventory-modal .inventory-rune-slots>button.inspecting{background:#57553b!important}
+html body .adventure-app .inventory-modal .inventory-section-title{color:#e3cc8c!important}
+html body .adventure-app .inventory-modal :is(.inventory-heading,.inventory-scroll,.inventory-footer){padding-inline:32px}
+/* Existing illustrated frames remain; their inset surfaces now share the stone palette. */
+html body :is(.reward-flow,.forest-defeat)::after{background:#34372bf2!important}
+html body .trading-catalogue::after{background:#34372b!important}
+html body .trading-outfits{background:#34372b;color:#e7d29a}
+html body .trading-items>button{border-width:1px}
+/* Small controls retain their dimensions and live text. */
+html body :is(.inventory-modal,.settings-panel,.mechanic-guide,.rune-loadout-editor,.chest-panel,.trading-confirm,.fullscreen-hint) button:not(.primary):not(.inventory-done):not(.inventory-rune-slots>button):not(.loadout-slots>button):not(.loadout-library>button){
+ background:#454735!important;border-image:var(--forest-card) 12% fill / 7px / 0 stretch!important;
+ border-radius:0!important;color:#e6cf8d!important;
+}
+html body .adventure-app .inventory-modal .inventory-footer .inventory-done{
+ background:linear-gradient(#dfc985,#b2934e)!important;border:2px solid #dcc282!important;border-image:none!important;
+ box-shadow:inset 2px 2px #f0dca0,inset -2px -2px #8c733b!important;color:#493c20!important;
+}
+.settings-panel .setting-row>.fullscreen-toggle{width:44px!important;min-width:44px!important;height:36px!important;min-height:36px!important;padding:7px!important;justify-self:end;display:grid;place-items:center}
+@media(max-height:480px),(max-width:600px){
+ html body :is(.adventure-app,.modal-backdrop,.pause-menu-backdrop) :is(.panel.panel.panel,.mechanic-guide,.chest-panel,.trading-confirm,.fullscreen-hint),html body .rune-loadout-editor.panel{border-image-width:24px!important;border-image-outset:2px!important}
+ html body .adventure-app .inventory-modal :is(.inventory-heading,.inventory-scroll,.inventory-footer){padding-inline:20px}
+}
+/* Reserve real space for the chunky outer stones so footer/scroll surfaces cannot cover them. */
+html body :is(.adventure-app,.modal-backdrop,.pause-menu-backdrop) :is(.panel.panel.panel:not(.completion-panel):not(.forge-panel),.mechanic-guide,.chest-panel,.trading-confirm,.fullscreen-hint),html body .rune-loadout-editor.panel,html body .fullscreen-hint{
+ border:18px solid transparent!important;
+ border-image:var(--forest-stone) 12% fill / 48px / 0 stretch!important;
+}
+html body .adventure-app .inventory-backdrop .inventory-modal.forest-dialog.panel{border:18px solid transparent!important;border-image:var(--forest-stone) 12% fill / 48px / 0 stretch!important}
+html body .adventure-app .inventory-modal .trail-inventory{max-height:calc(100dvh / var(--desktop-scale,1) - 76px)}
+html body .adventure-app .inventory-modal .inventory-footer{background:transparent!important}
+html body .adventure-app .inventory-modal .inventory-rune-slots>button{
+ border:1px solid transparent!important;border-image:var(--forest-card) 8% fill / 12px / 0 stretch!important;
+ background:#424536!important;box-shadow:none!important;
+}
+html body .adventure-app .inventory-modal .inventory-rune-slots>button.inspecting{outline:2px solid #d7ba6e;outline-offset:-3px;background:#57553b!important}
+html body .adventure-app .inventory-modal :is(.inventory-supplies article,.inventory-rune-description),html body .settings-panel .setting-row{
+ border-image:var(--forest-card) 8% fill / 12px / 0 stretch!important;
+}
+@media(max-height:480px),(max-width:600px){
+ html body :is(.adventure-app,.modal-backdrop,.pause-menu-backdrop) :is(.panel.panel.panel,.mechanic-guide,.chest-panel,.trading-confirm,.fullscreen-hint),html body .rune-loadout-editor.panel,html body .adventure-app .inventory-backdrop .inventory-modal.forest-dialog.panel{border-width:12px!important;border-image-width:30px!important}
+ html body .adventure-app .inventory-modal .trail-inventory{max-height:calc(100dvh / var(--desktop-scale,1) - 64px)}
+}
+/* Preparation, campaign ending, rune library and character cards use the same materials. */
+html body .adventure-app :is(.hero-preparation.forge-panel,.journey-finale){
+ border:18px solid transparent!important;border-image:var(--forest-stone) 12% fill / 48px / 0 stretch!important;
+ background:#34372b!important;box-shadow:0 14px 48px #0008!important;color:#e7d7a3;
+}
+html body :is(.loadout-preview,.loadout-owned>button,.loadout-list-heading,.finale-seals>span,.camp-next-trail,.hero-roster,.outfit-large-preview,.outfit-collection,.outfit-options>button){
+ border-image:var(--forest-card) 8% fill / 10px / 0 stretch!important;
+ background:#424536!important;box-shadow:none!important;
+}
+@media(max-height:480px),(max-width:600px){html body .adventure-app :is(.hero-preparation.forge-panel,.journey-finale){border-width:12px!important;border-image-width:30px!important}}
+html body .rune-loadout-editor.panel{padding-bottom:34px}
+html body .rune-loadout-editor .loadout-scenery{display:none}
+html body .rune-loadout-editor .loadout-equipped>header{background:transparent!important;box-shadow:none;border:0;border-bottom:1px solid #877a51}
+@media(max-height:480px){html body .rune-loadout-editor.panel{padding-bottom:24px}}

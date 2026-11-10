@@ -118,3 +118,10 @@
 .trading-actions>.trading-buy:not(:disabled){font-size:27px!important;color:#f3db9a}
 .trading-actions>.trading-buy:disabled{font-size:17px!important;letter-spacing:0!important;color:#d2d3bd}
 .trading-actions>.trading-buy:not(:disabled):hover,.trading-actions>.trading-buy:focus-visible{color:#fff0b4;filter:none;text-shadow:0 2px #263021,0 0 7px #b5d9aa66!important}
+/* Both tabs occupy the exact same well inside the frame. */
+.trading-catalogue{--stock-top:130px;--stock-height:296px;--stock-left:69px;--stock-right:65px}
+.trading-catalogue :is(.trading-items,.trading-outfits){position:absolute;top:var(--stock-top);left:var(--stock-left);right:var(--stock-right);height:var(--stock-height);box-sizing:border-box;margin:0}
+.trading-catalogue .trading-outfits{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 12px;text-align:center;gap:12px;overflow:auto}
+.trading-catalogue .trading-outfits>span{flex:none;line-height:1}
+.trading-catalogue .trading-outfits h2{margin:0;font-size:24px;line-height:1.3}
+.trading-catalogue .trading-outfits p{margin:0;font-size:17px;line-height:1.4}

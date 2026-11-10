@@ -11,3 +11,11 @@ createRoot(document.getElementById('root')!).render(<App />);
 import './components/HeroSelectAlignment.css';
 
 import './forestControls.css';
+
+import './forestFrames.css';
+
+import './components/PixelPausePrototype.css';
+
+import './components/InventoryColumns.css';
+
+import './components/FramedDialogs.css';

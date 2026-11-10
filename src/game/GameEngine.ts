@@ -591,7 +591,7 @@ export class GameEngine {
     this.pingTarget = null;
     this.recorder.clear();
     this.elapsedLevelTime = 0;
-    this.legTimeRemaining = !this.devUnlocked && !this.isTraining && this.currentLevel.id <= 5 ? puzzleBalance(this.currentLevel.id).legSeconds : null;
+    this.legTimeRemaining = !this.isTraining && this.currentLevel.id <= 5 ? puzzleBalance(this.currentLevel.id).legSeconds : null;
     this.training.reset();
     this.timePickup = null;
     this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
@@ -700,7 +700,8 @@ export class GameEngine {
 
   public unlockDevMode() {
     this.devUnlocked = true;
-    this.legTimeRemaining = null;
+    if (this.legTimeRemaining === null && !this.isTraining && this.currentLevel.id <= 5)
+      this.legTimeRemaining = puzzleBalance(this.currentLevel.id).legSeconds;
     this.campaign.completed = [1,2,3,4,5];
     this.campaign.forged = true;
     this.campaign.mechanicalOwned = true;
@@ -1818,7 +1819,7 @@ export class GameEngine {
     // Expire before accepting a checkpoint: arriving after zero cannot rescue a run.
     if (this.legTimeRemaining !== null) {
       this.legTimeRemaining = Math.max(0, this.legTimeRemaining - dt);
-      if (this.legTimeRemaining <= 0.000001) {
+      if (!this.devUnlocked && this.legTimeRemaining <= 0.000001) {
         this.legTimeRemaining = 0;
         this.defeatReason = 'timeout';
         voice.say(this.voiceRole, 'defeat');
@@ -2063,10 +2064,10 @@ export class GameEngine {
         rectIntersects(getCharacterBoundingBox(this.player.x, this.player.y, 24, 24), targetPlate)) {
       this.checkpointIndex++;
       this.echoCharges=Math.min(this.echoLimit-(this.echoFreeSummon?1:0),this.echoCharges+1);
-      this.legTimeRemaining = this.devUnlocked ? null : puzzleBalance(this.currentLevel.id).legSeconds;
+      this.legTimeRemaining = puzzleBalance(this.currentLevel.id).legSeconds;
       this.shardClaimedThisLeg = false; this.timePickup = null;
       this.pickupSpawnTimer = puzzleBalance(this.currentLevel.id).shardInterval;
-      this.showBanner(this.devUnlocked ? (this.language==='vi'?'Đã kích hoạt ấn thạch · Không giới hạn thời gian':'Rune activated · No time limit') : this.checkpointIndex < this.currentLevel.plates.length
+      this.showBanner(this.checkpointIndex < this.currentLevel.plates.length
         ? (this.language==='vi'?`Chặng mới ${puzzleBalance(this.currentLevel.id).legSeconds}s · Đến rune ${this.checkpointIndex+1}!`:`New leg · ${puzzleBalance(this.currentLevel.id).legSeconds}s · Reach rune ${this.checkpointIndex + 1}!`)
         : (this.language==='vi'?'Giữ tất cả rune bằng Echo, rồi tới cổng thoát!':'Hold every rune with Echoes, then reach the exit!'));
     }

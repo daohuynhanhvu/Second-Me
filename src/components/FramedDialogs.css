@@ -1,0 +1,91 @@
+/* Reuse the corner-safe atlas: no elongated vines or stretched stone tiles. */
+html body .modal-backdrop.modal-backdrop :is(.settings-panel.panel.panel.panel,.rune-loadout-editor.panel.panel.panel){
+ border-image-source:url('/assets/ui/inventory-nine-slice-pixel.png')!important;
+ border-image-slice:25% fill!important;border-image-repeat:round!important;
+}
+html body .modal-backdrop.modal-backdrop .settings-panel.panel.panel.panel{
+ display:flex;flex-direction:column;gap:0;width:min(700px,calc(100vw / var(--desktop-scale,1) - 40px));
+ height:min(780px,calc(100dvh / var(--desktop-scale,1) - 40px));
+ max-height:calc(100dvh / var(--desktop-scale,1) - 40px)!important;
+ padding:22px 24px 20px;overflow:hidden!important;
+}
+html body .settings-panel>.panel-top,html body .settings-panel>h2,html body .settings-panel>.primary{flex:none}
+html body .settings-panel>.primary{margin-top:14px;min-height:44px}
+html body .settings-panel .settings-scroll{
+ min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#b3a26c #2d3227;padding:0 8px 4px 0;
+}
+html body .settings-panel.settings-panel :is(.setting-row,.setting-controls){
+ border-image:var(--forest-card) 100 fill / 10px / 0 round!important;
+ background:#404333!important;
+}
+html body .settings-panel.settings-panel .setting-controls{padding:14px;margin:10px 0}
+html body .settings-panel.settings-panel .setting-row select{background:#444735!important;color:#ead49a;border-color:#a29360}
+/* Two equal-height, independently scrolling rune columns. */
+html body .modal-backdrop.modal-backdrop .rune-loadout-editor.panel.panel.panel{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1fr) auto auto;
+ gap:14px 18px;padding:24px;overflow:hidden;
+ width:min(1080px,calc(100vw - 40px));height:min(760px,calc(100dvh - 40px));max-height:calc(100dvh - 40px);
+}
+html body .rune-loadout-editor :is(.loadout-equipped,.loadout-library){
+ display:flex;flex-direction:column;min-height:0;min-width:0;overflow:auto;
+ overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b3a26c #2d3227;
+ padding:16px;border:1px solid transparent;border-image:var(--forest-card) 100 fill / 12px / 0 round!important;
+}
+html body .rune-loadout-editor .loadout-equipped>header{flex:none;min-height:80px;padding:0 4px 12px}
+html body .rune-loadout-editor .loadout-equipped header h2{font-size:25px!important;line-height:1.25!important}
+html body .rune-loadout-editor .loadout-library{border-left:1px solid transparent}
+html body .rune-loadout-editor .loadout-list-heading{flex:none;min-height:80px;margin:0 0 12px;padding:0 4px;border:0;border-image:none!important;background:transparent!important}
+html body .rune-loadout-editor .loadout-slots{grid-template-columns:repeat(3,minmax(0,1fr));margin:8px 0 0;gap:8px}
+html body .rune-loadout-editor .loadout-slots>button{min-height:108px;flex:none}
+html body .rune-loadout-editor .loadout-slots>button>span:last-child{font-size:14px!important;white-space:normal;line-height:1.3}
+html body .rune-loadout-editor .loadout-owned{flex:none;overflow:visible;min-height:0;padding:0}
+html body .rune-loadout-editor :is(.loadout-slots>button,.loadout-preview,.loadout-owned>button){border-image:var(--forest-card) 100 fill / 10px / 0 round!important;clip-path:none}
+html body .rune-loadout-editor .loadout-preview{display:flex;flex:none;min-height:200px;padding:16px;margin-top:12px;overflow:visible}
+html body .rune-loadout-editor>footer{grid-column:1/-1;padding-top:10px;margin:0}
+html body .rune-loadout-editor>.loadout-note{grid-column:1/-1;margin:0;text-align:center;font-size:12px!important;line-height:1.4;white-space:normal}
+html body .rune-loadout-editor .loadout-close{right:2px;top:2px;width:28px;height:28px}
+@media(max-height:480px),(max-width:600px){
+ html body .modal-backdrop.modal-backdrop :is(.settings-panel.panel.panel.panel,.rune-loadout-editor.panel.panel.panel){padding:14px;gap:8px}
+ html body .rune-loadout-editor :is(.loadout-equipped,.loadout-library){padding:10px}
+ html body .rune-loadout-editor .loadout-equipped>header,html body .rune-loadout-editor .loadout-list-heading{min-height:64px}
+ html body .rune-loadout-editor .loadout-equipped header h2{font-size:19px!important}
+ html body .settings-panel>h2{font-size:24px!important;margin:8px 0!important}
+ html body .rune-loadout-editor .loadout-slots{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html body .rune-loadout-editor>.loadout-note{font-size:10px!important}
+}
+html body .modal-backdrop.modal-backdrop .settings-panel.panel.panel.panel>.primary{
+ background:linear-gradient(#dfc985,#b2934e)!important;border:2px solid #dcc282!important;border-image:none!important;
+ box-shadow:inset 2px 2px #f0dca0,inset -2px -2px #8c733b!important;color:#493c20!important;
+}
+/* Boss preparation shares the corrected atlas and stone cards. */
+html body .adventure-app .forge-panel.hero-preparation{
+ border-image-source:url('/assets/ui/inventory-nine-slice-pixel.png')!important;
+ border-image-slice:25% fill!important;border-image-repeat:round!important;
+ display:flex;flex-direction:column;width:min(1080px,calc(100vw - 40px));
+ max-height:calc(100dvh - 40px);padding:26px 30px;overflow:hidden;
+}
+html body .hero-preparation>.panel-top,html body .hero-preparation>.forge-footer{flex:none}
+html body .hero-preparation .forge-columns{
+ min-height:0;overflow:auto;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(200px,.7fr);
+ align-items:center;gap:24px;padding:18px 0;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#b3a26c #2d3227;
+}
+html body .hero-preparation .forge-columns>div{min-width:0}
+html body .hero-preparation .echo-rune-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+html body .hero-preparation .echo-rune{
+ width:auto;min-width:0;border:1px solid transparent!important;
+ border-image:var(--forest-card) 100 fill / 10px / 0 round!important;
+ background:#414435!important;box-shadow:none!important;padding:12px 7px;
+}
+html body .hero-preparation .echo-rune :is(strong,small){white-space:normal;color:#e9d49a!important}
+html body .hero-preparation .forge-footer{padding-top:14px;margin-top:0;gap:18px}
+html body .hero-preparation .rune-reward-note{color:#cbbd91}
+@media(max-height:480px),(max-width:600px){
+ html body .adventure-app .forge-panel.hero-preparation{padding:16px;max-height:calc(100dvh - 24px);width:calc(100vw - 24px)}
+ html body .hero-preparation .forge-columns{grid-template-columns:minmax(0,1fr) 160px;gap:12px;padding:10px 0}
+ html body .hero-preparation #forge-title{font-size:26px!important}
+ html body .hero-preparation .forge-hero{min-height:220px}
+}
+html body .hero-preparation .echo-rune-list{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html body .hero-preparation .echo-rune strong{overflow-wrap:normal!important;font-size:15px!important}

@@ -1,0 +1,67 @@
+/* Two independent inventories. Their content never determines the other column's height. */
+#root .adventure-app .inventory-backdrop .inventory-modal.forest-dialog.panel{
+ width:min(1120px,calc(100vw / var(--desktop-scale,1) - 32px));
+ border-image-slice:180 fill!important;border-image-repeat:round!important;
+}
+#root .adventure-app .inventory-modal .trail-inventory{
+ height:min(760px,calc(100dvh / var(--desktop-scale,1) - 76px));
+ max-height:calc(100dvh / var(--desktop-scale,1) - 76px);
+}
+#root .adventure-app .inventory-modal .inventory-scroll{
+ flex:1;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ grid-template-rows:minmax(0,1fr);align-items:stretch;overflow:hidden;gap:18px;
+ padding:14px 24px 18px;
+}
+#root .adventure-app .inventory-modal :is(.inventory-supply-column,.inventory-rune-column){
+ display:grid;grid-template-rows:44px minmax(0,1fr);gap:10px;
+ min-width:0;min-height:0;padding:14px;
+ border:1px solid transparent;border-image:var(--forest-card) 100 fill / 12px / 0 round;
+ background:#3e4233;
+}
+#root .adventure-app .inventory-modal :is(.inventory-supply-column>.inventory-section-title,.inventory-runes-title){
+ display:flex;align-items:center;min-height:44px;height:auto;margin:0;padding:0 4px;
+}
+#root .adventure-app .inventory-modal .inventory-runes-title{gap:8px;justify-content:space-between}
+#root .adventure-app .inventory-modal .inventory-runes-title .inventory-section-title{font-size:15px!important}
+#root .adventure-app .inventory-modal .inventory-runes-title>button{font-size:12px!important;padding:6px;flex:none}
+#root .adventure-app .inventory-modal :is(.inventory-supplies,.inventory-rune-content){
+ min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;
+ scrollbar-color:#b3a26c #2d3227;margin:0;padding:0 6px 4px 0;
+}
+#root .adventure-app .inventory-modal .inventory-supplies{display:flex;flex-direction:column;gap:8px}
+#root .adventure-app .inventory-modal .inventory-supplies article{flex:none;min-height:100px;padding:12px;gap:10px}
+#root .adventure-app .inventory-modal :is(.inventory-supplies article,.inventory-rune-slots>button,.inventory-rune-description){border-image-slice:100 fill!important;border-image-repeat:round!important}
+#root .adventure-app .inventory-modal .inventory-rune-slots{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#root .adventure-app .inventory-modal .inventory-rune-slots>button{min-height:116px;padding:14px 5px 8px}
+#root .adventure-app .inventory-modal .inventory-rune-slots strong{font-size:14px!important}
+#root .adventure-app .inventory-modal .inventory-rune-description{padding:16px;margin-top:12px;min-height:0}
+#root .adventure-app .inventory-modal .inventory-heading{padding-top:18px;padding-bottom:8px}
+#root .adventure-app .inventory-modal .inventory-subtitle{padding-bottom:12px}
+#root .adventure-app .inventory-modal .inventory-footer{padding-block:12px}
+@media(max-width:600px){
+ #root .adventure-app .inventory-modal .inventory-scroll{gap:8px;padding:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ #root .adventure-app .inventory-modal :is(.inventory-supply-column,.inventory-rune-column){padding:10px;grid-template-rows:64px minmax(0,1fr)}
+ #root .adventure-app .inventory-modal .inventory-runes-title{flex-wrap:wrap;align-content:center;gap:3px}
+ #root .adventure-app .inventory-modal .inventory-supplies article{display:flex;flex-wrap:wrap;padding:10px;gap:6px}
+ #root .adventure-app .inventory-modal .inventory-supplies article>div{flex:1 1 100%}
+ #root .adventure-app .inventory-modal .inventory-rune-slots{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #root .adventure-app .inventory-modal .inventory-rune-slots strong{font-size:12px!important}
+}
+@media(max-height:480px){
+ #root .adventure-app .inventory-modal .trail-inventory{height:calc(100dvh - 64px);max-height:calc(100dvh - 64px)}
+ #root .adventure-app .inventory-modal .inventory-heading{padding-top:8px;padding-bottom:4px}
+ #root .adventure-app .inventory-modal .inventory-heading h2{font-size:22px!important}
+ #root .adventure-app .inventory-modal .inventory-heading>div:first-of-type>small{display:none}
+ #root .adventure-app .inventory-modal .inventory-subtitle{display:none}
+ #root .adventure-app .inventory-modal .inventory-scroll{padding-block:8px}
+ #root .adventure-app .inventory-modal :is(.inventory-supply-column,.inventory-rune-column){padding:10px;grid-template-rows:32px minmax(0,1fr);gap:4px}
+ #root .adventure-app .inventory-modal :is(.inventory-supply-column>.inventory-section-title,.inventory-runes-title){min-height:32px}
+ #root .adventure-app .inventory-modal .inventory-footer{padding-block:6px}
+ #root .adventure-app .inventory-modal .inventory-footer .inventory-done{min-height:32px;padding:6px 12px}
+}
+/* Corner-only foliage; the middle edge strips contain repeatable stone, not stretched vines. */
+#root .adventure-app .inventory-backdrop .inventory-modal.forest-dialog.panel{
+ border-image-source:url('/assets/ui/inventory-nine-slice-pixel.png')!important;
+ border-image-slice:25% fill!important;
+ border-image-repeat:round!important;
+}

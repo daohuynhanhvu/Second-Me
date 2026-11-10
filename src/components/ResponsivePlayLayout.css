@@ -1,0 +1,65 @@
+/* Scale the arena and both HUD rails together on large desktop displays.
+   Viewport units must be converted back to logical pixels before applying zoom. */
+.adventure-app .game-stage[data-touch-controls=false]:is([data-screen=playing],[data-screen=paused],[data-screen=victory],[data-screen=defeat],[data-screen=ending]) {
+  zoom: var(--desktop-scale, 1);
+  width: min(calc(100vw / var(--desktop-scale, 1)), calc((100dvh / var(--desktop-scale, 1) - var(--status-rail) - var(--control-footer)) * 16 / 9));
+  height: min(calc(100dvh / var(--desktop-scale, 1)), calc(100vw / var(--desktop-scale, 1) * 9 / 16 + var(--status-rail) + var(--control-footer)));
+}
+
+/* Real information panels: content participates in layout; no painted HUD image. */
+.adventure-app .adventure-hud::before { background:#0b1913; border-bottom:1px solid #596347; }
+.adventure-app .adventure-hud .hud-top {
+  display:grid;grid-template-columns:minmax(150px,1fr) minmax(230px,1.25fr) auto;
+  align-items:stretch;gap:8px;padding:6px 10px;
+}
+.adventure-app .adventure-hud .hud-top .level-card,
+.adventure-app .adventure-hud .hud-top :is(.leg-clock,.boss-bar),
+.adventure-app .adventure-hud .hud-top .hud-tools {
+  position:relative;inset:auto!important;transform:none;width:auto!important;max-width:none;
+  height:auto!important;max-height:none!important;min-width:0;box-sizing:border-box;
+  background:#15271c!important;background-image:none!important;border:1px solid #73805a!important;
+  box-shadow:inset 0 0 0 2px #0c1b12!important;border-radius:2px;
+}
+.adventure-app .adventure-hud .hud-top .level-card {grid-column:1;grid-row:1;padding:7px 12px;justify-content:center;}
+.adventure-app .adventure-hud .hud-top :is(.leg-clock,.boss-bar) {
+  grid-column:2;grid-row:1;padding:6px 12px!important;align-content:center;gap:3px;
+}
+.adventure-app .adventure-hud .hud-top .leg-clock {display:grid!important;grid-template-rows:22px 4px 12px;}
+.adventure-app .adventure-hud .hud-top .leg-clock>div:first-child {height:auto;gap:10px;}
+.adventure-app .adventure-hud .hud-top .leg-clock strong {font-size:26px!important;line-height:22px!important;}
+.adventure-app .adventure-hud .hud-top .leg-clock>div:first-child>span {font-size:13px!important;}
+.adventure-app .adventure-hud .hud-top .leg-clock p {font-size:11px!important;line-height:12px!important;}
+.adventure-app .adventure-hud .hud-top .hud-tools {
+  grid-column:3;grid-row:1;display:flex;align-items:center;justify-content:flex-end;padding:6px;gap:4px;
+}
+.adventure-app .adventure-hud .hud-top .hud-tools button {
+  background:#263a29!important;background-image:none!important;border:1px solid #7b8961!important;
+  box-shadow:inset 0 0 0 1px #14251a!important;border-radius:2px!important;
+}
+.adventure-app .adventure-hud .hud-top .hud-tools button:hover {background:#3b5033!important;}
+.adventure-app .adventure-hud .hud-top .hud-wallet {
+  background:none;border:0;border-right:1px solid #596347;max-width:none;padding:4px 8px 4px 2px;
+}
+.adventure-app .adventure-hud .hud-top .leg-clock.urgent {border-color:#dc8661!important;color:#ffd2a2;}
+@container(max-width:1050px) {
+  .adventure-app .adventure-hud .hud-top {grid-template-columns:minmax(125px,1fr) minmax(190px,1.2fr) auto;gap:5px;padding-inline:6px;}
+  .adventure-app .adventure-hud .hud-top .hud-tools {gap:3px;padding:4px;}
+  .adventure-app .adventure-hud .hud-top .hud-tools button {width:27px;min-width:27px;height:30px;min-height:30px;padding:4px;}
+  .adventure-app .adventure-hud .hud-top .level-card {padding:5px 8px;}
+  .adventure-app .adventure-hud .hud-top .level-card>strong {font-size:15px!important;}
+}
+@media(max-height:480px) {
+  .adventure-app .adventure-hud .hud-top {grid-template-columns:minmax(105px,1fr) minmax(160px,1.2fr) auto;gap:4px;padding:3px 5px;}
+  .adventure-app .adventure-hud .hud-top :is(.leg-clock,.boss-bar) {padding:3px 7px!important;gap:2px;}
+  .adventure-app .adventure-hud .hud-top .leg-clock {grid-template-rows:18px 3px 10px;}
+  .adventure-app .adventure-hud .hud-top .leg-clock strong {font-size:20px!important;line-height:18px!important;}
+  .adventure-app .adventure-hud .hud-top .leg-clock>div:first-child>span {font-size:10px!important;}
+  .adventure-app .adventure-hud .hud-top .leg-clock p {font-size:9px!important;line-height:10px!important;}
+  .adventure-app .adventure-hud .hud-top .hud-tools {padding:3px;gap:2px;}
+  .adventure-app .adventure-hud .hud-top .hud-tools button {width:23px;min-width:23px;height:28px;min-height:28px;padding:3px;}
+  .adventure-app .adventure-hud .hud-top .level-card>strong {font-size:12px!important;}
+}
+/* The timer fills its panel; it is never tied to the old painted plaque's width. */
+.adventure-app .adventure-hud .hud-top .leg-clock>div:first-child{width:100%;display:flex;justify-content:space-between}
+.adventure-app .adventure-hud .hud-top .leg-clock.run-clock{grid-template-rows:26px 14px;gap:5px}
+.adventure-app .adventure-hud .hud-top .leg-clock.run-clock p{grid-row:2}
