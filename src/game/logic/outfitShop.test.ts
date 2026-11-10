@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Campaign} from './campaign.ts';
-import {canWearOutfit,cleanOwnedOutfits,outfitTone,type ShopOutfitId} from './outfits.ts';
+import {canWearOutfit,cleanOwnedOutfits,orderedShopOutfits,orderedCharacterOutfits,SHOP_OUTFITS,outfitTone,type ShopOutfitId} from './outfits.ts';
 import {GameEngine} from '../GameEngine.ts';
 test('each intermediate costume costs exactly 100 and can be bought only once',()=>{
  const c=new Campaign();c.coins=200;
@@ -41,4 +41,19 @@ test('legacy Frostbound and Ember require separate purchases for each hero while
  for(const id of ['mage-frost','mage-ember','swordsman-frost','swordsman-ember'] as const){assert.equal(c.buyOutfit(id),true);assert.equal(c.buyOutfit(id),false);}
  assert.equal(c.coins,0);
  for(const hero of ['mage','swordsman'] as const)for(const outfit of ['frost','ember'] as const)assert.equal(canWearOutfit(hero,outfit,c.ownedOutfits),true);
+});
+
+test('shop places owned costumes first and preserves their catalogue order',()=>{
+ const ids=(owned:Parameters<typeof orderedShopOutfits>[0])=>orderedShopOutfits(owned).map(o=>o.id);
+ const catalogue=SHOP_OUTFITS.map(o=>o.id);
+ assert.deepEqual(ids([]),catalogue);
+ assert.deepEqual(ids(['void-knight','mage-ember']),['mage-ember','void-knight',...catalogue.filter(id=>id!=='mage-ember'&&id!=='void-knight')]);
+ assert.deepEqual(ids([...catalogue].reverse()),catalogue);
+});
+
+test('character wardrobe shows wearable outfits before locked outfits in added order',()=>{
+ const ids=(owned:Parameters<typeof orderedShopOutfits>[0])=>orderedCharacterOutfits('mage',owned).map(o=>o.id);
+ assert.deepEqual(ids([]),['default','woodland','frost','ember']);
+ assert.deepEqual(ids(['mage-ember']),['default','woodland','ember','frost']);
+ assert.deepEqual(ids(['mage-ember','mage-frost']),['default','frost','woodland','ember']);
 });

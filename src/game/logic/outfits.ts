@@ -41,10 +41,18 @@ export const SHOP_OUTFITS = [
 export type ShopOutfitId=typeof SHOP_OUTFITS[number]['id'];
 export const isShopOutfit=(id:unknown):id is 'ice-knight'|'void-knight'=>id==='ice-knight'||id==='void-knight';
 export const cleanOwnedOutfits=(value:unknown):ShopOutfitId[]=>Array.isArray(value)?[...new Set(value.filter((id):id is ShopOutfitId=>SHOP_OUTFITS.some(o=>o.id===id)))]:[];
+/** Owned first; the catalogue order is the order outfits were added to the game. */
+export function orderedShopOutfits(owned:readonly ShopOutfitId[]){
+ const has=new Set(owned);
+ return [...SHOP_OUTFITS.filter(o=>has.has(o.id)),...SHOP_OUTFITS.filter(o=>!has.has(o.id))];
+}
 export function canWearOutfit(hero:OutfitHero,id:OutfitId,owned:readonly ShopOutfitId[]){
  if(!OUTFITS.some(o=>o.id===id))return false;
  if(id==='default'||id==='woodland')return true;
  return SHOP_OUTFITS.some(o=>o.hero===hero&&o.outfit===id&&owned.includes(o.id));
+}
+export function orderedCharacterOutfits(hero:OutfitHero,owned:readonly ShopOutfitId[]){
+ return [...OUTFITS.filter(o=>canWearOutfit(hero,o.id,owned)),...OUTFITS.filter(o=>!canWearOutfit(hero,o.id,owned))].filter(o=>hero==='swordsman'||!isShopOutfit(o.id));
 }
 export function outfitTone(hero:OutfitHero,id:OutfitId=getOutfit(hero)){
  return hero==='swordsman'&&isShopOutfit(id)?id==='ice-knight'?{core:'#e5fbff',color:'#72d6f7',dark:'#28678e',glow:'rgba(91,205,255,.22)'}:{core:'#ead2ff',color:'#b256ef',dark:'#351050',glow:'rgba(153,55,230,.22)'}:null;
