@@ -43,7 +43,7 @@ class SoundEngine {
         this.musicGain.connect(this.masterGain);
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && String(this.ctx.state) !== 'running' && String(this.ctx.state) !== 'closed') {
       this.ctx.resume().catch(() => {});
     }
   }
@@ -503,11 +503,12 @@ class SoundEngine {
     let p = this.bufferCache.get(url);
     if (!p) {
       const g = this.graph();
-      p = !g ? Promise.resolve(null) : fetch(url)
+      if(!g)return Promise.resolve(null);
+      p = fetch(url)
         .then(r => (r.ok ? readBody(r, onProgress) : Promise.reject(new Error(String(r.status)))))
         .then(b => g.ctx.decodeAudioData(b))
         .then(buf => { this.ready.set(url, buf); return buf; })
-        .catch(() => null);
+        .catch(() => { this.bufferCache.delete(url); return null; });
       this.bufferCache.set(url, p);
     }
     return p;

@@ -37,6 +37,7 @@ export class Campaign {
   chanceCharges=0;
   aidUnlocked=false;
   heroClears:Record<string,number[]>={mage:[],swordsman:[]};
+  devShopStockMigrated = false;
   coins = 0;
   timeItems = 0;
   limitRings = 0;
@@ -72,11 +73,19 @@ export class Campaign {
       const migrateRunes=value.echoRunes===undefined&&this.completed.length>0;
       if(migrateRunes)for(const _id of this.completed)this.grantRune();
       this.bestStars = Object.fromEntries(Object.entries(value.bestStars ?? {}).filter(([id, stars]) => Number(id) >= 1 && Number(id) <= 6 && Number.isInteger(stars) && Number(stars) >= 0 && Number(stars) <= 3)) as Record<number, number>;
-      if(migrateRunes)this.save();
+      this.devShopStockMigrated=value.devShopStockMigrated===true;
+      const legacyDevStock=!this.devShopStockMigrated&&this.timeItems>=90000&&this.limitRings>=90000;
+      if(legacyDevStock){
+        this.timeItems=0;this.limitRings=0;
+        for(const item of SHOP_ITEMS)if(item.id!=='time'&&item.id!=='ring'&&item.id!=='aid'&&this.supplies[item.id]>=item.cap)this.supplies[item.id]=0;
+        this.devShopStockMigrated=true;
+      }
+      if(migrateRunes||legacyDevStock)this.save();
     } catch { this.supplies=emptySupplies();this.chanceCharges=0;this.aidUnlocked=false;this.heroClears={mage:[],swordsman:[]};this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
+      devShopStockMigrated:this.devShopStockMigrated,
       supplies:this.supplies,chanceCharges:this.chanceCharges,aidUnlocked:this.aidUnlocked,heroClears:this.heroClears,
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
       echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, chestKeys:this.chestKeys,lastChestRewards:this.lastChestRewards, bestStars: this.bestStars,

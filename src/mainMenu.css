@@ -96,3 +96,8 @@ body.reduced-motion :is(.rune-lit,.menu-wizard.is-idle){animation:none}
 /* The painted frame's rim and the brambles crossing into its opening, back over the stone panel (whose box overlaps
    them): stone-panel-frame.png, tools/assets/prepare_menu_panel.py. Over the slabs too: the brambles are in front. */
 .intro-menu::after{content:'';position:absolute;inset:0;z-index:4;background:url('/assets/menu/stone-panel-frame.png') 0 0 / 100% 100% no-repeat;image-rendering:pixelated;pointer-events:none}
+/* Replace only the two painted subtitles. SECOND ME remains the original logo. */
+.intro-localized-tagline{position:absolute;z-index:2;display:flex;align-items:center;justify-content:center;margin:0;white-space:nowrap;color:#dfdfb7;font-size:clamp(9px,1.45cqw,22px);line-height:1;letter-spacing:.06em;text-shadow:1px 1px #092620;pointer-events:none;background-image:url('/assets/menu/second-me-forest-clean.png');background-repeat:no-repeat;image-rendering:pixelated}
+.tagline-above{left:19.62%;top:5.2%;width:26.16%;height:4.43%;background-size:382.22% 2258.82%;background-position:26.57% 1.64%}
+.tagline-below{left:22.16%;top:25.91%;width:21.44%;height:4.43%;background-size:466.44% 2258.82%;background-position:28.21% 31.74%;font-size:clamp(9px,1.55cqw,23px)}
+.tagline-below{background-position:60.59% 4.77%}

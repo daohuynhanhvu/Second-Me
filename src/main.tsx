@@ -9,3 +9,5 @@ import './pixelReadability.css';
 
 createRoot(document.getElementById('root')!).render(<App />);
 import './components/HeroSelectAlignment.css';
+
+import './forestControls.css';

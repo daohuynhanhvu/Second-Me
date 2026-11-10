@@ -1,3 +1,4 @@
+import {restoreOutfits,getOutfits,equipOutfit,type OutfitHero,type OutfitId} from './logic/outfits.ts';
 import { SKILL_PICKUPS } from './logic/skillPickups.ts';
 import { ManaPool, MAX_MP, COMBO_MP, skillManaCost } from './logic/mana.ts';
 import {SHOP_ITEMS,type ShopItemId,type SupplyId,type Supplies} from './logic/shopItems.ts';
@@ -73,6 +74,7 @@ export type CombatSkill = 'fire' | 'lightning' | 'stone' | 'haste' | 'armor' | '
 const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lightning','stone'], swordsman: ['haste','armor','wave'], mechanical: ['fire','armor','haste'] };
 
 export interface HUDState {
+  outfits?:Record<OutfitHero,OutfitId>;
   guideTopic?: GuideTopic|null;
   guideLibrary?: boolean;
   screen: GameScreen;
@@ -355,7 +357,7 @@ export class GameEngine {
   private lastHUDNotify = 0;
 
   constructor() {
-    this.campaign.load();
+    this.campaign.load();restoreOutfits();
     this.loadSettings();
     setCurrentLanguage(this.language);
     if (typeof document !== 'undefined') document.title = this.language === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge';
@@ -516,6 +518,7 @@ export class GameEngine {
     this.showBanner(this.language==='vi'?'Nhẫn đã dùng · Giới hạn 6 Echo trong màn này.':'Ring used · Echo limit is 6 for this level.');
     this.notifyHUD(); return true;
   }
+  public setCharacterOutfit(hero:OutfitHero,id:OutfitId){if(this.screen!=='characters')return false;const ok=equipOutfit(hero,id);if(ok)this.notifyHUD();return ok;}
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&this.timeItemsUsedThisLevel<5&&this.campaign.timeItems>0&&!this.runeEditing;}
@@ -702,11 +705,15 @@ export class GameEngine {
     this.campaign.forged = true;
     this.campaign.mechanicalOwned = true;
     this.campaign.coins = 99999;
-    this.campaign.timeItems = 99999;
-    this.campaign.limitRings = 99999;
-    this.campaign.chestKeys = 99999;
-    for(const item of SHOP_ITEMS)if(item.id!=='time'&&item.id!=='ring')this.campaign.supplies[item.id]=item.cap;
-    this.campaign.aidUnlocked=true;this.campaign.chanceCharges=3;
+    // Leave shop stock buyable, including saves filled by the previous dev code.
+    // Preserve ordinary purchased quantities; clear only capped developer stock.
+    for(const item of SHOP_ITEMS){
+      if(this.campaign.shopStock(item.id)<item.cap)continue;
+      if(item.id==='time')this.campaign.timeItems=0;
+      else if(item.id==='ring')this.campaign.limitRings=0;
+      else if(item.id!=='aid')this.campaign.supplies[item.id]=0;
+    }
+    this.campaign.aidUnlocked=true;
     for(const rune of ECHO_RUNES)this.campaign.echoRunes[rune.id]=9999;
     // Keep the developer's selected build, filling only unused slots.
     for(const rune of ECHO_RUNES){
@@ -2254,7 +2261,7 @@ export class GameEngine {
         showHints: this.showHints,
         devUnlocked: this.devUnlocked,
         language: this.language,
-        characterClass: this.characterClass,
+        characterClass: this.characterClass,outfits:getOutfits(),
         weapon: this.weapon,
         coins: this.campaign.coins,
         timeItems: this.campaign.timeItems,

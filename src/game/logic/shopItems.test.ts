@@ -44,10 +44,23 @@ test('aid is the other hero, has 15 HP, attacks independently, cannot hold a gat
  g.enemies=[];const p=g.currentLevel.plates[0];g.supportAlly!.x=p.x+25;g.supportAlly!.y=p.y+25;(g as any).update(.01);assert.equal(p.isPressed,false);assert.equal(g.echoes.length,0);
  (g as any).hitSupport(20);assert.equal(g.supportAlly,null);g.campaign.supplies.aid=1;assert.equal(g.useSupply('aid'),false);g.restartLevel();assert.ok(g.useSupply('aid'));
 });
-test('dev mode fills all new items to their catalogue caps',t=>{const g=game(t);g.unlockDevMode();for(const i of SHOP_ITEMS.slice(0,5))assert.equal(g.campaign.shopStock(i.id),i.cap);assert.equal(g.campaign.aidUnlocked,true);});
+test('dev mode grants coins and runes while keeping shop purchases available',t=>{
+ const g=game(t);g.campaign.supplies.healSmall=7;g.campaign.supplies.healLarge=99;g.campaign.supplies.revive=10;g.campaign.supplies.chances=2;g.campaign.timeItems=99999;g.campaign.limitRings=99999;
+ g.unlockDevMode();assert.equal(g.campaign.coins,99999);assert.ok(Object.values(g.campaign.echoRunes).every(n=>n===9999));assert.equal(g.campaign.supplies.healSmall,7);assert.equal(g.campaign.aidUnlocked,true);
+ for(const id of ['time','ring','healLarge','revive','chances'] as const)assert.equal(g.campaign.shopStock(id),0);
+ g.screen='shop';for(const item of SHOP_ITEMS.filter(i=>i.id!=='aid'))assert.ok(g.buyShopItem(item.id),item.id);
+ const stock=g.campaign.timeItems;g.unlockDevMode();assert.equal(g.campaign.timeItems,stock,'ordinary purchases survive repeated code entry');
+});
 
 test('legacy supply saves migrate without losing stock, opened revival charges or hero progress',t=>{
  const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');let data=JSON.stringify({supplies:{heal10:7,heal50:2,revive:3,chances:2,support:1},chanceUses:1,supportClaimed:true,heroClears:{mage:[1,2,3],swordsman:[1]},timeItems:11,limitRings:4});
  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>data,setItem:(_key:string,value:string)=>data=value}});t.after(()=>old?Object.defineProperty(globalThis,'localStorage',old):Reflect.deleteProperty(globalThis,'localStorage'));
  const c=new Campaign();c.load();assert.equal(c.supplies.healSmall,7);assert.equal(c.supplies.healLarge,2);assert.equal(c.supplies.aid,1);assert.equal(c.supplies.chances,1);assert.equal(c.chanceCharges,2);assert.equal(c.aidUnlocked,true);assert.equal(c.timeItems,11);assert.equal(c.limitRings,4);assert.deepEqual(c.heroClears.mage,[1,2,3]);c.save();const next=new Campaign();next.load();assert.deepEqual(next.supplies,c.supplies);assert.equal(next.chanceCharges,2);
 });
+
+ test('old full dev saves become buyable automatically on load without losing coins or runes',t=>{
+ const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');let data=JSON.stringify({coins:100011,timeItems:99999,limitRings:99999,supplies:{healSmall:99,healLarge:99,revive:10,chances:2},echoRunes:{calling:9999}});
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>data,setItem:(_k:string,v:string)=>data=v}});t.after(()=>old?Object.defineProperty(globalThis,'localStorage',old):Reflect.deleteProperty(globalThis,'localStorage'));
+ const c=new Campaign();c.load();assert.equal(c.coins,100011);for(const i of SHOP_ITEMS.filter(i=>i.id!=='aid')){assert.equal(c.shopStock(i.id),0);assert.ok(c.buyShopItem(i.id));}
+ const next=new Campaign();next.load();assert.equal(next.timeItems,1);assert.equal(next.supplies.revive,1);assert.equal(next.devShopStockMigrated,true);
+ });

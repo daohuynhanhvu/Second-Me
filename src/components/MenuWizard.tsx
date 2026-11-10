@@ -1,3 +1,5 @@
+import {getWizardSheet} from '../game/rendering/wizardSprite.ts';
+import {outfitSheet} from '../game/rendering/outfitSprites.ts';
 import { useEffect, useRef } from 'react';
 import { ANCHOR, CELL, SPRITE_K, T, wizardPose, type WizardPose } from './menuWizardEntrance.ts';
 
@@ -6,9 +8,15 @@ let played = false;
 
 /** Aeris on the main menu: steps out of the portal, walks to her spot, then idles (inside IntroEffects' SVG). */
 export function MenuWizard() {
+  const sprite=useRef<SVGImageElement>(null),shadow=useRef<SVGEllipseElement>(null);
   const clip = useRef<SVGGElement>(null), body = useRef<SVGGElement>(null), idle = useRef<SVGGElement>(null);
   const cell = useRef<SVGSVGElement>(null), flare = useRef<SVGEllipseElement>(null);
 
+  useEffect(()=>{
+    let frame=0;
+    const ready=()=>{const sheet=getWizardSheet();if(!sheet){frame=requestAnimationFrame(ready);return;}const image=outfitSheet(sheet,'mage');sprite.current?.setAttribute('href',(image as HTMLCanvasElement).toDataURL());};
+    ready();return()=>cancelAnimationFrame(frame);
+  },[]);
   useEffect(() => {
     const portal = Array.from(clip.current?.ownerSVGElement?.querySelectorAll('.portal-swirl,.plasma-wave,.portal-core,.portal-breath') ?? []);
     const setRate = (rate: number) => portal.forEach(el => el.getAnimations().forEach(a => { a.playbackRate = rate; }));
@@ -17,6 +25,7 @@ export function MenuWizard() {
       if (clip.current) clip.current.style.filter = p.glow > 0.01 ? `brightness(${1 + p.glow * 0.7}) drop-shadow(0 0 ${3 + p.glow * 5}px rgba(126,255,224,${p.glow * 0.9}))` : '';
       body.current?.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${p.s})`);
       body.current?.setAttribute('opacity', String(p.opacity));
+      shadow.current?.setAttribute('opacity',p.inPortal?'0':'.48');
       cell.current?.setAttribute('viewBox', `${p.frame * CELL} ${p.row * CELL} ${CELL} ${CELL}`);
       flare.current?.setAttribute('opacity', String(p.flare));
       idle.current?.classList.toggle('is-idle', p.done);
@@ -43,13 +52,16 @@ export function MenuWizard() {
     <defs>
       {/* Same hard alpha edge as the game's sprite loader (alpha >= 180 -> opaque). */}
       <filter id="menu-wizard-alpha"><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 1 1 1"/></feComponentTransfer></filter>
+      <filter id="menu-wizard-ground-shadow" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="1.7"/></filter>
     </defs>
     <ellipse ref={flare} cx="309" cy="445" rx="100" ry="152" fill="url(#intro-portal-core)" opacity="0"/>
     <g ref={clip}>
       <g ref={body} opacity="0">
+        <ellipse ref={shadow} cx="2" cy="23" rx="29" ry="7" fill="#010b0a" opacity="0" filter="url(#menu-wizard-ground-shadow)"/>
+
         <g ref={idle} className="menu-wizard">
           <svg ref={cell} x={-ANCHOR.x * k} y={-ANCHOR.y * k} width={CELL * k} height={CELL * k} viewBox={`0 ${2 * CELL} ${CELL} ${CELL}`} overflow="hidden">
-            <image href="/assets/aeris/Aeris_Walk.png" width={CELL * 8} height={CELL * 3} filter="url(#menu-wizard-alpha)"/>
+            <image ref={sprite} href="/assets/aeris/Aeris_Walk.png" width={CELL * 8} height={CELL * 3} filter="url(#menu-wizard-alpha)"/>
           </svg>
         </g>
       </g>

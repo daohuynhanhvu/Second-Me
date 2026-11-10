@@ -58,6 +58,7 @@ class MusicDirector {
   private scene: MusicScene | null | undefined = undefined;
   private ducked = false;
   private seq = 0;
+  private retryAt=0;
 
   private load() {
     this.index ??= fetch(`${BASE}/index.json`).then(r => (r.ok ? r.json() : [])).catch(() => [])
@@ -144,15 +145,16 @@ class MusicDirector {
 
   /** Idempotent: call every frame with the scene the game is in. `duck` lowers it (pause). */
   set(scene: MusicScene | null, duck = false) {
-    if (scene === this.scene && duck === this.ducked) return;
     const g = sounds.graph();
+    const retry=scene!==null&&scene!=='intro'&&!this.current&&Date.now()>=this.retryAt;
+    if (scene === this.scene && duck === this.ducked&&!retry) return;
     if (!g) return;
     const bus = this.ensureBus(g);
     if (duck !== this.ducked) {
       this.ducked = duck;
       bus.gain.setTargetAtTime(this.level * (duck ? 0.4 : 1), g.ctx.currentTime, 0.15);
     }
-    if (scene !== this.scene) { this.scene = scene; void this.switchTo(scene); }
+    if (scene !== this.scene||retry) { this.scene = scene;this.retryAt=Date.now()+3000; void this.switchTo(scene); }
   }
 
   private async switchTo(scene: MusicScene | null) {
@@ -182,6 +184,7 @@ class MusicDirector {
     src.connect(gain); gain.connect(this.bus);
     src.start(t);
     this.current = { file, src, gain };
+    src.onended=()=>{gain.disconnect();if(this.current?.src===src)this.current=null;};
   }
 
   stop() {

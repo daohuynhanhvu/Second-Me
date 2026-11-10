@@ -1,6 +1,10 @@
+import './components/ForestPause.css';
+import {sounds} from './game/logic/sound.ts';
+import {Pause,Play,RotateCcw,Home,X} from 'lucide-react';
+import './components/PlayHudLayout.css';
 import './components/ForestDialogs.css';
 import {LandscapeGate} from './components/LandscapeGate.tsx';
-import {readLandscapeRequirement} from './game/logic/orientation.ts';
+import {readLandscapeRequirement,isTouchDevice} from './game/logic/orientation.ts';
 import { installScreenControls, FullscreenButton } from './components/FullscreenButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, readSavedSettings, type HUDState } from './game/GameEngine.ts';
@@ -15,7 +19,14 @@ const initial: HUDState = { screen:'intro', levelName:'LEVEL 01', levelSubtitle:
   recordingTimeRemaining:8000, echoStatus:'none', echoCount:0, isMuted:false, bannerMessage:'', elapsedLevelTime:0,
   completed:[], forged:false, lastReward:null, health:100, bossHp:0, bossPhase:0, attackCooldown:0, dodgeCooldown:0, legTimeRemaining:null, checkpointIndex:0, checkpointCount:0, slowed:false, defeatReason:'damage', volume:.25, effectsVolume:1, musicVolume:1, voiceVolume:1, reducedMotion:false, showHints:true, devUnlocked:false, language:'en', characterClass:'mage', weapon:'staff', coins:0, timeItems:0, limitRings:0, chestKeys:0, echoLimit:4, limitRingActive:false, bestStars:{}, lastRating:null, skillCooldown:0, bossArmor:0, pillarsRemaining:0, activeBuff:'', skillDrop:null, mechanicalOwned:false };
 export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngine) => void } = {}) {
+  const [touchControls]=useState(isTouchDevice);
   const [portraitBlocked,setPortraitBlocked]=useState(readLandscapeRequirement);
+  useEffect(()=>{
+    const wake=()=>{sounds.graph();};
+    const visible=()=>{if(document.visibilityState==='visible')wake();};
+    window.addEventListener('pointerdown',wake,true);window.addEventListener('touchend',wake,true);window.addEventListener('keydown',wake,true);document.addEventListener('visibilitychange',visible);
+    return()=>{window.removeEventListener('pointerdown',wake,true);window.removeEventListener('touchend',wake,true);window.removeEventListener('keydown',wake,true);document.removeEventListener('visibilitychange',visible);};
+  },[]);
   useEffect(() => installScreenControls(), []);
   const canvas = useRef<HTMLCanvasElement>(null);
   const ref = useRef<GameEngine | null>(null);
@@ -43,7 +54,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
   useEffect(() => { if (ref.current) ref.current.suspendVisuals = filmPlaying; }, [filmPlaying]);
   const engine = ref.current;
   const lang = hud.language === 'vi' ? 'vi' : 'en';
-  return localize(<main className="adventure-app" lang={hud.language} translate="no">{portraitBlocked&&<LandscapeGate vi={hud.language==='vi'}/>}<div className="game-stage" data-screen={hud.screen} inert={portraitBlocked}><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
+  return localize(<main className="adventure-app" lang={hud.language} translate="no">{portraitBlocked&&<LandscapeGate vi={hud.language==='vi'}/>}<div className="game-stage" data-screen={hud.screen} data-touch-controls={touchControls} inert={portraitBlocked}><canvas ref={canvas} width={1280} height={720} data-testid="game-canvas"/>
     {hud.screen === 'intro' && <Intro engine={engine} hud={hud}/>}
     {hud.screen === 'intro' && splash && <StudioSplash paused={portraitBlocked} onDone={() => setSplash(false)}/>}
     {hud.screen === 'intro' && !splash && introRun > 0 && <CinematicIntro key={introRun} lang={hud.language} reducedMotion={hud.reducedMotion} paused={portraitBlocked} onDone={() => setIntroRun(0)}/>}
@@ -63,6 +74,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     {/* Lobby and play have it in their toolbars; the loading transition stays clean, and the forge panel fills a
         phone screen corner to corner, so no free corner there (F still works everywhere). */}
     {!['lobby', 'playing', 'loading', 'forge'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
-    {hud.screen === 'paused' && <div className="modal-backdrop"><div className="panel pause-panel"><span className="eyebrow gold">MỘT KHOẢNG LẶNG</span><h2>Tạm dừng</h2><button className="primary" onClick={()=>engine?.resumeGame()}>TIẾP TỤC</button><button className="secondary" onClick={()=>engine?.restartLevel()}>CHƠI LẠI MÀN</button><button className="text-button" onClick={()=>engine?.goToLobby()}>VỀ SẢNH</button></div></div>}
+    {hud.screen === 'paused' && <div className="modal-backdrop game-pause-backdrop"><section className="panel pause-panel game-pause-panel" role="dialog" aria-modal="true" aria-labelledby="pause-title"><button className="pause-close" aria-label={lang==='vi'?'Tiếp tục':'Resume'} onClick={()=>engine?.resumeGame()}><X size={20}/></button><div className="pause-crest" aria-hidden="true"><Pause size={27}/></div><span className="pause-kicker">{lang==='vi'?'NGHỈ CHÂN BÊN LỐI MÒN':'REST BY THE TRAIL'}</span><h2 id="pause-title">{lang==='vi'?'Tạm dừng':'Paused'}</h2><p className="pause-trail">{hud.levelName} · {hud.levelSubtitle}</p><div className="pause-status"><span>HP<b><i className="pause-hp-icon" aria-hidden="true">♥</i>{Math.ceil(hud.health)} / {hud.maxHealth??100}</b></span><span>MP<b><i className="pause-mp-icon" aria-hidden="true">♦</i>{Math.floor(hud.mana??100)} / {hud.maxMana??100}</b></span><span>ECHO<b><i className="pause-echo-icon" aria-hidden="true">✦</i>{hud.echoCount} / {hud.echoLimit}</b></span></div><button className="primary pause-resume" onClick={()=>engine?.resumeGame()}><Play size={20}/>{lang==='vi'?'TIẾP TỤC HÀNH TRÌNH':'RESUME JOURNEY'}</button><div className="pause-other-actions"><button onClick={()=>engine?.restartLevel()}><RotateCcw size={17}/>{lang==='vi'?'Chơi lại màn':'Retry level'}</button><button onClick={()=>engine?.goToLobby()}><Home size={17}/>{lang==='vi'?'Về trại':'Back to camp'}</button></div></section></div>}
+
   </div></main>);
 }

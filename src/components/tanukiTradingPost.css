@@ -23,3 +23,98 @@
 .trading-merchant>span{height:306px}
 .trading-counter-front{position:absolute;left:360px;top:459px;width:520px;height:160px;background-size:1280px 720px;background-position:-360px -459px;background-repeat:no-repeat;image-rendering:pixelated;pointer-events:none}
 .trading-speech{left:424px}
+/* Separate, padded content wells keep labels off the illustrated stone edges. */
+.trading-catalogue{left:794px;top:70px;width:466px;height:574px;box-sizing:border-box;padding:0;border:0;background:none;box-shadow:none;isolation:isolate}
+.trading-catalogue:before{content:'';position:absolute;inset:0;z-index:-1;background:url('../../public/assets/ui/trading-stone-frame.svg') center/100% 100% no-repeat;image-rendering:pixelated;pointer-events:none}
+.trading-tabs{left:22px;right:22px;top:-37px;height:43px;gap:8px;z-index:0}
+.trading-tabs>button{padding:2px 8px 7px;border:3px solid #888b75;background:#39453b;color:#9fa68f;box-shadow:inset 2px 2px #a7a48c,inset -2px -3px #263129,0 0 0 3px #1b281f;font-size:23px;line-height:1}
+.trading-tabs>button[aria-selected=true]{border-color:#a6a58a;background:#4b5949;color:#e8efd3}
+.trading-hint{position:absolute;left:35px;right:35px;top:19px;padding:0;height:15px;border:0;text-align:center;font-size:12px;line-height:15px;color:#a9b394}
+.trading-items{position:absolute;top:40px;left:38px;right:34px;bottom:auto;height:335px;flex:none;padding:0 9px 0 0;scrollbar-width:thin;scrollbar-color:#b9ab71 #24382e;box-sizing:border-box}
+.trading-items>button{display:grid;grid-template-columns:34px minmax(0,1fr) 83px;align-items:center;gap:9px;min-height:62px;margin:0;padding:6px 7px;box-sizing:border-box;border:2px solid transparent;background:none;color:#ecedda}
+.trading-items>button.selected{border-color:#b6ab71;background:#75825c24;box-shadow:inset 2px 0 #dfcf91}
+.trading-items>button:hover{background:#9baf7b22}
+.trading-items>button>.shop-item-icon{width:30px;height:34px;max-width:30px;justify-self:center}
+.trading-items>button>span:not(.shop-item-icon){font-size:21px;line-height:1.15;gap:4px;overflow-wrap:break-word}
+.trading-items>button>span>small{font-size:13px!important;line-height:1.15;color:#acbca8}
+.trading-items>button b{font-size:19px;line-height:1.1;text-align:right;white-space:nowrap;font-weight:400;color:#e0cfa0}
+.trading-product-info{position:absolute;top:451px;left:39px;right:38px;min-height:0;height:94px;padding:0;border:0;overflow:auto;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#b9ab71 #24382e}
+.trading-product-info header{display:flex;flex-wrap:wrap;align-items:center;gap:5px 12px}
+.trading-product-info strong{font-size:21px;line-height:1.15;color:#ebedda}
+.trading-product-info small{font-size:12px!important;line-height:1.2;color:#b9c4aa;white-space:normal}
+.trading-product-info p{font-size:17px;line-height:1.4;color:#d5dfcb;margin:9px 0 0;overflow-wrap:break-word}
+.trading-outfits{position:absolute;top:45px;left:35px;right:35px;height:320px;margin:0;padding:50px 15px;box-sizing:border-box;color:#d5dfcb}
+.trading-actions{left:824px;right:49px;bottom:22px;height:40px;gap:0}
+.trading-actions>button{display:flex;align-items:center;justify-content:center;min-height:40px;padding:5px 9px;border:3px solid #969278;background:#3a493b;box-shadow:inset 2px 2px #b0aa89,inset -2px -2px #263329,2px 3px #18271e;font-size:20px;line-height:1;color:#ede4bd}
+.trading-actions>.trading-buy{border-color:#b3a775;color:#ede4bd}
+.trading-actions>button:disabled{opacity:1;color:#b3b399;font-size:18px;background:#344037}
+.trading-actions>.trading-leave{position:fixed;left:28px;top:28px;width:145px;height:45px;font-size:22px;background:#555d4c;border-color:#9e9b81}
+.trading-wallet{border-color:#96947c;background:#3c483b;box-shadow:inset 2px 2px #b4af8c,3px 4px #1b281f}
+.trading-speech{left:420px;top:150px;width:360px;min-height:54px;max-height:110px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:11px 21px;border:4px solid #75512e;background:repeating-linear-gradient(0deg,#0000 0 8px,#82541b08 8px 10px),#e8be72;box-shadow:inset 0 0 0 3px #f4d68f,0 4px #352a1d;color:#33291c;font-size:23px;line-height:1.25;text-align:center;z-index:3;overflow-wrap:break-word}
+.trading-speech:before,.trading-speech:after{content:'';position:absolute;top:-5px;bottom:-5px;width:10px;background:#c7934f;border:3px solid #694729;box-shadow:inset 2px 0 #f3d38a}
+.trading-speech:before{left:-9px}.trading-speech:after{left:auto;right:-9px;border-radius:0}
+/* Mount the catalogue on the stall instead of floating disconnected cards. */
+.trading-catalogue{filter:drop-shadow(5px 8px 0 #0a180f88)}
+.trading-catalogue:after{content:'';position:absolute;left:14px;right:14px;top:4px;bottom:-54px;z-index:-2;pointer-events:none;border:5px solid #493d28;background:repeating-linear-gradient(90deg,#4c422a 0 4px,#635238 4px 9px,#51462d 9px 70px,#302f20 70px 74px);box-shadow:inset 3px 0 #8e7850,inset -4px 0 #262b1e}
+.trading-catalogue:before{z-index:-1}
+.trading-tabs{top:-32px;left:24px;right:24px;gap:4px}
+.trading-tabs>button{border-color:#8c896a;background:#3a4936;box-shadow:inset 2px 2px #b2a77f,inset -2px -3px #1e3328,0 0 0 3px #293322;cursor:pointer;transition:color .12s,background-color .12s,filter .12s}
+.trading-tabs>button:hover,.trading-tabs>button:focus-visible{color:#fff0b0;filter:brightness(1.23);outline:2px solid #d9c783;outline-offset:-5px}
+.trading-items>button{position:relative;cursor:pointer;transition:background-color .12s,color .12s,border-color .12s}
+.trading-items>button:hover,.trading-items>button:focus-visible{background:#bba35b30;border-color:#c9b478;color:#fff3c5;box-shadow:inset 3px 0 #f0d384;outline:none}
+.trading-items>button:hover>.shop-item-icon,.trading-items>button:focus-visible>.shop-item-icon{filter:brightness(1.25) drop-shadow(0 0 4px #d6cf7977);transform:translateY(-2px)}
+.trading-items>button>.shop-item-icon{transition:transform .12s,filter .12s}
+.trading-items>button.selected{background:#a5a47122;border-color:#bcb77c}
+.trading-items>button:active{background:#d1b36a44}
+.trading-product-info{background:#122525;left:40px;right:39px;padding:2px 0}
+.trading-actions{left:829px;right:48px;bottom:24px;height:40px}
+.trading-actions>.trading-buy{background:#665032;border-color:#b6a16d;box-shadow:inset 2px 2px #c2aa75,inset -2px -2px #382f20,0 3px #20281a;transition:filter .12s,transform .12s}
+.trading-actions>.trading-buy:not(:disabled):hover,.trading-actions>.trading-buy:focus-visible{filter:brightness(1.3);color:#fff4bf;outline:2px solid #e1c982;outline-offset:-6px}
+.trading-actions>.trading-buy:not(:disabled):active{transform:translateY(2px)}
+.trading-actions>.trading-leave{left:25px;top:25px;width:156px;height:49px;border:0;background:url('../../public/assets/ui/trading-wood-button.svg') center/100% 100% no-repeat;box-shadow:none;color:#f1dfaf;text-shadow:2px 2px #2b2a19;filter:drop-shadow(2px 4px #15231688);font-size:22px;transition:filter .12s,transform .12s}
+.trading-actions>.trading-leave:hover,.trading-actions>.trading-leave:focus-visible{filter:brightness(1.25) drop-shadow(2px 4px #15231688);color:#fff3bd;outline:none;transform:translateY(-2px)}
+.trading-actions>.trading-leave:active{transform:translateY(1px)}
+.trading-wallet{border-color:#897e52;background:#45442e;color:#ead18c;box-shadow:inset 2px 2px #a69a6c,3px 4px #1b281f}
+@media(prefers-reduced-motion:reduce){.trading-items>button,.trading-items>button>.shop-item-icon,.trading-tabs>button,.trading-actions>button{transition:none!important;transform:none!important}}
+/* Illustrated forest frame: tabs, rune rails, purchase socket and description share one asset. */
+.trading-catalogue{left:788px;top:16px;width:478px;height:670px;filter:drop-shadow(4px 6px 0 #08171066)}
+.trading-catalogue:before{background-image:url('../../public/assets/ui/trading-forest-frame.png');z-index:-1}
+.trading-catalogue:after{left:65px;right:65px;top:124px;bottom:233px;border:0;background:#142628;box-shadow:none;z-index:-2}
+.trading-tabs{left:53px;right:48px;top:18px;height:47px;gap:23px;z-index:1}
+.trading-tabs>button,.trading-tabs>button[aria-selected=true]{border:0;background:none;box-shadow:none;padding:0;color:#a3a897;font-size:23px;text-shadow:2px 2px #172222;transition:color .12s,filter .12s}
+.trading-tabs>button[aria-selected=true]{color:#c9faf4;text-shadow:0 0 7px #6bd8ce88,2px 2px #172222}
+.trading-tabs>button:hover,.trading-tabs>button:focus-visible{outline:0;filter:brightness(1.3);color:#efffdc}
+.trading-hint{top:99px;left:80px;right:80px;font-size:11px;color:#a9b69b;line-height:14px}
+.trading-items{left:69px;right:65px;top:130px;height:296px;padding-right:8px;scrollbar-color:#c5b475 #203735}
+.trading-items>button{grid-template-columns:30px minmax(0,1fr) 70px;min-height:58px;padding:5px 3px;gap:7px}
+.trading-items>button>span:not(.shop-item-icon){font-size:19px;line-height:1.2}
+.trading-items>button b{font-size:17px}.trading-items>button>span>small{font-size:12px!important}
+.trading-product-info{top:518px;left:69px;right:65px;height:88px;padding:0;background:none}
+.trading-product-info strong{font-size:20px}.trading-product-info p{font-size:17px;line-height:1.3;margin-top:8px}
+.trading-product-info small{font-size:11px!important}
+.trading-outfits{top:142px;left:69px;right:65px;height:275px;padding:25px 8px}
+.trading-actions{left:937px;right:auto;width:180px;height:37px;bottom:200px;z-index:4}
+.trading-actions>.trading-buy,.trading-actions>.trading-buy:disabled{border:0;background:none;box-shadow:none;padding:3px 7px;color:#d4efdf;font-size:18px;text-shadow:1px 2px #152522;min-height:37px}
+.trading-actions>.trading-buy:disabled{color:#95a69d;font-size:14px}
+.trading-actions>.trading-buy:not(:disabled):hover,.trading-actions>.trading-buy:focus-visible{outline:0;color:#fff0ac;filter:drop-shadow(0 0 4px #a9f6dd)}
+/* Reuse the illustrated stone tab for navigation; match the socket's cyan lettering. */
+.trading-actions>.trading-leave{left:30px;top:29px;width:178px;height:48px;min-height:48px;padding:5px 12px;border:0;background-image:url('../../public/assets/ui/trading-forest-frame.png');background-size:478px 670px;background-position:-52px -18px;background-repeat:no-repeat;box-shadow:none;color:#d3eee3;text-shadow:2px 2px #162522;filter:drop-shadow(2px 4px #10231c99);font-size:22px;letter-spacing:.3px}
+.trading-actions>.trading-leave:hover,.trading-actions>.trading-leave:focus-visible{color:#e3fff8;filter:brightness(1.15) drop-shadow(0 0 5px #64d6c455);transform:translateY(-1px)}
+.trading-actions>.trading-buy{align-items:center;font-size:21px;color:#d5f3eb;text-shadow:0 0 5px #5bbda677,1px 2px #112621}
+.trading-actions>.trading-buy:not(:disabled):hover{color:#eafff9;filter:drop-shadow(0 0 5px #62e9e0);transform:translateY(-1px)}
+.game-stage[data-screen=shop]>.fullscreen-toggle.is-floating{left:222px;top:30px;width:43px;height:43px;border:3px solid #767e6d;border-radius:0;background:#384b40;color:#bde9df;box-shadow:inset 2px 2px #9c9f83,inset -2px -2px #172c25,2px 4px #10231c99}
+.game-stage[data-screen=shop]>.fullscreen-toggle.is-floating:hover{color:#ecfff7;filter:brightness(1.2);border-color:#a2c7ac}
+/* Centre every purchase state inside the painted stone socket. */
+.trading-actions{left:935px;width:184px;right:auto;bottom:213px;height:38px;align-items:center}
+.trading-actions>.trading-buy,.trading-actions>.trading-buy:disabled{display:flex;align-items:center;justify-content:center;flex:0 0 100%;height:38px;min-height:38px;max-height:38px;margin:0;padding:0 6px;box-sizing:border-box;line-height:1!important;letter-spacing:0;text-align:center;white-space:nowrap;transform:none}
+.trading-actions>.trading-buy:disabled{font-size:14px!important;color:#bdc8bc;text-shadow:1px 2px #213029}
+.trading-actions>.trading-buy:not(:disabled){font-size:20px!important}
+.trading-actions>.trading-buy:not(:disabled):hover{transform:none}
+.trading-actions>.trading-buy,.trading-actions>.trading-buy:disabled{font-weight:700!important;-webkit-text-stroke:.35px currentColor;text-shadow:1px 0 currentColor,0 2px #14251f;letter-spacing:.15px}
+.trading-actions>.trading-buy:disabled{font-size:17px!important;color:#d5dfce}
+.trading-actions>.trading-buy:not(:disabled){font-size:24px!important;color:#e4f8df}
+/* Keep the pixel glyphs crisp: no synthetic bold or overlapping strokes. */
+.trading-actions>.trading-buy,.trading-actions>.trading-buy:disabled{font-weight:400!important;-webkit-text-stroke:0!important;letter-spacing:1px!important;text-shadow:0 2px #263021!important;font-synthesis:none;filter:none}
+.trading-actions>.trading-buy:not(:disabled){font-size:27px!important;color:#f3db9a}
+.trading-actions>.trading-buy:disabled{font-size:17px!important;letter-spacing:0!important;color:#d2d3bd}
+.trading-actions>.trading-buy:not(:disabled):hover,.trading-actions>.trading-buy:focus-visible{color:#fff0b4;filter:none;text-shadow:0 2px #263021,0 0 7px #b5d9aa66!important}

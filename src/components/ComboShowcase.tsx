@@ -1,3 +1,5 @@
+import {outfitSheet} from '../game/rendering/outfitSprites.ts';
+import type {OutfitId} from '../game/logic/outfits.ts';
 import React, { useEffect, useRef } from 'react';
 import sprites from '../game/data/comboSprites.json';
 import { COMBO_HITS, type ComboHero } from '../game/logic/combo.ts';
@@ -34,7 +36,7 @@ function timeline(hero: ComboHero) {
  * nearest-neighbour), for the character screen.
  * Draws only when something changes (a new frame, or the previous one still fading).
  */
-export function ComboPreview({ hero }: { hero: ComboHero }) {
+export function ComboPreview({ hero, outfit }: { hero: ComboHero;outfit?:OutfitId }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const s = SHEETS[hero];
   const scale = Math.max(2, Math.floor(380 / s.frameW));
@@ -50,7 +52,7 @@ export function ComboPreview({ hero }: { hero: ComboHero }) {
     let raf = 0, current = -1, previous = -1, changedAt = 0, ghostDone = true;
     const draw = (f: number, alpha: number) => {
       ctx.globalAlpha = alpha;
-      ctx.drawImage(img, f * s.frameW, 0, s.frameW, s.frameH, 0, 0, s.frameW * scale, s.frameH * scale);
+      ctx.drawImage(outfitSheet(img,hero,outfit), f * s.frameW, 0, s.frameW, s.frameH, 0, 0, s.frameW * scale, s.frameH * scale);
     };
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -70,7 +72,7 @@ export function ComboPreview({ hero }: { hero: ComboHero }) {
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [hero]);
+  }, [hero,outfit]);
 
   return <canvas ref={canvas} className="combo-preview" width={s.frameW * scale} height={s.frameH * scale} aria-hidden="true"/>;
 }

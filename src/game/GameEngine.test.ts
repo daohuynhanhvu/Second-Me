@@ -295,10 +295,10 @@ test('pressing Y four times unlocks every trail for the current dev session', t 
   controls.handleKeyDown(event);
   assert.equal(engine.devUnlocked,true);
   assert.equal(engine.campaign.coins,99999);
-  assert.equal(engine.campaign.timeItems,99999);
+  assert.equal(engine.campaign.timeItems,0);
   assert.equal(engine.campaign.mechanicalOwned,true);
-  assert.equal(engine.campaign.limitRings,99999);
-  assert.equal(engine.campaign.chestKeys,99999);
+  assert.equal(engine.campaign.limitRings,0);
+  assert.equal(engine.campaign.chestKeys,0);
   for(const rune of ECHO_RUNES)assert.equal(engine.campaign.echoRunes[rune.id],9999);
   assert.equal(engine.campaign.runeLoadout.length,5);
   assert.deepEqual(engine.campaign.pendingRuneChoices,[]);
@@ -310,8 +310,8 @@ test('pressing Y four times unlocks every trail for the current dev session', t 
   engine.campaign.runeLoadout=['swap','regen'];engine.campaign.pendingRuneChoices=['call','guard','power'];
   for(let i=0;i<4;i++)controls.handleKeyDown(event);
   assert.equal(engine.campaign.coins,99999);
-  assert.equal(engine.campaign.timeItems,99999);
-  assert.equal(engine.campaign.limitRings,99999);assert.equal(engine.campaign.chestKeys,99999);
+  assert.equal(engine.campaign.timeItems,0);
+  assert.equal(engine.campaign.limitRings,0);assert.equal(engine.campaign.chestKeys,0);
   assert.equal(engine.campaign.echoRunes.guard,9999);
   assert.deepEqual(engine.campaign.runeLoadout.slice(0,2),['swap','regen']);
   assert.equal(engine.campaign.runeLoadout.length,5);assert.deepEqual(engine.campaign.pendingRuneChoices,[]);

@@ -75,7 +75,7 @@ export function TouchSkills({ actions, mana, maxMana, manaCost, charges, recordi
       }}
       onPointerUp={stop} onPointerCancel={stop} onLostPointerCapture={stop}
       onClick={e => { if (e.detail === 0) a.run(); }}>
-      <span className="touch-skill-icon">{a.icon}</span>
+      <span className="touch-skill-icon">{a.icon}</span><span className="touch-skill-label">{a.name}</span>
       {a.cooldown > 0 && <b className="touch-skill-timer">{a.cooldown.toFixed(a.cooldown < 1 ? 1 : 0)}</b>}
       {a.id === 'echo' && <b className="touch-skill-badge">{charges}</b>}
       {a.id === 'skill' && <small className="touch-skill-cost">{manaCost}</small>}

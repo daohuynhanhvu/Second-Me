@@ -1,3 +1,4 @@
+import {outfitSheet} from './outfitSprites.ts';
 /**
  * Kael's and Aeris's combo frames (public/assets/combat, cut by
  * tools/assets/prepare_combo_sprites.py), the hit effects and the damage numbers.
@@ -55,7 +56,7 @@ export function drawComboHero(ctx: CanvasRenderingContext2D, game: GameEngine): 
   ctx.imageSmoothingEnabled = false;
   ctx.translate(Math.round(game.player.x), Math.round(game.player.y + FEET_Y));
   if (left) ctx.scale(-1, 1);
-  ctx.drawImage(img, pose.index * s.frameW, 0, s.frameW, s.frameH, -Math.round(s.anchorX), -Math.round(s.anchorY), s.frameW, s.frameH);
+  ctx.drawImage(outfitSheet(img,pose.hero), pose.index * s.frameW, 0, s.frameW, s.frameH, -Math.round(s.anchorX), -Math.round(s.anchorY), s.frameW, s.frameH);
   ctx.restore();
   return true;
 }

@@ -1,0 +1,57 @@
+/* Two independent wells, like the forest inventory reference. */
+.adventure-app .inventory-modal.panel,.modal-backdrop.inventory-backdrop>.inventory-modal.panel{width:min(1120px,95vw);max-width:1120px;max-height:94dvh;padding:0;border:0;border-radius:0;background:none;box-shadow:none;position:relative;isolation:isolate}
+.inventory-modal:before{content:'';position:absolute;inset:0;background:url('../../public/assets/ui/pause-forest-frame.png') center/100% 100% no-repeat;z-index:-1;pointer-events:none;image-rendering:pixelated}
+.inventory-modal:after{content:'';position:absolute;inset:11% 10% 9%;background:#172a22;z-index:-2;pointer-events:none}
+.inventory-modal .trail-inventory{display:flex;flex-direction:column;height:min(790px,92dvh);max-height:none;overflow:hidden;padding:65px 71px 50px;box-sizing:border-box;background:none;border:0;border-radius:0}
+.inventory-modal .inventory-heading{flex:none;display:flex;align-items:center;gap:12px;margin:0;padding:0 8px 17px;background:none;border:0;box-shadow:none;min-height:65px}
+.inventory-modal .inventory-heading h2{font-size:32px!important;line-height:1.2!important;color:#ecd58d;margin:4px 0 0}
+.inventory-modal .inventory-heading small{font-size:12px!important;line-height:1.2!important}
+.inventory-modal .inventory-emblem{background:#344c36;border:2px solid #9a9d68;border-radius:0;color:#e8ce8e}
+.inventory-modal .inventory-wallet{margin-left:auto;display:flex;align-items:center;gap:6px;color:#e6cb84}
+.inventory-modal .inventory-wallet b{font-size:20px!important}.inventory-modal .inventory-wallet small{font-size:12px!important}
+.inventory-modal .inventory-close{flex:none;align-self:flex-start}
+.inventory-modal .inventory-scroll{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;min-height:0;flex:1;overflow:hidden;padding:0 0 15px}
+.inventory-supply-column,.inventory-rune-column{min-width:0;min-height:0;background:#1e3027;border:4px solid #6c7960;box-shadow:inset 0 0 0 2px #13281e,0 0 0 2px #263b29;padding:15px;display:flex;flex-direction:column;box-sizing:border-box}
+.inventory-modal .inventory-section-title{font-size:18px!important;line-height:1.3!important;color:#e2cd91;letter-spacing:.5px;margin:0!important}
+.inventory-supply-column>.inventory-section-title{padding:0 0 12px;text-align:center;border-bottom:2px solid #77815b66;flex:none}
+.inventory-modal .inventory-supplies{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:auto;min-height:0;flex:1;margin:12px 0 0;padding:0 5px 3px 0;align-content:start;scrollbar-width:thin;scrollbar-color:#bdab6b #243a2b}
+.inventory-modal .inventory-supplies article{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-height:115px;padding:10px 8px;box-sizing:border-box;border:2px solid #8c8969;background:#3e4535;box-shadow:inset 0 0 0 2px #24382a;border-radius:0}
+.inventory-modal .supply-icon{flex:0 0 42px;width:42px;height:46px;background:none;border:0;color:#d8c588}.inventory-modal .supply-icon .shop-item-icon{width:42px;height:46px}
+.inventory-modal .inventory-supplies article>div{flex:1;min-width:70px}
+.inventory-modal .inventory-supplies h3{font-size:15px!important;line-height:1.3!important;margin:0!important;color:#e7d5a0;word-break:normal;overflow-wrap:normal}
+.inventory-modal .inventory-supplies h3 b{display:block;margin:5px 0 0;font-size:18px!important;color:#f0d78e;font-weight:400}
+.inventory-modal .inventory-supplies p{font-size:12px!important;line-height:1.4!important;color:#bdc6ad;margin:6px 0 0}
+.inventory-modal .inventory-supplies small{font-size:11px!important;line-height:1.3!important}
+.inventory-modal .inventory-supplies article>button{background:var(--control-green) center/100% 100% no-repeat;border:0;color:#e3d49e;min-height:30px;padding:5px 12px;font-size:13px!important;cursor:pointer;margin-left:auto}
+.inventory-modal .inventory-runes-title{display:flex;gap:10px;justify-content:space-between;align-items:center;flex:none;margin:0 0 14px;min-height:35px;border-bottom:2px solid #77815b66;padding-bottom:8px}
+.inventory-modal .inventory-runes-title button{font-size:11px!important;line-height:1.2!important;color:#ddc98b;min-height:28px;white-space:nowrap}
+.inventory-modal .inventory-rune-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;flex:none}
+.inventory-modal .inventory-rune-slots>button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:130px;padding:16px 3px 7px;box-sizing:border-box;clip-path:none;border:2px solid #71795d;background:#152a21;box-shadow:inset 0 0 0 2px #223d2b}
+.inventory-modal .inventory-rune-slots>button.inspecting{border-color:#e8c875;background:#3d4930;box-shadow:inset 0 0 0 2px #8d7c45,0 0 9px #b3bf4733}
+.inventory-modal .inventory-rune-slots>button small{position:absolute;left:5px;top:5px;font-size:11px!important}
+.inventory-modal .inventory-rune-slots .rune-stone{width:43px;height:53px}
+.inventory-modal .inventory-rune-slots strong{font-size:11px!important;line-height:1.2!important;text-align:center;word-break:normal;overflow-wrap:normal;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.inventory-modal .inventory-rune-slots em{font-size:12px!important;line-height:1.2!important;font-style:normal;color:#c9c393}
+.inventory-modal .inventory-rune-description{display:flex;flex:1;min-height:0;overflow:auto;align-items:flex-start;flex-direction:column;gap:10px;margin:15px 0 0;padding:14px;border:2px solid #4e664b;background:#14281f;box-sizing:border-box;scrollbar-width:thin}
+.inventory-modal .inventory-rune-description>div{flex:none;width:100%;min-width:0}
+.inventory-modal .inventory-rune-description h3{font-size:23px!important;line-height:1.2!important;margin:8px 0;color:#e3cf8a;word-break:normal;overflow-wrap:normal}
+.inventory-modal .inventory-rune-description p{font-size:15px!important;line-height:1.5!important;color:#d2d6b9;margin:0}
+.inventory-modal .inventory-rune-description span{font-size:11px!important;line-height:1.3!important}
+.inventory-modal .inventory-rune-description>button{margin-top:auto}
+.inventory-modal .inventory-usage-note{flex:none;font-size:11px!important;line-height:1.4!important;margin:9px 0 0;color:#a4b095}
+.inventory-modal .inventory-footer{flex:none;display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 5px 0;border-top:1px solid #7b886055;background:none}
+.inventory-modal .inventory-footer>span{font-size:13px!important;line-height:1.3!important;color:#c1cba7}
+.inventory-modal .inventory-footer>button{min-width:170px;min-height:43px;font-size:19px!important}
+@media(max-height:740px){.inventory-modal .trail-inventory{padding:46px 61px 37px;height:94dvh}.inventory-modal .inventory-heading{min-height:48px;padding-bottom:12px}.inventory-modal .inventory-heading h2{font-size:26px!important}.inventory-supply-column,.inventory-rune-column{padding:11px}.inventory-modal .inventory-supplies article{min-height:104px}.inventory-modal .inventory-rune-slots>button{min-height:111px}.inventory-modal .inventory-rune-slots .rune-stone{width:35px;height:43px}.inventory-modal .inventory-rune-description{margin-top:10px;padding:10px}.inventory-modal .inventory-rune-description h3{font-size:20px!important}.inventory-modal .inventory-rune-description p{font-size:13px!important}}
+@media(max-height:480px){.inventory-modal .trail-inventory{height:96dvh;padding:29px 45px 26px}.inventory-modal .inventory-heading{min-height:40px;padding-bottom:7px}.inventory-modal .inventory-heading h2{font-size:21px!important}.inventory-modal .inventory-heading small{font-size:9px!important}.inventory-modal .inventory-emblem{width:30px;height:30px}.inventory-modal .inventory-wallet b{font-size:14px!important}.inventory-modal .inventory-scroll{gap:11px;padding-bottom:7px}.inventory-supply-column,.inventory-rune-column{padding:7px;border-width:3px}.inventory-modal .inventory-section-title{font-size:13px!important}.inventory-modal .inventory-runes-title{margin-bottom:7px;min-height:26px;padding-bottom:4px}.inventory-modal .inventory-runes-title button{font-size:9px!important}.inventory-modal .inventory-supplies{gap:6px;margin-top:7px}.inventory-modal .inventory-supplies article{min-height:92px;padding:7px 5px}.inventory-modal .inventory-supplies h3{font-size:12px!important}.inventory-modal .inventory-supplies h3 b{font-size:14px!important}.inventory-modal .inventory-supplies p{font-size:10px!important}.inventory-modal .supply-icon,.inventory-modal .supply-icon .shop-item-icon{width:30px;height:34px;flex-basis:30px}.inventory-modal .inventory-rune-slots{gap:4px}.inventory-modal .inventory-rune-slots>button{min-height:77px;padding:12px 2px 3px;gap:2px}.inventory-modal .inventory-rune-slots .rune-stone{width:27px;height:32px}.inventory-modal .inventory-rune-slots strong{font-size:8px!important}.inventory-modal .inventory-rune-slots em{font-size:9px!important}.inventory-modal .inventory-rune-description{padding:6px;margin-top:7px}.inventory-modal .inventory-rune-description h3{font-size:15px!important;margin:4px 0}.inventory-modal .inventory-rune-description p{font-size:11px!important;line-height:1.35!important}.inventory-modal .inventory-usage-note{display:none}.inventory-modal .inventory-footer{padding-top:6px}.inventory-modal .inventory-footer>span{font-size:10px!important}.inventory-modal .inventory-footer>button{min-height:29px;min-width:120px;font-size:14px!important}}
+.inventory-backdrop .inventory-modal.forest-dialog.panel:before{content:'';position:absolute;inset:0!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:auto!important;height:auto!important;z-index:-1!important;background:url('../../public/assets/ui/pause-forest-frame.png') center/100% 100% no-repeat!important;filter:none!important;transform:none!important;pointer-events:none}
+.inventory-backdrop .inventory-modal.forest-dialog.panel:after{content:'';position:absolute;inset:11% 10% 9%!important;width:auto!important;height:auto!important;z-index:-2!important;background:#172a22!important;transform:none!important;filter:none!important;pointer-events:none}
+.inventory-modal .inventory-supplies{grid-auto-rows:145px;align-content:start}
+.inventory-modal .inventory-supplies article{height:145px;min-height:0;overflow:hidden;align-content:center}
+.inventory-modal .inventory-supplies article>div{min-width:0}
+.inventory-modal .inventory-supplies p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.inventory-modal .inventory-heading>div:first-of-type{background:var(--control-green) center/100% 100% no-repeat;padding:8px 20px;min-width:210px;text-align:center}
+.inventory-modal .inventory-heading h2{margin:0!important}
+.inventory-modal .inventory-heading>div:first-of-type>small{display:none}
+@media(max-height:740px){.inventory-modal .inventory-supplies{grid-auto-rows:122px}.inventory-modal .inventory-supplies article{height:122px}}
+@media(max-height:480px){.inventory-modal .inventory-supplies{grid-auto-rows:106px}.inventory-modal .inventory-supplies article{height:106px}.inventory-modal .inventory-heading>div:first-of-type{padding:5px 15px;min-width:130px}.inventory-modal .inventory-supplies p{font-size:10px!important}}

@@ -1,3 +1,7 @@
+import './ForestDefeat.css';
+import {RuneRewardFlow} from './RuneRewardFlow.tsx';
+import {OUTFITS,type OutfitId,type OutfitHero} from '../game/logic/outfits.ts';
+import './CharacterOutfits.css';
 import './JourneyFinale.css';
 import './CombatActionBar.css';
 import { CombatActionBar } from './CombatActionBar.tsx';
@@ -29,21 +33,21 @@ import { LEVELS } from '../game/logic/levels.ts';
 
 function CoinIcon() { return <img className="raccoon-coin" src={`${import.meta.env.BASE_URL}assets/ui/raccoon-coin.png`} alt="" aria-hidden="true"/>; }
 
-function AerisPortrait() {
+function AerisPortrait({outfit}:{outfit?:OutfitId}={}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const draw = () => { const ctx = ref.current?.getContext('2d'); if (ctx) { ctx.clearRect(0, 0, 70, 70); drawWizardSprite(ctx, 35, 55, 'down', false, false, 0); } };
+    const draw = () => { const ctx = ref.current?.getContext('2d'); if (ctx) { ctx.clearRect(0, 0, 70, 70); drawWizardSprite(ctx, 35, 55, 'down', false, false, 0,outfit); } };
     draw(); const timer = window.setInterval(draw, 250); return () => window.clearInterval(timer);
-  }, []);
+  }, [outfit]);
   return <canvas ref={ref} width={70} height={70} role="img" aria-label="Aeris"/>;
 }
 function WizardAvatar({className=''}:{className?:string}) { return <span className={`wizard-avatar ${className}`}><AerisPortrait/></span>; }
-function KaelPortrait() {
+function KaelPortrait({outfit}:{outfit?:OutfitId}={}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    const draw = () => { const ctx = ref.current?.getContext('2d'); if (ctx) { ctx.clearRect(0, 0, 70, 70); drawSoldierSprite(ctx, 35, 55, 'down', false, false, 0); } };
+    const draw = () => { const ctx = ref.current?.getContext('2d'); if (ctx) { ctx.clearRect(0, 0, 70, 70); drawSoldierSprite(ctx, 35, 55, 'down', false, false, 0,false,0,outfit); } };
     draw(); const timer = window.setInterval(draw, 250); return () => window.clearInterval(timer);
-  }, []);
+  }, [outfit]);
   return <canvas ref={ref} width={70} height={70} role="img" aria-label="Kael"/>;
 }
 function SelectedCharacterAvatar({hud}:{hud:HUDState}) {
@@ -100,7 +104,9 @@ export function Intro({ engine, hud }: { engine: GameEngine | null; hud: HUDStat
     <div className="intro-artwork">
     <IntroEffects/>
     <h1 className="intro-accessible-title">SECOND ME</h1>
-    <div className="intro-mobile-title" aria-hidden="true"><span>THE ANCIENT PATH REMEMBERS</span><strong>SECOND ME</strong><small>ECHOES OF THE WILD</small></div>
+    <div className="intro-localized-tagline tagline-above" lang={vi?'vi':'en'}>{vi?'LỐI MÒN XƯA VẪN NHỚ':'THE ANCIENT PATH REMEMBERS'}</div>
+    <div className="intro-localized-tagline tagline-below" lang={vi?'vi':'en'}>{vi?'TIẾNG VỌNG RỪNG SÂU':'ECHOES OF THE WILD'}</div>
+    <div className="intro-mobile-title" aria-hidden="true"><span>{vi?'LỐI MÒN XƯA VẪN NHỚ':'THE ANCIENT PATH REMEMBERS'}</span><strong>SECOND ME</strong><small>{vi?'TIẾNG VỌNG RỪNG SÂU':'ECHOES OF THE WILD'}</small></div>
     <div className="intro-language" role="group" aria-label={vi ? 'Ngôn ngữ' : 'Language'}>
       <button type="button" className={!vi ? 'selected' : ''} aria-pressed={!vi} onClick={() => engine?.setLanguage('en')}>EN</button>
       <span aria-hidden="true">/</span>
@@ -216,6 +222,7 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
   const vi = hud.language === 'vi';
   const [selected, setSelected] = useState<SelectableCharacter>(hud.characterClass);
   const grid = useRef<HTMLDivElement>(null);
+  const [draftOutfits,setDraftOutfits]=useState<Record<OutfitHero,OutfitId>>(hud.outfits??{mage:'default',swordsman:'default'});
   // Start keyboard focus on the current hero, so focus and selection agree on open.
   useEffect(() => { grid.current?.querySelector<HTMLButtonElement>('.is-selected')?.focus({preventScroll: true}); }, []);
   const roster: {id: SelectableCharacter; name: string; roleVi: string; roleEn: string}[] = [
@@ -224,29 +231,28 @@ export function Characters({engine, hud}: {engine: GameEngine | null; hud: HUDSt
     ...(MECHANICAL_ENABLED && hud.mechanicalOwned ? [{id:'mechanical' as const, name:'Rivet-07', roleVi:'Cơ giới', roleEn:'Mechanic'}] : []),
   ];
   const choice = roster.find(c => c.id === selected) ?? roster[0];
-  const portrait = (id: SelectableCharacter) => id === 'mage' ? <AerisPortrait/> : id === 'swordsman' ? <KaelPortrait/> : <MechanicalPortrait/>;
+  const portrait = (id: SelectableCharacter,outfit?:OutfitId) => id === 'mage' ? <AerisPortrait outfit={outfit}/> : id === 'swordsman' ? <KaelPortrait outfit={outfit}/> : <MechanicalPortrait/>;
+  const outfit=choice.id==='mechanical'?'default':draftOutfits[choice.id];
+  const outfitInfo=OUTFITS.find(o=>o.id===outfit)!;
   const detail = choice.id === 'mage'
     ? (vi ? 'Chuột phải: ma pháp gai băng, ưu tiên boss, rồi quái gần nhất, cuối cùng là vị trí chuột. Hồi chiêu 6 giây.' : 'Right-click: Ice Spike magic targets the boss, then the nearest enemy, then the cursor. Cooldown: 6 seconds.')
     : choice.id === 'swordsman'
     ? (vi ? 'Kiếm sĩ cận chiến với Kiếm Echo. Pháp trận ánh sáng tăng sát thương và hồi máu trong 5 giây.' : 'A close-range fighter wielding the Echo sword. Light Sanctuary boosts damage and restores health for five seconds.')
     : (vi ? 'Chiến binh cơ giới dùng cưa máy. Kỹ năng Quá tải tăng tốc đánh trong 5 giây.' : 'A mechanical fighter wielding a chainblade. Overdrive boosts attack speed for five seconds.');
-  const confirm = () => { if (!engine) return; engine.selectClass(choice.id); engine.goToLobby(); };
+  const confirm = () => { if (!engine) return; if(choice.id!=='mechanical')engine.setCharacterOutfit(choice.id,outfit);engine.selectClass(choice.id); engine.goToLobby(); };
   return <div className="characters-screen overlay hero-select-screen">
-    <div className="hero-select-scene" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
+    <div className="hero-select-scene has-outfit-selector" role="dialog" aria-modal="true" aria-labelledby="hero-select-title">
       <h1 id="hero-select-title" className="hero-select-title">{vi ? 'CHỌN NHÂN VẬT' : 'CHOOSE YOUR HERO'}</h1>
       <button className="hero-select-back" onClick={() => engine?.goToLobby()} aria-label={vi ? 'Về sảnh' : 'Back to lobby'}>{vi ? 'VỀ SẢNH' : 'BACK'}</button>
-      <div className="hero-select-grid" ref={grid} role="group" aria-label={vi ? 'Chọn nhân vật' : 'Choose character'}>
-        {Array.from({length:8}, (_, i) => {
-          const c = roster[i];
-          return c ? <button key={c.id} type="button" className={'hero-slot' + (choice.id === c.id ? ' is-selected' : '')} onClick={() => setSelected(c.id)} aria-pressed={choice.id === c.id} aria-label={`${c.name} · ${vi ? c.roleVi : c.roleEn}`}>
-            <span className="hero-slot-label" title={`${c.name} · ${vi?c.roleVi:c.roleEn}`}>{c.name}</span><span className="hero-slot-figure">{portrait(c.id)}</span>
-          </button> : <div key={`empty-${i}`} className="hero-slot hero-slot-empty" aria-hidden="true"><span>✧</span></div>;
-        })}
+      <div className="hero-outfit-workspace">
+       <div className="hero-roster" ref={grid} role="group" aria-label={vi?'Chọn nhân vật':'Choose character'}>{roster.map(c=><button key={c.id} className={`hero-slot${choice.id===c.id?' is-selected':''}`} aria-pressed={choice.id===c.id} aria-label={c.name} onClick={()=>setSelected(c.id)}><span className="roster-portrait">{portrait(c.id,c.id==='mechanical'?undefined:draftOutfits[c.id])}</span><strong>{c.name}</strong></button>)}</div>
+       <div className="outfit-large-preview"><span>{choice.name}</span><div>{portrait(choice.id,outfit)}</div><strong style={{color:outfitInfo.color}}>{vi?outfitInfo.vi:outfitInfo.en}</strong></div>
+       <section className="outfit-collection" aria-label={vi?'Trang phục':'Outfits'}><header><strong>{vi?'TRANG PHỤC':'OUTFITS'}</strong><small>{vi?'Đổi ngoại hình · Giữ nguyên chỉ số':'Appearance only · Same stats'}</small></header><div className="outfit-options" role="group" aria-label={vi?'Chọn trang phục':'Choose outfit'}>{OUTFITS.map(o=><button key={choice.id+o.id} className={outfit===o.id?'outfit-selected':''} aria-pressed={outfit===o.id} aria-label={vi?o.vi:o.en} disabled={choice.id==='mechanical'&&o.id!=='default'} style={{'--outfit-color':o.color} as React.CSSProperties} onClick={()=>{if(choice.id!=='mechanical')setDraftOutfits(old=>({...old,[choice.id]:o.id}));}}><span>{portrait(choice.id,o.id)}</span><strong>{vi?o.vi:o.en}</strong>{outfit===o.id&&<Check size={16}/>}</button>)}</div></section>
       </div>
       <section className="hero-select-info" aria-live="polite">
-        <div className="hero-info-portrait">{choice.id === 'mage' || choice.id === 'swordsman' ? <ComboPreview key={choice.id} hero={choice.id}/> : portrait(choice.id)}</div>
-        <div className="hero-info-copy"><h2>{choice.name} · {vi ? choice.roleVi : choice.roleEn}</h2><p>{detail}</p><small>{vi ? 'VŨ KHÍ' : 'WEAPON'} · {choice.id === 'mage' ? (vi ? 'Trượng phép' : 'Magic staff') : choice.id === 'swordsman' ? (vi ? 'Kiếm' : 'Sword') : (vi ? 'Cưa máy' : 'Chainblade')}</small></div>
-        <div className="hero-info-action"><span>{choice.id === hud.characterClass ? (vi ? 'ĐANG CHỌN' : 'CURRENT HERO') : (vi ? 'NHÂN VẬT SẴN SÀNG' : 'HERO READY')}</span><button type="button" onClick={confirm} disabled={!engine}>{vi ? 'XÁC NHẬN' : 'CONFIRM'}</button></div>
+        <div className="hero-info-portrait">{choice.id === 'mage' || choice.id === 'swordsman' ? <ComboPreview key={choice.id} hero={choice.id} outfit={outfit}/> : portrait(choice.id)}</div>
+        <div className="hero-info-copy"><h2>{choice.name} · {vi ? choice.roleVi : choice.roleEn}</h2><p>{detail}</p><small>{vi ? 'VŨ KHÍ' : 'WEAPON'} · {choice.id === 'mage' ? (vi ? 'Trượng phép' : 'Magic staff') : choice.id === 'swordsman' ? (vi ? 'Kiếm' : 'Sword') : (vi ? 'Cưa máy' : 'Chainblade')} · {vi?outfitInfo.vi:outfitInfo.en}</small></div>
+        <div className="hero-info-action"><span>{choice.id === hud.characterClass ? (vi ? 'ĐANG CHỌN' : 'CURRENT HERO') : (vi ? 'NHÂN VẬT SẴN SÀNG' : 'HERO READY')}</span><button type="button" onClick={confirm} disabled={!engine}>{vi ? 'TRANG BỊ & CHỌN' : 'EQUIP & CONFIRM'}</button></div>
       </section>
     </div>
   </div>;
@@ -317,7 +323,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
       <div className="hud-tools"><FullscreenButton vi={hud.language==='vi'}/><button aria-label={hud.language==='vi'?'Mở sổ tay cơ chế':'Open mechanics guide'} title={hud.language==='vi'?'Sổ tay cơ chế':'Mechanics guide'} onClick={()=>engine?.openGuide()}><BookOpen size={17}/></button><span className="hud-wallet"><CoinIcon/> {hud.coins} · +2s ×{hud.timeItems}</span><button aria-label={hud.language==='vi'?'Túi đồ':'Inventory'} title={hud.language==='vi'?'Túi đồ':'Inventory'} onClick={() => setBag(!bag)}><Backpack size={17}/><span>{Object.values(hud.echoRunes??{}).reduce((a,n)=>a+n,0)}</span></button><button aria-label="Cài đặt" onClick={() => setSettings(true)}><Settings size={17}/></button><button aria-label="Bật tắt âm thanh" onClick={() => engine?.toggleAudio()}>{hud.isMuted ? <VolumeX size={17}/> : <Volume2 size={17}/>}</button><button aria-label="Chơi lại màn" onClick={() => engine?.restartLevel()}><RotateCcw size={17}/></button><button aria-label="Pause game" onClick={() => engine?.pauseGame()}><Pause size={17}/></button></div>
     </div>
     {hud.legTimeRemaining !== null && <div className={'leg-clock ' + (hud.legTimeRemaining <= 2 ? 'urgent' : '')} role="timer" aria-label="Thời gian đến điểm kế tiếp"><div><span>{hud.checkpointIndex < hud.checkpointCount ? `ĐẾN ẤN THẠCH ${hud.checkpointIndex+1} / ${hud.checkpointCount}` : 'ĐẾN CỔNG THOÁT'}</span><strong>{hud.legTimeRemaining.toFixed(1)}<small>s</small></strong></div><div className="leg-track"><i style={{width: `${Math.min(100,hud.legTimeRemaining/(hud.legTimeBudget??16)*100)}%`}}/></div><p>{hud.slowed ? 'DÂY LEO · TỐC ĐỘ −45%' : (hud.language==='vi'?`Rune cổng cuối: ${hud.runesHeld??0}/${hud.runesRequired??0} · Chặng mới ${hud.legTimeBudget??16}s`:`Final seal: ${hud.runesHeld??0}/${hud.runesRequired??0} · New leg ${hud.legTimeBudget??16}s`)}</p></div>}
-    {boss && <div className="boss-bar"><div><span>THỦ VỆ BĂNG</span><small>{hud.bossHp} / 240 · {translate('GIAI ĐOẠN',hud.language)} {hud.bossPhase} / 3</small></div><div className="health-track boss-segments" role="progressbar" aria-label="Máu boss" aria-valuenow={hud.bossHp} aria-valuemin={0} aria-valuemax={240}><i style={{ width: `${hud.bossHp/240*100}%` }}/>{[1,2,3].map(k=><b key={k} className={hud.bossHp>k*60?'':'spent'} style={{left:`${k*25}%`}}/>)}</div><p className="boss-armor">{hud.pillarsRemaining>0?(hud.language==='vi'?`PHÁ ${hud.pillarsRemaining} TRỤ ĐỂ GỠ GIÁP · GIÁP ${hud.bossArmor}`:`DESTROY ${hud.pillarsRemaining} PILLARS · ARMOR ${hud.bossArmor}`):(hud.language==='vi'?(hud.bossVulnerable?'SƠ HỞ · ĐÒN CỦA BẠN +35%':'ĐÃ MẤT GIÁP · ECHO GÂY 50% SÁT THƯƠNG'):(hud.bossVulnerable?'OPENING · YOUR DAMAGE +35%':'EXPOSED · ECHO DAMAGE 50%'))+((hud.bossShieldAt??0)>0?(hud.language==='vi'?` · KHIÊN BẬT LẠI Ở ${hud.bossShieldAt} HP`:` · SHIELD RETURNS AT ${hud.bossShieldAt} HP`):(hud.language==='vi'?' · ĐOẠN MÁU CUỐI':' · FINAL BAR'))}</p></div>}
+    {boss && <div className="boss-bar"><div><span>THỦ VỆ BĂNG</span><small>{hud.bossHp} / 240 · {translate('GIAI ĐOẠN',hud.language)} {hud.bossPhase} / 3</small></div><div className="health-track boss-segments" role="progressbar" aria-label="Máu boss" aria-valuenow={hud.bossHp} aria-valuemin={0} aria-valuemax={240}><i style={{ width: `${hud.bossHp/240*100}%` }}/>{[1,2,3].map(k=><b key={k} className={hud.bossHp>k*60?'':'spent'} style={{left:`${k*25}%`}}/>)}</div><p className="boss-armor">{hud.pillarsRemaining>0?(hud.language==='vi'?`PHÁ ${hud.pillarsRemaining} TRỤ · GIÁP ${hud.bossArmor}`:`BREAK ${hud.pillarsRemaining} PILLARS · ARMOR ${hud.bossArmor}`):hud.bossVulnerable?(hud.language==='vi'?'SƠ HỞ · SÁT THƯƠNG +35%':'OPENING · DAMAGE +35%'):(hud.bossShieldAt??0)>0?(hud.language==='vi'?`KHIÊN KẾ TIẾP · ${hud.bossShieldAt} HP`:`NEXT SHIELD · ${hud.bossShieldAt} HP`):(hud.language==='vi'?'ĐOẠN MÁU CUỐI':'FINAL HEALTH BAR')}</p></div>}
     {hud.bannerMessage && <div className={'hud-banner ' + (boss ? 'boss-banner' : 'trail-banner')}>{hud.bannerMessage}</div>}
     {hud.activeBuff && <div className="combat-buff">{hud.activeBuff}</div>}
     {hud.dissonanceSeconds>0 && <div className="combat-buff" role="status">RẠN VỠ {hud.dissonanceSeconds.toFixed(1)} / 5s · Gọi Echo để bảo hộ</div>}
@@ -333,7 +339,7 @@ function VictoryOrnaments(){
  return <div className="victory-ornaments" aria-hidden="true"><span>✦</span><i/><i/><i/><i/><i/></div>;
 }
 
-function VictoryStars({count,vi}:{count:number;vi:boolean}){
+export function VictoryStars({count,vi}:{count:number;vi:boolean}){
  return <div className="victory-stars" role="img" aria-label={`${count} / 3 ${vi?'sao':'stars'}`}>
   {[0,1,2].map(i=><span key={i} className={`victory-star ${i<count?'earned':'unearned'}`} style={{'--star-delay':`${.2+i*.24}s`} as React.CSSProperties}>
    <svg viewBox="0 0 100 100" aria-hidden="true" shapeRendering="crispEdges">
@@ -347,16 +353,7 @@ function VictoryStars({count,vi}:{count:number;vi:boolean}){
 }
 
 export function Completion({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
-  const last=engine?.currentLevelIdx===4,vi=hud.language==='vi',pending=!!hud.pendingRuneChoices?.length;
-  return <div className="modal-backdrop victory-backdrop"><div role="dialog" aria-modal="true" aria-label={vi?"Chiến thắng":"Victory"} className="panel completion-panel rune-completion woodland-victory"><VictoryOrnaments/><span className="eyebrow gold">{vi?'MỘT KÝ ỨC ĐƯỢC ĐÁNH THỨC':'A MEMORY AWAKENED'}</span><h2>{vi?'HOÀN THÀNH MÀN':'TRAIL COMPLETE'}</h2><p className="muted">{translate(hud.levelName,hud.language)} · {translate(hud.levelSubtitle,hud.language)}</p>
-    <VictoryStars count={hud.lastRating?.stars??0} vi={vi}/>
-    <div className="victory-loot"><span>+{hud.lastRating?.keys??0} <small>{vi?'CHÌA KHÓA':'KEYS'}</small></span><i/><span><CoinIcon/> +{hud.lastRating?.coins??0} <small>{vi?'XU':'COINS'}</small></span><i/><span><b>◷</b> {hud.elapsedLevelTime.toFixed(1)}<small> SEC</small></span></div>
-    <RuneChoicePicker hud={hud} engine={engine}/>
-    <p className="rune-reward-note">{vi?'Dùng ấn trong màn 2–6. Mỗi lần dùng tiêu hao 1 ấn; hiệu ứng kết thúc khi rời hoặc chơi lại màn.':'Use in levels 2–6. Each activation consumes one rune; buffs expire on leaving or retrying.'}</p>
-    <div className="collection-line"><span>{vi?'Tiến độ mở đấu trường':'Arena unlock progress'}</span><strong>{hud.completed.length} / 5</strong></div><div className="victory-progress" aria-hidden="true">{Array.from({length:5},(_,i)=><i key={i} className={hud.completed.includes(i+1)?"complete":""}/>)}</div>
-    <button className="primary" disabled={pending} onClick={()=>engine?.nextLevel()}>{pending?(vi?'CHỌN MỘT ẤN ĐỂ TIẾP TỤC':'CHOOSE A RUNE TO CONTINUE'):last?(vi?'ĐẾN TRẠM CHUẨN BỊ':'PREPARE FOR THE GUARDIAN'):`${vi?'TIẾP TỤC · MÀN':'CONTINUE · LEVEL'} ${(engine?.currentLevelIdx??0)+2}`} <ArrowRight size={19}/></button>
-    <div className="button-row"><button className="secondary" disabled={pending} onClick={()=>engine?.restartLevel()}><RotateCcw size={15}/>{vi?'CHƠI LẠI MÀN':'RETRY LEVEL'}</button><button className="secondary" onClick={()=>engine?.goToTitle()}><Home size={15}/>{vi?'MENU':'MENU'}</button></div>
-  </div></div>;
+  return <RuneRewardFlow engine={engine} hud={hud}/>;
 }
 
 export function Forge({ engine, hud }: { engine: GameEngine | null; hud: HUDState }) {
@@ -378,24 +375,17 @@ function DefeatScreen({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
   :boss
    ?(vi?'Phá bốn trụ trước để gỡ giáp boss; mỗi khi boss mất 25% máu, khiên và bốn trụ sẽ quay lại. Gọi Echo hỗ trợ, né ba tia băng trên mặt đất để tránh sát thương và làm chậm và tận dụng kỹ năng rơi trên sân.':'Break all four pillars to remove the Guardian’s armor; every 25% of health it loses brings the shield and the pillars back. Summon Echoes, evade the three ground ice rays and their slowing effect and collect the arena skill drops.')
    :(vi?'Né khỏi vùng cảnh báo trước khi bẫy hoặc quái ra đòn. Gọi Echo hỗ trợ chiến đấu và giữ rune để mở đường.':'Leave warning zones before traps or enemies strike. Let Echoes help in combat and hold runes to open the path.');
- return <div className="modal-backdrop defeat-backdrop"><section className="defeat-stage" role="dialog" aria-modal="true" aria-labelledby="defeat-title">
+ return <div className="modal-backdrop defeat-backdrop"><section className="defeat-stage forest-defeat" data-reason={timeout?'timeout':'damage'} role="dialog" aria-modal="true" aria-labelledby="defeat-title">
   <span className="defeat-kicker">{vi?'MỘT LẦN VẤP NGÃ · CHƯA PHẢI KẾT THÚC':'ONE FALL · NOT THE END'}</span>
   <h2 id="defeat-title">{timeout?(vi?'HẾT THỜI GIAN':'TIME RAN OUT'):(vi?'GỤC NGÃ':'FALLEN')}</h2>
   <p className="defeat-level">{translate(hud.levelName,hud.language)} · {translate(hud.levelSubtitle,hud.language)}</p>
-  <div className="defeat-sigil" aria-hidden="true"><svg viewBox="0 0 120 120" shapeRendering="crispEdges">
-   <path d="M32 10H88V18H99V32H106V84H98V99H85V108H33V100H21V85H14V34H22V20H32Z" fill="#192c28" stroke="#52675a" strokeWidth="3"/>
-   <path d="M33 21H83V29H92V83H84V94H34V85H26V35H33Z" fill="#243a31"/>
-   <path d="M40 80V40L59 30L78 40V80M59 30V65" fill="none" stroke="#ba8d6c" strokeWidth="5"/>
-   <path d="M69 10L59 37L68 49L52 67L60 79L45 108" fill="none" stroke="#091812" strokeWidth="8"/>
-   <path d="M72 10L62 37L71 49L55 67L63 79L48 108" fill="none" stroke="#a87e5d" strokeWidth="2"/>
-   <path d="M10 91H17V98H10ZM96 108H103V114H96ZM5 54H10V60H5Z" fill="#76816a"/>
-  </svg><i/><i/><i/></div>
+  <div className="defeat-hero-scene" data-hero={hud.characterClass} role="img" aria-label={timeout?(vi?'Nhân vật bị dừng lại vì hết giờ':'Your hero stopped as time expired'):(vi?'Nhân vật đã gục ngã':'Your fallen hero')}><div className="defeat-rays"/>{timeout?<div className="defeat-timeout-art"/>:<div className="defeat-collapse-art"/>}</div>
   <div className="defeat-stats"><span>{vi?'THỜI GIAN':'TIME'} <b>{hud.elapsedLevelTime.toFixed(1)}s</b></span><span>{vi?'MÀN CHƠI':'TRAIL'} <b>{String((engine?.currentLevelIdx??0)+1).padStart(2,'0')}</b></span></div>
-  <div className="defeat-hint"><span>{vi?'LẦN NÀY, THỬ CÁCH KHÁC':'A DIFFERENT APPROACH'}</span><p>{hint}</p></div>
+  <div className="defeat-hint"><p>{timeout?(vi?'Thời gian trên chặng đường này đã hết.':'Your time has expired on this trail.'):(vi?'Bạn đã gục ngã giữa khu rừng sâu.':'You collapsed in the depths of the forest.')}</p><details><summary>{vi?'Gợi ý thử lại':'Retry hint'}</summary><p>{hint}</p></details></div>
   <p className="defeat-kept">{vi?'Ấn chưa dùng và tiến trình vẫn được giữ lại.':'Unused runes and campaign progress are safe.'}</p>
   {engine?.canUseSupply('revive')&&<button className="defeat-revive" onClick={()=>engine.useSupply('revive')}>{vi?'DÙNG TRỤC PHỤC SINH · VỀ PHÁP ĐÀN':'USE REVIVAL SCROLL · RETURN TO ALTAR'} <span>× {hud.supplies?.revive??0}</span></button>}
   <button className="defeat-retry" onClick={()=>engine?.restartLevel()}><RotateCcw size={18}/>{vi?'THỬ LẠI':'TRY AGAIN'}<ArrowRight size={17}/></button>
-  <button className="defeat-return" onClick={()=>engine?.goToLobby()}><Map size={15}/>{vi?'VỀ SẢNH CHỌN MÀN':'BACK TO THE TRAILS'}</button>
+  <button className="defeat-return" onClick={()=>engine?.goToLobby()}><Map size={15}/>{vi?'VỀ TRẠI':'BACK TO BASE CAMP'}</button>
  </section></div>;
 }
 
@@ -410,6 +400,6 @@ export function EndScreen({ engine, hud }: { engine: GameEngine | null; hud: HUD
     <div className="finale-stats"><span>{vi?'THỜI GIAN ĐẤU BOSS':'BOSS BATTLE'}<b>{hud.elapsedLevelTime.toFixed(1)}s</b></span><span>{vi?'XẾP HẠNG':'RATING'}<b aria-label={`${hud.lastRating?.stars??0} / 3`}>{'★'.repeat(hud.lastRating?.stars??0)}{'☆'.repeat(3-(hud.lastRating?.stars??0))}</b></span></div>
     <p className="finale-key-reward">+{hud.lastRating?.keys??0} {vi?'CHÌA KHÓA MỞ RƯƠNG':'CHEST KEYS'}</p>
     <p className="finale-saved">{vi?'Tiến trình đã lưu · Cả sáu màn đã mở để chơi lại.':'Progress saved · All six trails are open for replay.'}</p></div></div>
-    <footer className="finale-actions"><button className="secondary" onClick={()=>engine?.restartLevel()}><RotateCcw size={17}/>{vi?'ĐẤU LẠI BOSS':'REMATCH GUARDIAN'}</button><button className="primary" onClick={()=>engine?.goToLobby()}><Map size={18}/>{vi?'VỀ SẢNH CHỌN MÀN':'BACK TO THE TRAILS'}<ArrowRight size={17}/></button></footer>
+    <footer className="finale-actions"><button className="secondary" onClick={()=>engine?.restartLevel()}><RotateCcw size={17}/>{vi?'ĐẤU LẠI BOSS':'REMATCH GUARDIAN'}</button><button className="primary" onClick={()=>engine?.goToLobby()}><Map size={18}/>{vi?'VỀ TRẠI':'BACK TO BASE CAMP'}<ArrowRight size={17}/></button></footer>
   </section></div>;
 }

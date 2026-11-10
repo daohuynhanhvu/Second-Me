@@ -1,3 +1,5 @@
+import {outfitSheet} from './outfitSprites.ts';
+import type {OutfitId} from '../logic/outfits.ts';
 import type { Direction } from '../logic/types.ts';
 
 const sheets = new Map<string, HTMLCanvasElement>();
@@ -24,7 +26,7 @@ function spriteSheet(name: string): HTMLCanvasElement | undefined {
   return;
 }
 
-export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, moving: boolean, echo: boolean, time: number, attacking = false, attackProgress = 0) {
+export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, moving: boolean, echo: boolean, time: number, attacking = false, attackProgress = 0, outfit?:OutfitId) {
   attacking = attacking && (direction === 'left' || direction === 'right');
   const image = spriteSheet(attacking ? 'Attack' : 'Walk');
   if (!image) return;
@@ -34,6 +36,6 @@ export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: n
   if (direction === 'left') ctx.scale(-1, 1);
   if (echo) { ctx.globalAlpha *= .7; ctx.filter = 'brightness(1.6) sepia(1) saturate(4) hue-rotate(135deg)'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 12; }
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(image, frame * 256, row * 256, 256, 256, -35, -55, 70, 70);
+  ctx.drawImage(outfitSheet(image,'swordsman',outfit), frame * 256, row * 256, 256, 256, -35, -55, 70, 70);
   ctx.restore();
 }

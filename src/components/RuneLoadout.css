@@ -28,3 +28,49 @@
 @keyframes rune-socket-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
 @keyframes rune-altar-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 .rune-loadout-editor .loadout-instruction.loadout-warning{color:#f1cf82;background:#6b4d1f33;border-left:3px solid #d4a54f;padding:8px 10px}
+/* Stable rune layout: never break a rune name in the middle of a word. */
+.rune-loadout-editor.panel{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);box-sizing:border-box}
+.rune-loadout-editor .loadout-equipped{min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.rune-loadout-editor .loadout-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;flex:none}
+.rune-loadout-editor .loadout-slots>button{position:relative;display:grid;grid-template-rows:70px 38px;align-content:center;align-items:center;justify-items:center;gap:3px;height:136px;min-height:136px;padding:14px 3px 5px;box-sizing:border-box;min-width:0}
+.rune-loadout-editor .loadout-slots>button>small{position:absolute;top:7px;left:7px;font-size:12px!important;line-height:1!important}
+.rune-loadout-editor .loadout-slots>button>span:last-child{width:100%;min-width:0;min-height:36px;margin:0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px!important;line-height:18px!important;letter-spacing:0!important;word-break:normal!important;overflow-wrap:normal!important;hyphens:none;overflow:hidden;text-overflow:ellipsis}
+.rune-loadout-editor .slot-stone,.rune-loadout-editor .slot-stone .rune-stone{width:56px;height:66px}
+.rune-loadout-editor .loadout-instruction{font-size:14px!important;line-height:1.5!important;min-height:42px;margin:14px 0 8px;flex:none}
+.rune-loadout-editor .loadout-preview{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;padding:8px 12px 10px}
+.rune-loadout-editor .loadout-preview h3{font-size:20px!important;line-height:1.3!important;margin:8px 0}
+.rune-loadout-editor .loadout-preview p{font-size:14px!important;line-height:1.6!important;margin:0;word-break:normal;overflow-wrap:break-word}
+.rune-loadout-editor .loadout-preview>small,.rune-loadout-editor .loadout-preview>span{font-size:12px!important;line-height:1.4!important}
+.rune-loadout-editor .loadout-library{min-width:0;min-height:0;display:flex;flex-direction:column;padding-left:20px}
+.rune-loadout-editor .loadout-list-heading{min-height:72px;flex:none;padding-right:22px;font-size:13px!important;line-height:1.4!important}
+.rune-loadout-editor .loadout-owned{min-height:0;overflow:auto;flex:1;padding-right:10px;scrollbar-gutter:stable}
+.rune-loadout-editor .loadout-owned>button{display:grid;grid-template-columns:52px minmax(0,1fr) 48px;gap:9px;align-items:center;min-height:116px;padding:12px 9px;margin:0 0 10px;box-sizing:border-box;flex:none}
+.rune-loadout-editor .loadout-owned>button>div{min-width:0}
+.rune-loadout-editor .loadout-owned strong{font-size:17px!important;line-height:1.3!important;word-break:normal;overflow-wrap:normal}
+.rune-loadout-editor .loadout-owned p{font-size:14px!important;line-height:1.5!important;margin:7px 0 0;word-break:normal;overflow-wrap:break-word}
+.rune-loadout-editor .loadout-owned>button>small{font-size:12px!important;line-height:1.3!important;text-align:right;white-space:nowrap}
+.rune-loadout-editor>.loadout-close{z-index:4;right:15px;top:15px;width:30px;height:30px}
+.rune-loadout-editor>footer{grid-column:1/-1;display:flex;justify-content:space-between;gap:18px;flex:none}
+.rune-loadout-editor>footer>button{min-width:150px;min-height:44px;font-size:16px!important}
+.rune-loadout-editor>.loadout-note{grid-column:1/-1;font-size:11px!important;line-height:1.4!important;text-align:center}
+@media(max-height:740px) and (min-width:761px){.rune-loadout-editor .loadout-slots>button{height:112px;min-height:112px;grid-template-rows:52px 34px;padding-top:12px}.rune-loadout-editor .slot-stone,.rune-loadout-editor .slot-stone .rune-stone{width:43px;height:51px}.rune-loadout-editor .loadout-preview>div>.rune-stone{height:55px;width:50px}.rune-loadout-editor .loadout-list-heading{min-height:64px}}
+@media(max-width:1050px){.rune-loadout-editor .loadout-slots>button>span:last-child{font-size:11px!important}.rune-loadout-editor .loadout-owned>button{grid-template-columns:42px minmax(0,1fr);gap:7px}.rune-loadout-editor .loadout-owned>button>small{grid-column:2;text-align:left}.rune-loadout-editor .loadout-owned p{font-size:13px!important}}
+@media(max-width:760px){.rune-loadout-editor .loadout-equipped{flex:none;overflow:visible}.rune-loadout-editor .loadout-slots>button{height:98px;min-height:98px;grid-template-rows:45px 32px;padding-top:12px}.rune-loadout-editor .slot-stone,.rune-loadout-editor .slot-stone .rune-stone{width:38px;height:45px}.rune-loadout-editor .loadout-preview{display:none}.rune-loadout-editor .loadout-library{padding-left:0;flex:1}.rune-loadout-editor .loadout-list-heading{min-height:30px}.rune-loadout-editor .loadout-instruction{font-size:12px!important;min-height:0;margin:8px 0}.rune-loadout-editor>footer>button{min-width:0;flex:1}.rune-loadout-editor>.loadout-note{font-size:10px!important}}
+@media(max-height:480px) and (min-width:761px){
+.rune-loadout-editor.panel{height:92dvh;max-height:92dvh;padding:20px 20px 12px;gap:10px 20px}
+.rune-loadout-editor .loadout-equipped>header{padding:7px 10px}
+.rune-loadout-editor .loadout-equipped header small{font-size:10px!important;line-height:1!important}
+.rune-loadout-editor .loadout-equipped header h2{font-size:21px!important;line-height:1.2!important;margin:5px 0 0}
+.rune-loadout-editor .loadout-slots{margin-top:10px;gap:6px}
+.rune-loadout-editor .loadout-slots>button{height:88px;min-height:88px;grid-template-rows:38px 30px;padding:12px 2px 3px;gap:1px}
+.rune-loadout-editor .slot-stone,.rune-loadout-editor .slot-stone .rune-stone{height:38px;width:34px}
+.rune-loadout-editor .loadout-slots>button>span:last-child{font-size:10px!important;line-height:15px!important;min-height:30px}
+.rune-loadout-editor .loadout-instruction{font-size:11px!important;line-height:1.3!important;min-height:0;margin:7px 0 0}
+.rune-loadout-editor .loadout-preview{display:none}
+.rune-loadout-editor .loadout-list-heading{min-height:43px;margin-bottom:5px;font-size:11px!important;gap:3px}
+.rune-loadout-editor .loadout-owned>button{min-height:90px;padding:8px}
+.rune-loadout-editor .loadout-owned p{font-size:12px!important;line-height:1.35!important}
+.rune-loadout-editor>footer{padding-top:9px}
+.rune-loadout-editor>footer>button{min-height:36px;font-size:14px!important}
+.rune-loadout-editor>.loadout-note{font-size:9px!important}
+}
