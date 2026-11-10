@@ -1,3 +1,4 @@
+import {chooseBossAttack,recordBossSwing,wantsBossSkill,type BossBehavior} from './bossBehavior.ts';
 import {ICE_BARRAGE} from './iceBarrage.ts';
 import {FROST_STRIKE,makeIceRays,insideIceRay,type IceRay} from './iceMagic.ts';
 export {TIME_ITEM_PRICE,TIME_ITEM_CAP} from './shopItems.ts';
@@ -158,7 +159,7 @@ export class Campaign {
   reset() { this.supplies=emptySupplies();this.supplies.aid=this.aidUnlocked?1:0;this.chanceCharges=0;this.runeLoadout=[];this.pendingRuneChoices=[];this.echoRunes={};this.lastRuneDrop=null;this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.save(); }
 }
 
-export interface BossState {
+export interface BossState extends BossBehavior {
   x: number; y: number; hp: number; maxHp: number; phase: number;
   mode: 'stalking' | 'warning' | 'strike' | 'recover'; timer: number;
   targetX: number; targetY: number; hitFlash: number;
@@ -174,7 +175,7 @@ export interface BossState {
   iceRays:IceRay[];
 }
 export function createBoss(): BossState {
-  return { x: 890, y: 350, hp: 240, maxHp: 240, phase: 1, mode: 'stalking', timer: 2,
+  return { meleeSwings:0,meleeMisses:0,skillQueue:0,enraged:false,x: 890, y: 350, hp: 240, maxHp: 240, phase: 1, mode: 'stalking', timer: 2,
     targetX: 0, targetY: 0, hitFlash: 0, projectiles: [],
     pillars: [[130,125],[1150,125],[130,595],[1150,595]].map(([x,y])=>({x,y,hp:60,maxHp:60})),
     armor: 100, burstCooldown: 5, burstRemaining: 0, burstPulse: 0, iceRays: [], };
@@ -226,7 +227,7 @@ export function swordHit(boss: BossState, x: number, y: number, empowered = fals
 }
 
 export function updateBoss(boss: BossState, player: { x: number; y: number }, dt: number,
-  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void,onSlow?:()=>void): boolean {
+  empowered: boolean, defender: {x:number;y:number} = player, echoDefenders: {x:number;y:number}[] = [], onEchoHit?: (index:number,damage:number) => void, onPlayerHit?: (damage:number) => void,onSlow?:()=>void,playerEvading=false,random:()=>number=Math.random): boolean {
   if (boss.hp <= 0) return false;
   boss.phase = boss.hp > 160 ? 1 : boss.hp > 80 ? 2 : 3;
   boss.hitFlash = Math.max(0, boss.hitFlash - dt);
@@ -258,24 +259,26 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
   boss.timer -= dt;
   let hit = false;
   if (boss.mode === 'stalking') {
-    const dx = player.x - boss.x, dy = player.y - boss.y, distance = Math.hypot(dx, dy);
+    const focus=wantsBossSkill(boss)?player:defender;
+    const dx = focus.x - boss.x, dy = focus.y - boss.y, distance = Math.hypot(dx, dy);
     if (distance > 85) {
       const speed = (55 + boss.phase * 14) * (empowered ? 0.55 : 1);
       boss.x += dx / distance * speed * dt;
       boss.y += dy / distance * speed * dt;
     }
     if (boss.timer <= 0) {
-      const index=boss.attackIndex??0;
-      const sequence:NonNullable<BossState['attack']>[]=['triple','volley'];
-      boss.attack=Math.hypot(player.x-boss.x,player.y-boss.y)<115&&index%3===2?'melee':sequence[index%sequence.length];boss.attackIndex=index+1;
+      const next=chooseBossAttack(boss,Math.hypot(defender.x-boss.x,defender.y-boss.y),random);
+      if(next){
+      boss.attack=next;boss.attackIndex=(boss.attackIndex??0)+1;
       boss.mode='warning';boss.warningDuration=boss.phase===3?.9:1.15;
-      boss.timer=boss.warningDuration;boss.targetX=player.x;boss.targetY=player.y;boss.attackFacingRight=player.x>boss.x;
+      const aim=next==='melee'?defender:player;
+      boss.timer=boss.warningDuration;boss.targetX=aim.x;boss.targetY=aim.y;boss.attackFacingRight=aim.x>boss.x;
       boss.safeAngle=Math.atan2(defender.y-boss.y,defender.x-boss.x)+.38;
-
+      }
     }
   } else if (boss.mode === 'warning' && boss.timer <= 0) {
     boss.mode='strike';boss.strikeDuration=boss.attack==='melee'?.3:boss.attack==='volley'?ICE_BARRAGE.DURATION:FROST_STRIKE.LIFE+FROST_STRIKE.FADE;boss.timer=boss.strikeDuration;
-    if(boss.attack==='melee'){if(Math.hypot(defender.x-boss.x,defender.y-boss.y)<=135&&Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<65){hit=true;onPlayerHit?.(DAMAGE.bossSlam);}echoDefenders.forEach((e,i)=>{if(Math.hypot(e.x-boss.x,e.y-boss.y)<=135&&Math.hypot(e.x-boss.targetX,e.y-boss.targetY)<65)onEchoHit?.(i,DAMAGE.bossSlam);});}
+    if(boss.attack==='melee'){let connected=false;if(!playerEvading&&Math.hypot(defender.x-boss.x,defender.y-boss.y)<=135&&Math.hypot(defender.x-boss.targetX,defender.y-boss.targetY)<65){hit=true;connected=true;onPlayerHit?.(DAMAGE.bossSlam);}echoDefenders.forEach((e,i)=>{if(Math.hypot(e.x-boss.x,e.y-boss.y)<=135&&Math.hypot(e.x-boss.targetX,e.y-boss.targetY)<65)onEchoHit?.(i,DAMAGE.bossSlam);});recordBossSwing(boss,connected);}
     if(!boss.attack||boss.attack==='triple')boss.iceRays=makeIceRays({x:boss.x,y:boss.y},Math.atan2(boss.targetY-boss.y,boss.targetX-boss.x));
     boss.burstRemaining=boss.attack==='volley'?ICE_BARRAGE.WAVES[boss.phase-1]:0;
     boss.burstPulse=.2;
@@ -283,6 +286,7 @@ export function updateBoss(boss: BossState, player: { x: number; y: number }, dt
     boss.mode='recover';boss.recoveryDuration=(boss.phase===3?1.45:1.8)*bossTempo(boss).recover;boss.timer=boss.recoveryDuration;
     boss.iceRays=[];boss.burstRemaining=0;
   } else if (boss.mode === 'recover' && boss.timer <= 0) {
+    if(!(boss.skillQueue??0))boss.enraged=false;
     boss.mode='stalking';boss.timer=(boss.phase===1?1.1:boss.phase===2?.85:.65)*bossTempo(boss).pause;
   }
   // A shared pulse may touch several rays, but each defender takes damage only once.

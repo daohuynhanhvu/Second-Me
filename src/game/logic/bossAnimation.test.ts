@@ -11,7 +11,7 @@ test('three attacks use distinct full-body rows, impact frames and recovery fram
  b.mode='stalking';assert.equal(bossActionPose(b),null);
 });
 test('casting locks aim direction and melee cannot hit a distant player at an old mark',()=>{
- const b=createBoss();b.timer=0;updateBoss(b,{x:b.x-200,y:b.y},.01,false);assert.equal(b.attackFacingRight,false);
+ const b=createBoss();b.timer=0;b.skillQueue=1;updateBoss(b,{x:b.x-200,y:b.y},.01,false);assert.equal(b.attackFacingRight,false);
  updateBoss(b,{x:b.x+200,y:b.y},.1,false);assert.equal(b.attackFacingRight,false);
  b.attack='melee';b.mode='warning';b.timer=.01;b.targetX=100;b.targetY=100;let damage=0;
  updateBoss(b,{x:100,y:100},.02,false,{x:100,y:100},[],undefined,n=>damage+=n);assert.equal(damage,0);

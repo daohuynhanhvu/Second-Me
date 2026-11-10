@@ -1,3 +1,4 @@
+import {wantsBossSkill} from '../logic/bossBehavior.ts';
 import {drawGuardianShield} from './guardianShield.ts';
 import {drawIceProjectile} from './iceProjectile.ts';
 import { drawSkillPickup } from './skillPickup.ts';
@@ -98,7 +99,8 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     if(boss.hp>0){
       const vi=game.language==='vi',recover=boss.mode==='recover'&&boss.armor===0;
       if(boss.mode==='warning'||recover){
-        const text=recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='melee'?(vi?'CẬN CHIẾN · NÉ CÚ ĐẤM':'MELEE · EVADE THE PUNCH'):boss.attack==='volley'?(vi?'BÃO ĐẠN BĂNG · TỎA 360°':'ICE BARRAGE · 360°'):(vi?'TAM TRỌNG HÀN KÍCH · NÉ BA TIA BĂNG':'TRIPLE FROST STRIKE · EVADE THE THREE RAYS');
+        const rage=boss.enraged?(vi?'TỨC GIẬN · 2 LƯỢT SKILL · ':'ENRAGED · DOUBLE CAST · '):'';
+        const text=rage+(recover?(vi?'SƠ HỞ · ĐÁNH NGAY +35%':'OPENING · STRIKE +35%'):boss.attack==='melee'?(vi?'CẬN CHIẾN · NÉ CÚ ĐẤM':'MELEE · EVADE THE PUNCH'):boss.attack==='volley'?(vi?'BÃO ĐẠN BĂNG · TỎA 360°':'ICE BARRAGE · 360°'):(vi?'TAM TRỌNG HÀN KÍCH · NÉ BA TIA BĂNG':'TRIPLE FROST STRIKE · EVADE THE THREE RAYS'));
         ctx.save();ctx.font='20px "Second Me Pixel", monospace';ctx.textAlign='center';ctx.textBaseline='middle';const width=ctx.measureText(text).width+20,x=Math.max(width/2+45,Math.min(1235-width/2,boss.x)),y=Math.max(155,boss.y-96);ctx.fillStyle='#041623ee';ctx.fillRect(x-width/2,y-15,width,30);ctx.fillStyle=recover?'#baffbd':boss.attack==='volley'?'#ffe2a0':'#d4faff';ctx.fillText(text,x,y);ctx.restore();
       }
     }
@@ -106,7 +108,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.ellipse(boss.x, boss.y + 47, 65, 16, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(9,31,39,.52)'; ctx.fill();
-    const bossTarget = (Math.floor((boss.attackIndex??0)/2)%2===0?game.echoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player;
+    const bossTarget = wantsBossSkill(boss)?(Math.floor((boss.attackIndex??0)/2)%2===0?game.echoes:[]).slice().sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0] ?? game.player:game.player;
     const walking = boss.mode === 'stalking' && Math.hypot(bossTarget.x - boss.x, bossTarget.y - boss.y) > 85;
     drawGuardianShield(ctx,boss,time,game.reducedMotion,false);
     drawFrostGuardian(ctx, boss, time, game.bossDeathElapsed, bossTarget.x > boss.x, walking);

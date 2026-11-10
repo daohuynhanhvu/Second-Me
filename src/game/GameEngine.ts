@@ -2118,7 +2118,7 @@ export class GameEngine {
       let bossDamage=0;
       const bossHit = updateBoss(boss, echoTarget??this.player, dt, this.currentLevel.plates.some(p => p.isPressed), this.player, bossEchoes, (index,damage) => {
         if(index>=normalBossEchoes.length)this.hitSupport(damage);else{const echo=normalBossEchoes[index];if(echo)this.hitEcho(echo,damage);}
-      }, damage=>{bossDamage=Math.max(bossDamage,damage);},()=>{this.frostSlow=FROST_STRIKE.SLOW_TIME;});
+      }, damage=>{bossDamage=Math.max(bossDamage,damage);},()=>{this.frostSlow=FROST_STRIKE.SLOW_TIME;},this.dodgeTime>0);
       if (this.boss.phase > this.lastBossPhase) voice.say('guardian', 'event', { id: `phase${this.boss.phase}` });
       this.lastBossPhase = this.boss.phase;
       // Slam wind-up: the shout is timed to end exactly as the blow lands.

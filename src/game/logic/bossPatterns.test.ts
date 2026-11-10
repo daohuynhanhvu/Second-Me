@@ -4,8 +4,8 @@ import {createBoss,updateBoss} from './campaign.ts';
 const player={x:240,y:600};
 test('later phases fire dense complete rings without a reserved escape sector',()=>{
  for(const [hp,waves] of [[240,4],[150,5],[70,6]]){
-  const b=createBoss();b.hp=hp;b.pillars.forEach(p=>p.hp=0);b.timer=0;b.attackIndex=1;
-  updateBoss(b,player,.01,false);assert.equal(b.attack,'volley');assert.equal(b.mode,'warning');assert.equal(b.projectiles.length,0);
+  const b=createBoss();b.hp=hp;b.pillars.forEach(p=>p.hp=0);b.timer=0;b.skillQueue=1;
+  updateBoss(b,player,.01,false,player,[],undefined,undefined,undefined,false,()=>.1);assert.equal(b.attack,'volley');assert.equal(b.mode,'warning');assert.equal(b.projectiles.length,0);
   updateBoss(b,player,1.16,false);assert.equal(b.burstRemaining,waves);
   updateBoss(b,player,.21,false);assert.equal(b.projectiles.length,hp===240?36:hp===150?48:60);
   const angles=b.projectiles.map(p=>(Math.atan2(p.vy,p.vx)+Math.PI*2)%(Math.PI*2)).sort((a,b)=>a-b);
@@ -15,22 +15,19 @@ test('later phases fire dense complete rings without a reserved escape sector',(
  }
 });
 test('three ground rays warn before damage and the complete attack expires',()=>{
- const b=createBoss();b.pillars=[];b.x=300;b.y=300;b.timer=0;
+ const b=createBoss();b.pillars=[];b.x=300;b.y=300;b.timer=0;b.skillQueue=1;
  const player={x:450,y:300};let hits=0,slows=0;
- updateBoss(b,player,.01,false,player,[],undefined,()=>hits++,()=>slows++);
+ updateBoss(b,player,.01,false,player,[],undefined,()=>hits++,()=>slows++,false,()=>.9);
  assert.equal(b.attack,'triple');assert.equal(b.mode,'warning');assert.equal(hits,0);assert.equal(b.iceRays.length,0);
  updateBoss(b,player,1.16,false,player,[],undefined,()=>hits++,()=>slows++);
  assert.equal(b.iceRays.length,3);assert.equal(hits,1);assert.equal(slows,1);
  for(let i=0;i<60;i++)updateBoss(b,{x:100,y:600},.05,false);
  assert.equal(b.iceRays.length,0);assert.equal(b.mode,'recover');
 });
-test('recovery never starts independent attacks and attack patterns alternate',()=>{
+test('recovery never starts independent attacks',()=>{
  const b=createBoss();b.mode='recover';b.timer=1.8;b.burstCooldown=-100;
  for(let i=0;i<20;i++)updateBoss(b,player,.05,false);
  assert.equal(b.mode,'recover');assert.equal(b.projectiles.length,0);assert.equal(b.iceRays.length,0);
- b.mode='stalking';b.timer=0;updateBoss(b,player,.01,false);assert.equal(b.attack,'triple');
- b.mode='stalking';b.timer=0;updateBoss(b,player,.01,false);assert.equal(b.attack,'volley');
- b.mode='stalking';b.timer=0;updateBoss(b,player,.01,false);assert.equal(b.attack,'triple');
 });
 
 test('melee is chosen only in close range and never emits ice rays or projectiles',()=>{
