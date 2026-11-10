@@ -1,3 +1,4 @@
+import {drawKnightOutfit} from './knightOutfits.ts';
 import {outfitSheet} from './outfitSprites.ts';
 import type {OutfitId} from '../logic/outfits.ts';
 import type { Direction } from '../logic/types.ts';
@@ -27,6 +28,8 @@ function spriteSheet(name: string): HTMLCanvasElement | undefined {
 }
 
 export function drawSoldierSprite(ctx: CanvasRenderingContext2D, x: number, y: number, direction: Direction, moving: boolean, echo: boolean, time: number, attacking = false, attackProgress = 0, outfit?:OutfitId) {
+  ctx.save();if(echo)ctx.globalAlpha*=.7;
+  const custom=drawKnightOutfit(ctx,x,y,direction,moving,time,attacking,attackProgress,outfit);ctx.restore();if(custom)return;
   attacking = attacking && (direction === 'left' || direction === 'right');
   const image = spriteSheet(attacking ? 'Attack' : 'Walk');
   if (!image) return;

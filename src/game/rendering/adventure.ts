@@ -1,3 +1,4 @@
+import {getOutfit,outfitTone} from '../logic/outfits.ts';
 import {wantsBossSkill} from '../logic/bossBehavior.ts';
 import {drawGuardianShield} from './guardianShield.ts';
 import {drawIceProjectile} from './iceProjectile.ts';
@@ -119,22 +120,25 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
     if (game.characterClass === 'swordsman' && game.attackFlash > 0) {
       ctx.save(); ctx.translate(game.player.x, game.player.y); ctx.rotate(game.attackAngle);
-      ctx.beginPath(); ctx.arc(0, 0, 90, -1.05, 1.05); ctx.strokeStyle = 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 90, -1.05, 1.05); ctx.strokeStyle = (game.characterClass==='swordsman'?outfitTone('swordsman')?.color:null) ?? 'rgba(167,255,226,.8)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.restore();
     }
+  const cosmetic=game.characterClass==='swordsman'?getOutfit('swordsman'):'default';
+  const tone=outfitTone('swordsman',cosmetic);
   if(game.lightCircle) {
     const c=game.lightCircle;ctx.save();ctx.globalAlpha=Math.min(1,c.life);
-    ctx.fillStyle='rgba(255,221,132,.12)';ctx.strokeStyle='#f6df9e';ctx.lineWidth=2;
+    ctx.fillStyle=tone?.glow??'rgba(255,221,132,.12)';ctx.strokeStyle=tone?.color??'#f6df9e';ctx.lineWidth=2;
     ctx.beginPath();ctx.ellipse(c.x,c.y,58,38,0,0,Math.PI*2);ctx.fill();ctx.stroke();
     ctx.beginPath();ctx.ellipse(c.x,c.y,48,30,0,0,Math.PI*2);ctx.stroke();
     for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.fillRect(c.x+Math.cos(a)*53-2,c.y+Math.sin(a)*34-2,4,4);}
     ctx.restore();
   }
-  drawVfx(ctx, game.vfx, game.player, true);    // on the ground, under the hero: heal ring, time clock
+  drawVfx(ctx, game.vfx, game.player, true,cosmetic);    // on the ground, under the hero: heal ring, time clock
   drawPfxShots(ctx, game.pfx, true);
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   for(const zone of game.frostZones)drawBossFrostZone(ctx,zone.x,zone.y,zone.radius,zone.struck,time,game.reducedMotion,Math.max(0,-zone.timer));
-  if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
+  if(tone&&game.hasteTime>0){ctx.save();ctx.strokeStyle=tone.color;ctx.globalAlpha=.6;ctx.lineWidth=2;for(let i=0;i<3;i++){const a=time*4+i*2.1;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y-8+i*5,25,10,a,.3,2.3);ctx.stroke();}ctx.restore();}
+  if(game.overdrive>0){ctx.strokeStyle=tone?.color??'#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
   // Kael and Aeris show their combo frames while attacking (rendering/comboSprites.ts).
   const comboFrame = !game.exitTravelRemaining && comboPose(game) ? drawComboHero(ctx, game) : false;
   if(game.characterClass==='swordsman' && !comboFrame && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawSoldierSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0,1-game.attackFlash/.22);
@@ -163,10 +167,10 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     drawLightningOrb(ctx, x, y, Math.atan2(shot.targetY - shot.y, shot.targetX - shot.x), shot.skill ? 14 : 10, time);
   }
   if(game.skillDrop)drawSkillPickup(ctx,game.skillDrop,time,game.language==='vi',Math.hypot(game.player.x-game.skillDrop.x,game.player.y-game.skillDrop.y)<180,game.reducedMotion);
-  if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c';ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=tone?.color??(f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c');ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
   // A picked-up shield: the hex bubble (vfx.ts), or the plain ring while its sheet is still loading.
-  if(!drawHexShield(ctx,game.player.x,game.player.y-14,game.stoneShield>0||game.armorShield>0,time,game.reducedMotion)) {ctx.strokeStyle=game.stoneShield>0?'#aeb6a3':'#e2d099';ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}
-  drawVfx(ctx, game.vfx, game.player, false);   // over the hero: pickup effects
+  if(!drawHexShield(ctx,game.player.x,game.player.y-14,game.stoneShield>0||game.armorShield>0,time,game.reducedMotion,cosmetic)) {ctx.strokeStyle=tone?.color??(game.stoneShield>0?'#aeb6a3':'#e2d099');ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}
+  drawVfx(ctx, game.vfx, game.player, false,cosmetic);   // over the hero: pickup effects
   if (game.invulnerability > 0) {
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();

@@ -1,3 +1,4 @@
+import {SHOP_OUTFITS,cleanOwnedOutfits,type ShopOutfitId} from './outfits.ts';
 import {chooseBossAttack,recordBossSwing,wantsBossSkill,type BossBehavior} from './bossBehavior.ts';
 import {ICE_BARRAGE} from './iceBarrage.ts';
 import {FROST_STRIKE,makeIceRays,insideIceRay,type IceRay} from './iceMagic.ts';
@@ -25,6 +26,7 @@ export function levelRating(seconds: number, levelId?: number): { stars: number;
 }
 
 export class Campaign {
+  ownedOutfits:ShopOutfitId[]=[];
   completed: number[] = [];
   forged = false;
   bossDefeated = false;
@@ -48,6 +50,7 @@ export class Campaign {
     try {
       if (typeof localStorage === 'undefined') return;
       const value = JSON.parse(localStorage.getItem('second-me-campaign-v3') ?? '{}');
+      this.ownedOutfits=cleanOwnedOutfits(value.ownedOutfits);
       this.supplies=cleanSupplies(value.supplies);
       this.chanceCharges=Number.isInteger(value.chanceCharges)?Math.max(0,Math.min(3,value.chanceCharges)):0;
       // The former schema kept an opened three-chance item in stock until all charges were spent.
@@ -81,11 +84,11 @@ export class Campaign {
         this.devShopStockMigrated=true;
       }
       if(migrateRunes||legacyDevStock)this.save();
-    } catch { this.supplies=emptySupplies();this.chanceCharges=0;this.aidUnlocked=false;this.heroClears={mage:[],swordsman:[]};this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
+    } catch { this.ownedOutfits=[];this.supplies=emptySupplies();this.chanceCharges=0;this.aidUnlocked=false;this.heroClears={mage:[],swordsman:[]};this.completed = []; this.forged = false; this.bossDefeated = false; this.coins = 0; this.timeItems = 0; this.chestKeys=0;this.lastChestRewards=[];this.limitRings = 0; this.bestStars = {}; this.echoRunes={};this.runeLoadout=[]; }
   }
   save() {
     try { if (typeof localStorage !== 'undefined') localStorage.setItem('second-me-campaign-v3', JSON.stringify({
-      devShopStockMigrated:this.devShopStockMigrated,
+      ownedOutfits:this.ownedOutfits,devShopStockMigrated:this.devShopStockMigrated,
       supplies:this.supplies,chanceCharges:this.chanceCharges,aidUnlocked:this.aidUnlocked,heroClears:this.heroClears,
       completed: this.completed, forged: this.forged, bossDefeated: this.bossDefeated,
       echoRunes:this.echoRunes,runeLoadout:this.runeLoadout,pendingRuneChoices:this.pendingRuneChoices, mechanicalOwned: this.mechanicalOwned, coins: this.coins, timeItems: this.timeItems, limitRings:this.limitRings, chestKeys:this.chestKeys,lastChestRewards:this.lastChestRewards, bestStars: this.bestStars,
@@ -151,6 +154,11 @@ export class Campaign {
     this.coins-=item.price*quantity;
     if(id==='time')this.timeItems+=quantity;else if(id==='ring')this.limitRings+=quantity;else this.supplies[id]+=quantity;
     this.save();return true;
+  }
+  buyOutfit(id:ShopOutfitId){
+    const product=SHOP_OUTFITS.find(o=>o.id===id);
+    if(!product||this.ownedOutfits.includes(id)||!Number.isSafeInteger(this.coins)||this.coins<product.price)return false;
+    this.coins-=product.price;this.ownedOutfits.push(id);this.save();return true;
   }
   buyMechanical() { if (this.mechanicalOwned || this.coins < 100) return false; this.coins -= 100; this.mechanicalOwned = true; this.save(); return true; }
   buyTimeItem() { return this.buyShopItem('time'); }

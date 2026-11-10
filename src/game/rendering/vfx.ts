@@ -1,3 +1,5 @@
+import {knightEffectSheet} from './knightOutfits.ts';
+import type {OutfitId} from '../logic/outfits.ts';
 // Sprite-sheet effects from the supplied GIFs (tools/assets/prepare_vfx_sheets.py): one row per sheet, frames
 // left to right. The numbers below are the script's output; vfx.test.ts checks them against the files.
 
@@ -54,14 +56,14 @@ export function loadVfx() {
 function sheet(key: VfxSheet) { const img = images[key]; return img?.complete && img.naturalWidth ? img : null; }
 
 /** One cell, centred on (x, y), `width` game px wide. */
-function drawCell(ctx: CanvasRenderingContext2D, key: VfxSheet, frame: number, x: number, y: number, width: number, alpha = 1) {
+function drawCell(ctx: CanvasRenderingContext2D, key: VfxSheet, frame: number, x: number, y: number, width: number, alpha = 1, outfit:OutfitId='default') {
   const img = sheet(key);
   if (!img) return false;
   const s = VFX_SHEETS[key], height = width * s.h / s.w;
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.imageSmoothingEnabled = s.smooth;
-  ctx.drawImage(img, frame * s.w, 0, s.w, s.h, Math.round(x - width / 2), Math.round(y - height / 2), width, height);
+  ctx.drawImage(knightEffectSheet(img,outfit), frame * s.w, 0, s.w, s.h, Math.round(x - width / 2), Math.round(y - height / 2), width, height);
   ctx.restore();
   return true;
 }
@@ -70,14 +72,14 @@ function drawCell(ctx: CanvasRenderingContext2D, key: VfxSheet, frame: number, x
 const OFFSET_Y: Record<VfxKind, number> = { shieldPickup: -18, sparkle: -18, healRing: 4, clock: -14 };
 
 /** The engine's one-shot effects. `ground` picks the layer: under the hero (heal ring, clock) or over (the rest). */
-export function drawVfx(ctx: CanvasRenderingContext2D, list: readonly Vfx[], hero: { x: number; y: number }, ground: boolean) {
+export function drawVfx(ctx: CanvasRenderingContext2D, list: readonly Vfx[], hero: { x: number; y: number }, ground: boolean, outfit:OutfitId='default') {
   loadVfx();
   for (const fx of list) {
     if ((fx.kind === 'healRing' || fx.kind === 'clock') !== ground) continue;
     const at = vfxFrame(fx.kind, fx.age);
     if (!at) continue;
     const p = fx.follow ? hero : fx;
-    drawCell(ctx, fx.kind, at.frame, p.x, p.y + OFFSET_Y[fx.kind], VFX_SHEETS[fx.kind].size, at.alpha);
+    drawCell(ctx, fx.kind, at.frame, p.x, p.y + OFFSET_Y[fx.kind], VFX_SHEETS[fx.kind].size, at.alpha,fx.kind==='clock'?'default':outfit);
   }
 }
 
@@ -86,7 +88,7 @@ export function drawVfx(ctx: CanvasRenderingContext2D, list: readonly Vfx[], her
  * the attack's angle about (x, y); its outer edge is 70 of the cell's 192 px from the centre, scaled to `radius`.
  * `k` runs 0 -> 1 over the arc's life. False while the sheet is not loaded (the caller draws its plain arc).
  */
-export function drawSlash(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, radius: number, k: number, flip: boolean) {
+export function drawSlash(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, radius: number, k: number, flip: boolean, outfit:OutfitId='default') {
   const img = sheet('slash');
   if (!img) return false;
   const s = VFX_SHEETS.slash, size = radius * 1.15 / 70 * s.w;
@@ -96,7 +98,7 @@ export function drawSlash(ctx: CanvasRenderingContext2D, x: number, y: number, a
   ctx.imageSmoothingEnabled = false;
   ctx.translate(x, y); ctx.rotate(angle);
   if (flip) ctx.scale(1, -1);          // the return swing mirrors the first
-  ctx.drawImage(img, frame * s.w, 0, s.w, s.h, -size / 2, -size / 2, size, size);
+  ctx.drawImage(knightEffectSheet(img,outfit), frame * s.w, 0, s.w, s.h, -size / 2, -size / 2, size, size);
   ctx.restore();
   return true;
 }
@@ -107,20 +109,20 @@ let shieldSince = -1, shieldGone = -1, shieldAt = { x: 0, y: 0 };
  * The bubble around the hero while a picked-up shield holds, then its break. Call every frame. Returns false
  * only when the shield is up but the sheet is not loaded (the caller draws its plain ring).
  */
-export function drawHexShield(ctx: CanvasRenderingContext2D, x: number, y: number, active: boolean, time: number, still: boolean) {
+export function drawHexShield(ctx: CanvasRenderingContext2D, x: number, y: number, active: boolean, time: number, still: boolean, outfit:OutfitId='default') {
   if (time < shieldSince || time < shieldGone) { shieldSince = -1; shieldGone = -1; }   // a new level: the clock restarted
   if (active) {
     if (shieldSince < 0) shieldSince = time;
     shieldGone = -1; shieldAt = { x, y };
     const frame = hexShieldFrame(time - shieldSince, still);
     // See-through: the hero stays readable inside it; brighter while it assembles and during the sweep.
-    return drawCell(ctx, 'hexShield', frame, x, y, VFX_SHEETS.hexShield.size, frame === HEX.build - 1 ? 0.28 : 0.5);
+    return drawCell(ctx, 'hexShield', frame, x, y, VFX_SHEETS.hexShield.size, frame === HEX.build - 1 ? 0.28 : 0.5,outfit);
   }
   if (shieldSince >= 0) { shieldSince = -1; shieldGone = time; }
   if (shieldGone >= 0) {
     const frame = still ? null : hexShieldBreakFrame(time - shieldGone);
     if (frame === null) shieldGone = -1;
-    else drawCell(ctx, 'hexShield', frame, shieldAt.x, shieldAt.y, VFX_SHEETS.hexShield.size, 0.6);
+    else drawCell(ctx, 'hexShield', frame, shieldAt.x, shieldAt.y, VFX_SHEETS.hexShield.size, 0.6,outfit);
   }
   return true;
 }
