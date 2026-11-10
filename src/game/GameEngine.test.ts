@@ -418,3 +418,20 @@ test('boss introduction freezes combat and the clock until explicitly started', 
  assert.equal((engine as unknown as {elapsedLevelTime:number}).elapsedLevelTime,0);assert.equal(engine.boss!.x,x);assert.equal(engine.boss!.y,y);assert.equal(engine.mana.value,100);
  engine.beginBossFight();advance(.1);assert.equal(engine.bossIntroduction,false);assert.ok((engine as unknown as {elapsedLevelTime:number}).elapsedLevelTime>0);
 });
+
+test('touch stick moves exactly like the keys, at any stick deflection, and keys win when both are used', () => {
+  const after = (drive: (e: GameEngine, keys: Set<string>) => void) => {
+    const {engine,controls,advance}=setup();
+    const x=engine.player.x,y=engine.player.y;
+    drive(engine,controls.heldKeys);advance(.3);
+    return {dx:engine.player.x-x,dy:engine.player.y-y,dir:engine.player.direction};
+  };
+  const keysRight=after((_,k)=>k.add('KeyD'));
+  assert.ok(keysRight.dx>0);
+  assert.deepEqual(after(e=>e.setTouchMove(46,0)),keysRight);
+  assert.deepEqual(after(e=>e.setTouchMove(9.5,0)),keysRight, 'a light push walks at full speed too');
+  const keysDiagonal=after((_,k)=>{k.add('KeyD');k.add('KeyS');});
+  assert.deepEqual(after(e=>e.setTouchMove(30,30)),keysDiagonal, 'diagonals are not faster than on keys');
+  assert.deepEqual(after((e,k)=>{e.setTouchMove(-40,0);k.add('KeyD');}),keysRight);
+  assert.deepEqual(after(e=>e.setTouchMove(0,0)),{dx:0,dy:0,dir:after(e=>e.setTouchMove(0,0)).dir});
+});

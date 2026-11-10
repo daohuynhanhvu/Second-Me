@@ -1,0 +1,11 @@
+/* Movement zone: lower-left of the play area, under the HUD cards; the action bar keeps the lower right. */
+.touch-stick-zone{position:absolute;left:0;bottom:0;width:42%;height:62%;z-index:11;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+/* Pixel stone ring: hard bevels, no blur. Resting spot (left/bottom) when no finger is down; while held, the
+   inline left/top put its centre under the finger (the negative margins centre it; margin-top only counts then). */
+.touch-stick{position:absolute;left:84px;bottom:28px;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;
+  background:#0a1610a8;border:3px solid #050d08;box-shadow:inset 0 0 0 3px #3f6a3a,inset 0 0 0 7px #0a161099,0 4px 0 #050d08aa;
+  opacity:.55;pointer-events:none;transition:opacity .12s steps(2)}
+.touch-stick-zone.is-active .touch-stick{opacity:1}
+.touch-stick-knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;
+  background:#e6c46e;border:3px solid #050d08;box-shadow:inset 3px 3px 0 #fff0b0,inset -3px -4px 0 #8a6424}
+@media(max-height:420px){.touch-stick{width:96px;height:96px;margin:-48px 0 0 -48px;left:70px}.touch-stick-knob{width:42px;height:42px;margin:-21px 0 0 -21px}}

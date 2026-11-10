@@ -34,10 +34,12 @@ body.reduced-motion .portal-swirl{animation:none}
 .rune-r-lit{animation:rune-blink 9s ease-in-out infinite}
 @keyframes rune-blink{0%,100%{opacity:.6}10%{opacity:1}45%,52%{opacity:0}66%{opacity:1}}
 /* Wizard dips gently, squashing from the feet. */
-.menu-wizard{image-rendering:pixelated;transform-box:view-box;transform-origin:621px 742px;animation:wizard-bob 1.6s ease-in-out infinite}
+.menu-wizard image{image-rendering:pixelated}
+/* Idle bob once she has arrived: squash from the feet (local origin = the game's feet anchor; soles 22.6 units lower). */
+.menu-wizard.is-idle{transform-box:view-box;transform-origin:0 22.6px;animation:wizard-bob 1.6s ease-in-out infinite}
 @keyframes wizard-bob{50%{transform:scale(1.03,.95)}}
-body.reduced-motion :is(.rune-r-lit,.menu-wizard){animation:none}
-@media(prefers-reduced-motion:reduce){:is(.rune-r-lit,.menu-wizard){animation:none}}
+body.reduced-motion :is(.rune-r-lit,.menu-wizard.is-idle){animation:none}
+@media(prefers-reduced-motion:reduce){:is(.rune-r-lit,.menu-wizard.is-idle){animation:none}}
 @keyframes foliage-sway{from{transform:translateX(-1px) rotate(-.16deg)}to{transform:translateX(2px) rotate(.23deg)}}
 .intro-accessible-title{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .intro-mobile-title{display:none}
@@ -79,13 +81,12 @@ body.reduced-motion :is(.rune-r-lit,.menu-wizard){animation:none}
 .intro-artwork{container-type:inline-size}
 .intro-menu-item{font-size:clamp(9px,1.9cqw,29px)}
 .intro-language{font-size:clamp(8px,.8cqw,14px)}
-@media(max-width:600px) and (orientation:portrait){
-  .intro-artwork{top:32%;width:100%}
-  .intro-menu{left:50%;top:106%;bottom:auto;transform:translateX(-50%);width:min(78%,304px,calc((68dvh - 32vw - 30px) * 304 / 420));height:auto;padding:0;clip-path:none;grid-template-rows:none;gap:6px;background:none;box-shadow:none}
-  .intro-menu::after{display:none}
-  .intro-menu-item{aspect-ratio:304/78;font-size:clamp(13px,4vw,20px)}
-  .intro-language{top:auto;bottom:3%;right:3%;left:auto;width:auto;padding:4px 8px;background:#0b211de6}
-}
+/* Fill the screen like a game instead of letterboxing: zoom in, cropping only the scene's outer edges, as far as
+   the safe area allows: portal arch to menu frame across (art x 130-1246 of 1376, 81.1%), title to Aeris' feet
+   down (y 24-744 of 768, 93.75%). Both spans are centred, so centring the art keeps them on screen. */
+.intro-artwork{width:min(max(100%,calc(100dvh * 1376 / 768)),calc(100% / .811),calc(100dvh * 1376 / 768 / .9375))}
+/* Any screen still wider or taller than that shows the forest itself, blurred and dimmed, not flat bars. */
+.intro-screen::before{display:block;content:'';position:absolute;inset:-40px;z-index:0;background:url('/assets/menu/second-me-forest-clean.png') center/cover no-repeat;filter:blur(18px) brightness(.38) saturate(.85);pointer-events:none}
 /* The frame's brambles reaching out to the hovered slab (MenuVines.tsx: a canvas-drawn sheet of 18 frames, each the
    slab's 304 x 78 sprite cell with 48 px either side and 18 px above and below). Inside the face, so they rise and press with it. */
 .intro-menu-vines{position:absolute;left:calc(-48 / 304 * 100%);right:calc(-48 / 304 * 100%);top:calc(-18 / 78 * 100%);bottom:calc(-18 / 78 * 100%);z-index:2;background-repeat:no-repeat;background-size:1800% 100%;background-position:0 0;image-rendering:pixelated;pointer-events:none;visibility:hidden}

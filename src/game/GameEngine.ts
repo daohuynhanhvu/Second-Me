@@ -336,6 +336,9 @@ export class GameEngine {
 
   // Input
   private heldKeys = new Set<string>();
+  /** On-screen joystick direction (TouchControls.tsx); used when no movement key is held. */
+  private touchMove = { x: 0, y: 0 };
+  public setTouchMove(x: number, y: number) { this.touchMove = { x, y }; }
 
   // Loop management
   private animFrameId: number | null = null;
@@ -1652,6 +1655,7 @@ export class GameEngine {
 
   private handleWindowBlur = () => {
     this.heldKeys.clear();
+    this.touchMove = { x: 0, y: 0 };
     this.pauseGame();
   };
 
@@ -1906,6 +1910,10 @@ export class GameEngine {
       const invLen = 1 / Math.SQRT2;
       moveX *= invLen;
       moveY *= invLen;
+    }
+    if (!moveX && !moveY) {
+      const length = Math.hypot(this.touchMove.x, this.touchMove.y);
+      if (length > 0) { moveX = this.touchMove.x / length; moveY = this.touchMove.y / length; }
     }
     if (this.dodgeTime > 0) {
       if (!moveX && !moveY) {

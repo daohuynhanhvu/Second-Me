@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { MenuWizard } from './MenuWizard.tsx';
 
 // All coordinates follow the supplied 1376 × 768 painting. The art and this
 // overlay scale together, so the camera and the menu stay completely still.
@@ -87,8 +88,8 @@ export function IntroEffects() {
       </g>
       {/* Painting's R is baked unlit (tools/assets/prepare_menu_wizard_rune.py); this is the original lit R. */}
       <image className="rune-r-lit" href="/assets/menu/rune-r-lit.png" x="548" y="484" width="52" height="82" preserveAspectRatio="none"/>
-      {/* The in-game Aeris, back turned, where the painted wizard stood (feet at 621,742). */}
-      <image className="menu-wizard" href="/assets/menu/menu-wizard.png" x="574" y="613.5" width="94" height="128.5" preserveAspectRatio="none"/>
+      {/* The in-game Aeris walks out of the portal to where the painted wizard stood. */}
+      <MenuWizard/>
       <g className="rune-glow rune-three" fill="none" stroke="#86fff0" strokeWidth="2.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M1299 521 L1312 487 L1291 501 L1307 510 M1301 520 L1288 537"/>
       </g>
