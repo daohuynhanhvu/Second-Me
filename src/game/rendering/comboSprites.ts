@@ -1,3 +1,5 @@
+import {drawKnightOutfit} from './knightOutfits.ts';
+import {getOutfit,outfitTone} from '../logic/outfits.ts';
 import {outfitSheet} from './outfitSprites.ts';
 /**
  * Kael's and Aeris's combo frames (public/assets/combat, cut by
@@ -71,6 +73,7 @@ export function comboPose(game: GameEngine): { hero: ComboHero; index: number } 
 export function drawComboHero(ctx: CanvasRenderingContext2D, game: GameEngine): boolean {
   const pose = comboPose(game);
   if (!pose) return false;
+  if(pose.hero==='swordsman'&&drawKnightOutfit(ctx,game.player.x,game.player.y,game.comboAim.x<game.player.x?'left':'right',false,0,true,(game.combo?.time??0)/((COMBO_HITS.swordsman[game.combo?.step??0].frames)*COMBO_HITS.swordsman[game.combo?.step??0].frameTime)))return true;
   const img = image(pose.hero);
   if (!img) return false;
   const s = SHEETS[pose.hero];
@@ -86,24 +89,25 @@ export function drawComboHero(ctx: CanvasRenderingContext2D, game: GameEngine): 
 
 /** Sword arcs, impact bursts, the nova ring, spell projectiles and damage numbers. */
 export function drawComboEffects(ctx: CanvasRenderingContext2D, game: GameEngine, time: number) {
+  const tone=game.characterClass==='swordsman'?outfitTone('swordsman'):null;
   ctx.save();
   for (const fx of game.comboFx) {
     const k = 1 - fx.life / fx.max;                     // 0 → 1 over the effect
     ctx.globalAlpha = Math.max(0, 1 - k);
     // Kael's swings use the crescent sheet (vfx.ts); the plain arc below is the spin and the loading fallback.
-    if (fx.kind === 'arc' && drawSlash(ctx, fx.x, fx.y, fx.angle, fx.radius, k, !!fx.flip)) continue;
+    if (fx.kind === 'arc' && drawSlash(ctx, fx.x, fx.y, fx.angle, fx.radius, k, !!fx.flip,game.characterClass==='swordsman'?getOutfit('swordsman'):'default')) continue;
     if (fx.kind === 'arc' || fx.kind === 'spin') {
       const r = fx.radius * (0.85 + 0.15 * k);
       const from = fx.kind === 'spin' ? fx.angle - Math.PI * 2 * Math.min(1, k * 1.6) : fx.angle - 1.15;
       const to = fx.kind === 'spin' ? fx.angle : fx.angle + 1.15;
       ctx.lineCap = 'round';
-      ctx.strokeStyle = fx.heavy ? '#fff3c4' : '#f4ffe6'; ctx.lineWidth = fx.heavy ? 7 : 5;
+      ctx.strokeStyle = tone?.core ?? (fx.heavy ? '#fff3c4' : '#f4ffe6'); ctx.lineWidth = fx.heavy ? 7 : 5;
       ctx.beginPath(); ctx.ellipse(fx.x, fx.y, r, r * 0.62, 0, fx.flip ? to : from, fx.flip ? from : to, !!fx.flip); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,214,120,.55)'; ctx.lineWidth = 2;
+      ctx.strokeStyle = tone?.color ?? 'rgba(255,214,120,.55)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(fx.x, fx.y, r - 6, (r - 6) * 0.62, 0, fx.flip ? to : from, fx.flip ? from : to, !!fx.flip); ctx.stroke();
     } else if (fx.kind === 'impact') {
       const r = fx.radius * (0.4 + k * 0.9);
-      ctx.fillStyle = '#fffbe8';
+      ctx.fillStyle = tone?.core ?? '#fffbe8';
       for (let i = 0; i < 10; i++) {
         const a = i / 10 * Math.PI * 2 + fx.angle, len = r * (i % 2 ? 0.55 : 1);
         ctx.beginPath(); ctx.moveTo(fx.x, fx.y);
@@ -112,7 +116,7 @@ export function drawComboEffects(ctx: CanvasRenderingContext2D, game: GameEngine
         ctx.lineTo(fx.x + Math.cos(a + 0.12) * len * 0.35, fx.y + Math.sin(a + 0.12) * len * 0.35);
         ctx.fill();
       }
-      ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 3;
+      ctx.strokeStyle = tone?.color ?? '#ffd36b'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(fx.x, fx.y, r * 0.8, 0, Math.PI * 2); ctx.stroke();
     } else if (fx.kind === 'nova') {
       const r = fx.radius * (0.25 + 0.75 * Math.sqrt(k));

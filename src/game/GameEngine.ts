@@ -1,4 +1,4 @@
-import {restoreOutfits,getOutfits,equipOutfit,type OutfitHero,type OutfitId} from './logic/outfits.ts';
+import {restoreOutfits,getOutfits,equipOutfit,canWearOutfit,type ShopOutfitId,type OutfitHero,type OutfitId} from './logic/outfits.ts';
 import { SKILL_PICKUPS } from './logic/skillPickups.ts';
 import { ManaPool, MAX_MP, comboManaCost, skillManaCost } from './logic/mana.ts';
 import {SHOP_ITEMS,type ShopItemId,type SupplyId,type Supplies} from './logic/shopItems.ts';
@@ -78,6 +78,7 @@ const CLASS_SKILLS: Record<CharacterClass, CombatSkill[]> = { mage: ['fire','lig
 
 export interface HUDState {
   outfits?:Record<OutfitHero,OutfitId>;
+  ownedOutfits?:ShopOutfitId[];
   guideTopic?: GuideTopic|null;
   guideLibrary?: boolean;
   screen: GameScreen;
@@ -373,6 +374,7 @@ export class GameEngine {
 
   constructor() {
     this.campaign.load();restoreOutfits();
+    for(const hero of ['mage','swordsman'] as const)if(!canWearOutfit(hero,getOutfits()[hero],this.campaign.ownedOutfits))equipOutfit(hero,'default');
     this.loadSettings();
     setCurrentLanguage(this.language);
     if (typeof document !== 'undefined') document.title = this.language === 'vi' ? 'SECOND ME — Lò rèn lửa' : 'SECOND ME — The Emberforge';
@@ -533,7 +535,7 @@ export class GameEngine {
     this.showBanner(this.language==='vi'?'Nhẫn đã dùng · Giới hạn 6 Echo trong màn này.':'Ring used · Echo limit is 6 for this level.');
     this.notifyHUD(); return true;
   }
-  public setCharacterOutfit(hero:OutfitHero,id:OutfitId){if(this.screen!=='characters')return false;const ok=equipOutfit(hero,id);if(ok)this.notifyHUD();return ok;}
+  public setCharacterOutfit(hero:OutfitHero,id:OutfitId){if(!['characters','shop'].includes(this.screen)||!canWearOutfit(hero,id,this.campaign.ownedOutfits))return false;const ok=equipOutfit(hero,id);if(ok)this.notifyHUD();return ok;}
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&this.timeItemsUsedThisLevel<5&&this.campaign.timeItems>0&&!this.runeEditing;}
@@ -741,6 +743,10 @@ export class GameEngine {
     this.notifyHUD();
   }
 
+  public buyOutfit(id:ShopOutfitId){
+    if(this.screen!=='shop')return false;
+    const bought=this.campaign.buyOutfit(id);if(bought)this.notifyHUD();return bought;
+  }
   public buySupply(id:SupplyId){return this.buyShopItem(id);}
   public buyShopItem(id:ShopItemId,quantity=1){
     if(this.screen!=='shop')return false;
@@ -2380,7 +2386,7 @@ export class GameEngine {
         showHints: this.showHints,
         devUnlocked: this.devUnlocked,
         language: this.language,
-        characterClass: this.characterClass,outfits:getOutfits(),
+        characterClass: this.characterClass,outfits:getOutfits(),ownedOutfits:[...this.campaign.ownedOutfits],
         weapon: this.weapon,
         coins: this.campaign.coins,
         timeItems: this.campaign.timeItems,

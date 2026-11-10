@@ -1,3 +1,5 @@
+import {isShopOutfit} from '../game/logic/outfits.ts';
+import {drawKnightOutfit,knightAtlasReady} from '../game/rendering/knightOutfits.ts';
 import {outfitSheet} from '../game/rendering/outfitSprites.ts';
 import type {OutfitId} from '../game/logic/outfits.ts';
 import React, { useEffect, useRef } from 'react';
@@ -36,7 +38,7 @@ function timeline(hero: ComboHero) {
  * nearest-neighbour), for the character screen.
  * Draws only when something changes (a new frame, or the previous one still fading).
  */
-export function ComboPreview({ hero, outfit }: { hero: ComboHero;outfit?:OutfitId }) {
+export function ComboPreview({ hero, outfit, reducedMotion=false }: { hero: ComboHero;outfit?:OutfitId;reducedMotion?:boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const s = SHEETS[hero];
   const scale = Math.max(2, Math.floor(380 / s.frameW));
@@ -52,12 +54,14 @@ export function ComboPreview({ hero, outfit }: { hero: ComboHero;outfit?:OutfitI
     let raf = 0, current = -1, previous = -1, changedAt = 0, ghostDone = true;
     const draw = (f: number, alpha: number) => {
       ctx.globalAlpha = alpha;
+      if(hero==='swordsman'){ctx.save();ctx.scale(scale,scale);const progress=f===0?0:((f-1)%8)/8;const custom=drawKnightOutfit(ctx,s.frameW/2,s.frameH-13,'right',false,0,f!==0,progress,outfit);ctx.restore();if(custom)return;}
       ctx.drawImage(outfitSheet(img,hero,outfit), f * s.frameW, 0, s.frameW, s.frameH, 0, 0, s.frameW * scale, s.frameH * scale);
     };
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (!img.complete || !img.naturalWidth) return;
-      let t = ((now - t0) / 1000) % total, i = 0;
+      if(hero==='swordsman'&&isShopOutfit(outfit)&&!knightAtlasReady())return;
+      let t = reducedMotion?0:((now - t0) / 1000) % total, i = 0;
       while (t >= steps[i].dur) { t -= steps[i].dur; i++; }
       const st = steps[i];
       if (i !== current) { previous = current; current = i; changedAt = now; ghostDone = false; }
@@ -72,7 +76,7 @@ export function ComboPreview({ hero, outfit }: { hero: ComboHero;outfit?:OutfitI
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [hero,outfit]);
+  }, [hero,outfit,reducedMotion]);
 
   return <canvas ref={canvas} className="combo-preview" width={s.frameW * scale} height={s.frameH * scale} aria-hidden="true"/>;
 }
