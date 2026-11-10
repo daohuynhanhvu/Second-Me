@@ -34,7 +34,7 @@ export function ChestGacha({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
     busy.current=true;setResults(rewards);setTier(rewards.includes('ring')?'fire':'gold');setOpening(true);setRun(n=>n+1);
   };
   return <>
-    <button className="shop-reward-chest" ref={trigger} aria-label={vi?'Mở rương đỏ':'Open red chest'} onClick={()=>setOpen(true)}><ChestSprite/><span>{vi?'RƯƠNG ĐỎ':'RED CHEST'}</span></button>
+    <button className="shop-reward-chest" ref={trigger} aria-label={vi?'Mở rương thưởng':'Open reward chest'} onClick={()=>setOpen(true)}><ChestSprite/></button>
     {open&&<div className="chest-backdrop" onClick={close}><section className="chest-panel" role="dialog" aria-modal="true" aria-label={vi?'Rương thưởng':'Reward chest'} onClick={e=>e.stopPropagation()}>
       <header><button ref={closeButton} aria-label={vi?'Đóng rương':'Close chest'} onClick={close}>×</button></header>
       <p className="chest-key-balance"><ChestKeyIcon size={28}/> {hud.chestKeys} {vi?'chìa khóa':'keys'}</p>
