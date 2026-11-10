@@ -78,6 +78,11 @@ body.reduced-motion :is(.rune-lit,.menu-wizard.is-idle){animation:none}
 .intro-artwork{container-type:inline-size}
 .intro-menu-item{font-size:clamp(9px,1.9cqw,29px)}
 .intro-language{font-size:clamp(8px,.8cqw,14px)}
+/* EN / VI lives in the strip the panel keeps above its first slab (3.13% of the art's width). pixelReadability.css
+   pins it at 16px for legibility, which on a phone is taller than that strip and covers START GAME: scale it with
+   the art instead (16px on a full-size menu, never under 12px), with a tight line. */
+.adventure-app .intro-artwork :is(.intro-language,.intro-language button){font-size:clamp(12px,1.6cqw,16px)!important;line-height:1!important}
+.adventure-app .intro-artwork .intro-language button{padding:2px 3px}
 /* Fill the screen like a game instead of letterboxing: zoom in, cropping only the scene's outer edges, as far as
    the safe area allows: portal arch to menu frame across (art x 130-1246 of 1376, 81.1%), title to Aeris' feet
    down (y 24-744 of 768, 93.75%). Both spans are centred, so centring the art keeps them on screen. */
