@@ -20,7 +20,7 @@ html body :is(.adventure-app,.modal-backdrop) :is(
  .setting-row,.loadout-slots>button,.loadout-library>button,.loadout-description,
  .rune-choice-grid>button,.reward-three>button,.reward-totals,.chest-results li,
  .outfit-large-preview,.hero-roster,.outfit-options>button,
- .trading-items>button,.trading-product-info,.rune-function-tip
+ .trading-items>button,.rune-function-tip
 ),html body .rune-function-tip{
  border-image:var(--forest-card) 12% fill / 10px / 0 stretch!important;
  background:#424536!important;border-radius:0!important;
