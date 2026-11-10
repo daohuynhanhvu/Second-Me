@@ -23,3 +23,7 @@
 .outfit-options::-webkit-scrollbar-thumb{background:#b3a26c;border:2px solid #2d3227;border-radius:6px}
 .outfit-options::-webkit-scrollbar-thumb:hover{background:#d1be80}
 @media(max-height:480px){.outfit-collection{padding:7px 9px 10px}.outfit-options{grid-auto-rows:minmax(75px,1fr);gap:6px;padding:3px 9px 8px 3px}}
+/* Forest frame art is 36px deep; keep the heading beneath its upper vines. */
+.outfit-collection{box-sizing:border-box;padding:36px 18px 22px}
+.outfit-collection>header{gap:4px;margin-bottom:9px}
+@media(max-height:480px){.outfit-collection{padding:26px 12px 15px}.outfit-collection>header{gap:2px;margin-bottom:6px}.outfit-collection>header small{display:block;font-size:10px!important}}
