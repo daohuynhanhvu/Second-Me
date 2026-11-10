@@ -8,10 +8,42 @@ import type {GameEngine,HUDState} from '../game/GameEngine.ts';
 import './tanukiTradingPost.css';
 const displayItems=[...SHOP_ITEMS.filter(i=>i.id==='time'||i.id==='ring'),...SHOP_ITEMS.filter(i=>i.id!=='time'&&i.id!=='ring'&&i.id!=='aid')];
 const poseOffsets=[[0,0],[18,-2],[7,6],[18,6]];
+const shopGreetings={
+ vi:[
+  'Xin chào! Bạn muốn mua gì nào?',
+  'Chào bạn! Hôm nay đi đường có thuận lợi không?',
+  'Ồ, khách quen đây rồi! Mời bạn xem hàng nhé.',
+  'Bạn khỏe chứ? Nghỉ chân một lát rồi hãy đi.',
+  'Trong rừng có gì mới không? Kể tôi nghe với!',
+  'Tanuki xin chào! Cần món gì cứ gọi tôi nhé.',
+  'Túi còn chỗ chứ? Tôi hỏi trước cho chắc!',
+  'Bộ trang phục này hợp bạn đấy. Tin tôi đi!',
+  'Hết xu vẫn cứ ghé chơi, tôi thích trò chuyện!',
+  'Đừng vội nhé, cứ chọn món bạn ưng ý.',
+  'Chúc bạn gặp toàn điều lành trên đường đi!',
+  'Nghe thấy tiếng rương gọi không? Tôi thì có!',
+  'Nhớ giữ sức nhé. Tôi đợi bạn ở quầy!',
+ ],
+ en:[
+  'Welcome! What would you like?',
+  'Hello! How has your journey been today?',
+  'A familiar face! Come and browse a while.',
+  'Doing well? Rest a little before you go.',
+  'Any news from the forest? Tell me!',
+  'Hello from Tanuki! Just ask if you need help.',
+  'Got room in your bag? Just checking!',
+  'That outfit suits you. Trust my eye!',
+  'No coins? Visit anyway. I like a good chat!',
+  'No rush. Pick something you truly like.',
+  'May your road be full of good surprises!',
+  'Hear that chest calling? I sure do!',
+  'Take care out there. I will be right here!',
+ ],
+};
 const asset=(name:string)=>`${import.meta.env.BASE_URL}assets/ui/${name}`;
 export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
  const vi=hud.language==='vi',viewport=useRef<HTMLDivElement>(null),dialog=useRef<HTMLFormElement>(null),buyButton=useRef<HTMLButtonElement>(null),reactionUntil=useRef(0);
- const [ready,setReady]=useState(false),[greetingRun,setGreetingRun]=useState(0),[scale,setScale]=useState(1),[selected,setSelected]=useState<ShopItemId>('time'),[tab,setTab]=useState<'items'|'outfits'>('items'),[confirm,setConfirm]=useState(false),[quantity,setQuantity]=useState(1),[message,setMessage]=useState(''),[pose,setPose]=useState(0),[speech,setSpeech]=useState(true);
+ const [ready,setReady]=useState(false),[greetingRun,setGreetingRun]=useState(0),[greetingIndex,setGreetingIndex]=useState(0),[scale,setScale]=useState(1),[selected,setSelected]=useState<ShopItemId>('time'),[tab,setTab]=useState<'items'|'outfits'>('items'),[confirm,setConfirm]=useState(false),[quantity,setQuantity]=useState(1),[message,setMessage]=useState(''),[pose,setPose]=useState(0),[speech,setSpeech]=useState(true);
  const [hovered,setHovered]=useState<ShopItemId|null>(null);
  const item=SHOP_ITEMS.find(i=>i.id===selected)!;
  const preview=SHOP_ITEMS.find(i=>i.id===(hovered??selected))!;
@@ -35,16 +67,16 @@ export function TanukiShop({engine,hud}:{engine:GameEngine|null;hud:HUDState}){
  useEffect(()=>{if(!confirm)return;dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}else if(e.key==='Tab'){const nodes=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input')??[]),first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}};window.addEventListener('keydown',key,true);return()=>window.removeEventListener('keydown',key,true);},[confirm]);
  const select=(id:ShopItemId)=>{setSelected(id);setQuantity(1);setMessage('');};
  const purchase=()=>{
-  if(selected==='aid'||!unlocked||quantity<1||quantity>maxQuantity||!engine?.buyShopItem(selected,quantity)){setMessage(vi?'Không thể mua. Kiểm tra xu và chỗ trống trong túi.':'Cannot purchase. Check your coins and inventory capacity.');return;}
-  setMessage(vi?`Đã nhận ${quantity} × ${item.vi}. Cảm ơn bạn!`:`Received ${quantity} × ${item.en}. Thank you!`);reactionUntil.current=performance.now()+1500;setPose(3);setSpeech(true);close();
+  if(selected==='aid'||!unlocked||quantity<1||quantity>maxQuantity||!engine?.buyShopItem(selected,quantity)){setMessage(vi?'Không thể mua. Kiểm tra xu và chỗ trống trong túi.':'Cannot purchase. Check your coins and inventory capacity.');setSpeech(true);setGreetingRun(n=>n+1);return;}
+  setMessage(vi?`Đã nhận ${quantity} × ${item.vi}. Cảm ơn bạn!`:`Received ${quantity} × ${item.en}. Thank you!`);reactionUntil.current=performance.now()+1500;setPose(3);setSpeech(true);setGreetingRun(n=>n+1);close();
  };
  return <div className="tanuki-trading-shop" ref={viewport}><div className="trading-world" style={{transform:`translate(-50%,-50%) scale(${scale})`}}>
   <img className="trading-background" src={asset('tanuki-market-sunset.png')} alt=""/>
   <div className="trading-fireflies" aria-hidden="true"><i/><i/><i/><i/></div>
-  <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(2);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-poses.png')})`,backgroundPosition:`${pose%2*100}% ${Math.floor(pose/2)*100}%`,transform:`translate(${poseOffsets[pose][0]}px,${poseOffsets[pose][1]}px)`}}/></button>
+  <button className={`trading-merchant ${hud.reducedMotion?'merchant-still':''}`} data-pose={pose} aria-label={vi?'Trò chuyện với Tanuki':'Talk to Tanuki'} onClick={()=>{setMessage('');setGreetingIndex(index=>(index+1+Math.floor(Math.random()*(shopGreetings.vi.length-1)))%shopGreetings.vi.length);setSpeech(true);setGreetingRun(n=>n+1);reactionUntil.current=performance.now()+1800;setPose(2);}}><span aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-merchant-poses.png')})`,backgroundPosition:`${pose%2*100}% ${Math.floor(pose/2)*100}%`,transform:`translate(${poseOffsets[pose][0]}px,${poseOffsets[pose][1]}px)`}}/></button>
   {/* The counter in front of Tanuki: the same painting, cut to the counter, so Tanuki stands behind it. */}
   <div className="trading-counter-front" aria-hidden="true" style={{backgroundImage:`url(${asset('tanuki-market-sunset.png')})`}}/>
-  {ready&&speech&&<div className="trading-speech" role="status">{message||(vi?'Xin chào! Bạn muốn mua gì nào?':'Welcome! What would you like?')}</div>}
+  {ready&&speech&&<div className="trading-speech" role="status">{message||(vi?shopGreetings.vi[greetingIndex]:shopGreetings.en[greetingIndex])}</div>}
   <ChestGacha engine={engine} hud={hud}/>
   <div className="trading-wallet"><img src={asset('raccoon-coin.png')} alt=""/><span>{vi?'XU':'GOLD'}: <b>{hud.coins.toLocaleString(vi?'vi-VN':'en-US')}</b></span></div>
   <section className="trading-catalogue" aria-label={vi?'Quầy hàng Tanuki':'Tanuki’s shop'}>
