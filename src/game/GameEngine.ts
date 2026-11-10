@@ -367,6 +367,17 @@ export class GameEngine {
   private lastTimestamp = 0;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
+  private readonly cameraZoom = 1.3;
+  private cameraX: number | null = null;
+  private cameraY: number | null = null;
+
+  private screenToWorld(x: number, y: number) {
+    if (this.screen !== 'playing' || !this.canvas || this.cameraX === null || this.cameraY === null) return { x, y };
+    return {
+      x: (x - this.canvas.width / 2) / this.cameraZoom + this.cameraX,
+      y: (y - this.canvas.height / 2) / this.cameraZoom + this.cameraY,
+    };
+  }
 
   // State sync to React UI (throttled to ~10-15Hz or discrete changes)
   public onHUDChange: ((state: HUDState) => void) | null = null;
@@ -1785,13 +1796,13 @@ export class GameEngine {
   private handleCanvasMouseMove=(e:MouseEvent)=>{
     if(!this.canvas)return;
     const bounds=this.canvas.getBoundingClientRect();
-    if(bounds.width&&bounds.height)this.cursorTarget={x:(e.clientX-bounds.left)*this.canvas.width/bounds.width,y:(e.clientY-bounds.top)*this.canvas.height/bounds.height};
+    if(bounds.width&&bounds.height)this.cursorTarget=this.screenToWorld((e.clientX-bounds.left)*this.canvas.width/bounds.width,(e.clientY-bounds.top)*this.canvas.height/bounds.height);
   };
   private handleCanvasMouseDown = (e: MouseEvent) => {
     if ((e.button !== 0 && e.button !== 1 && e.button !== 2) || !this.canvas || this.screen !== 'playing') return;
     const bounds = this.canvas.getBoundingClientRect();
-    const target = { x: (e.clientX - bounds.left) * this.canvas.width / bounds.width,
-      y: (e.clientY - bounds.top) * this.canvas.height / bounds.height };
+    const target = this.screenToWorld((e.clientX - bounds.left) * this.canvas.width / bounds.width,
+      (e.clientY - bounds.top) * this.canvas.height / bounds.height);
     if (e.shiftKey && this.echo) { this.pingTarget={...target,life:4}; this.showBanner(this.language==='vi'?'Echo ưu tiên mục tiêu đã đánh dấu.':'Echo target marked.'); return; }
     if (e.button === 1) { e.preventDefault(); this.useUltimate(target); }
     else if (e.button === 2) { e.preventDefault(); this.useSkill(target); }
@@ -2305,6 +2316,22 @@ export class GameEngine {
   private render() {
     if (!this.ctx || !this.canvas) return;
 
+    const followPlayer = ['playing', 'paused', 'victory', 'defeat'].includes(this.screen);
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (followPlayer) {
+      const halfW = this.canvas.width / (2 * this.cameraZoom);
+      const halfH = this.canvas.height / (2 * this.cameraZoom);
+      const targetX = Math.max(halfW, Math.min(this.canvas.width - halfW, this.player.x));
+      const targetY = Math.max(halfH, Math.min(this.canvas.height - halfH, this.player.y));
+      this.cameraX = this.cameraX === null ? targetX : this.cameraX + (targetX - this.cameraX) * 0.12;
+      this.cameraY = this.cameraY === null ? targetY : this.cameraY + (targetY - this.cameraY) * 0.12;
+      this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.scale(this.cameraZoom, this.cameraZoom);
+      this.ctx.translate(-Math.round(this.cameraX), -Math.round(this.cameraY));
+    } else {
+      this.cameraX = this.cameraY = null;
+    }
+
     this.renderer.stage.levelTime = this.elapsedLevelTime;
     this.renderer.stage.reducedMotion = this.reducedMotion;
     this.renderer.stage.exitOpen = !this.boss && (this.devUnlocked || isPuzzleExitOpen(this.currentLevel,this.checkpointIndex));
@@ -2329,6 +2356,7 @@ export class GameEngine {
     if(open && this.exitOpenedAt===null) this.exitOpenedAt=t;
     if(!open) this.exitOpenedAt=null;
     if(open) drawPortalEnergy(this.ctx,exit.x+exit.width/2,exit.y+exit.height/2,t-this.exitOpenedAt!,this.exitTravelRemaining>0?1:.6,this.reducedMotion,true);
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     if(this.hurtFlash>0){
       this.ctx.save();const g=this.ctx.createRadialGradient(this.canvas.width/2,this.canvas.height/2,this.canvas.height*.25,this.canvas.width/2,this.canvas.height/2,this.canvas.width*.65);
       g.addColorStop(0,'#b8321800');g.addColorStop(1,`rgba(196,48,24,${this.hurtFlash/.28*.45})`);
