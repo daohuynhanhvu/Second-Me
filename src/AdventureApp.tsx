@@ -52,12 +52,14 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     {hud.screen === 'shop' && <Shop engine={engine} hud={hud}/>}
     {hud.screen === 'characters' && <Characters engine={engine} hud={hud}/>}
     {hud.screen === 'playing' && <AdventureHUD engine={engine} hud={hud}/>}
-    {hud.screen === 'playing' && <MechanicGuide engine={engine} hud={hud}/>}
+    {/* The boss cutscene first; its mechanic guide follows once the fight begins (the game is frozen meanwhile). */}
+    {hud.screen === 'playing' && !hud.bossIntroduction && <MechanicGuide engine={engine} hud={hud}/>}
     {hud.screen === 'victory' && <Completion engine={engine} hud={hud}/>}
     {hud.screen === 'forge' && <Forge engine={engine} hud={hud}/>}
     {(hud.screen === 'ending' || hud.screen === 'defeat') && <EndScreen engine={engine} hud={hud}/>}
-    {/* Lobby and play have it in their toolbars; the loading transition stays clean (F still works). */}
-    {!['lobby', 'playing', 'loading'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
+    {/* Lobby and play have it in their toolbars; the loading transition stays clean, and the forge panel fills a
+        phone screen corner to corner, so no free corner there (F still works everywhere). */}
+    {!['lobby', 'playing', 'loading', 'forge'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
     {hud.screen === 'paused' && <div className="modal-backdrop"><div className="panel pause-panel"><span className="eyebrow gold">MỘT KHOẢNG LẶNG</span><h2>Tạm dừng</h2><button className="primary" onClick={()=>engine?.resumeGame()}>TIẾP TỤC</button><button className="secondary" onClick={()=>engine?.restartLevel()}>CHƠI LẠI MÀN</button><button className="text-button" onClick={()=>engine?.goToLobby()}>VỀ SẢNH</button></div></div>}
   </div></main>);
 }

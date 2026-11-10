@@ -3,6 +3,7 @@ import './CombatActionBar.css';
 import { CombatActionBar } from './CombatActionBar.tsx';
 import { TouchJoystick } from './TouchControls.tsx';
 import { FullscreenButton } from './FullscreenButton.tsx';
+import { BossIntro } from './BossIntro.tsx';
 import { isTouchDevice } from '../game/logic/orientation.ts';
 import { TrailInventory } from './TrailInventory.tsx';
 import { TanukiShop } from './TanukiShop.tsx';
@@ -307,12 +308,7 @@ export function AdventureHUD({ engine, hud }: { engine: GameEngine | null; hud: 
   const [touch] = useState(isTouchDevice);
   const boss = hud.bossHp > 0;
   return localize(<div className="adventure-hud overlay">
-    {hud.bossIntroduction&&<div className="boss-introduction" role="dialog" aria-modal="true" aria-labelledby="boss-intro-name"><section>
-      <span className="boss-intro-eyebrow">{hud.language==='vi'?'ĐẤU TRƯỜNG CUỐI · VI':'FINAL ENCOUNTER · VI'}</span>
-      <h2 id="boss-intro-name">FROST GUARDIAN</h2><p className="boss-intro-story">{hud.language==='vi'?'Kẻ canh giữ ngủ yên đã thức giấc. Bốn trụ băng đang bảo vệ hắn.':'The sleeping guardian has awakened. Four frost pillars make it invulnerable.'}</p>
-      <ol><li><b>{hud.language==='vi'?'PHÁ BỐN TRỤ':'BREAK FOUR PILLARS'}</b><span>{hud.language==='vi'?'Mỗi trụ 60 HP. Còn bất kỳ trụ nào, boss miễn sát thương. Cứ mất 25% máu, khiên bật lại và bốn trụ hồi sinh.':'60 HP each. The boss takes no damage while any pillar remains. Every 25% of health it loses, its shield and the four pillars return.'}</span></li><li><b>{hud.language==='vi'?'PHỐI HỢP VỚI ECHO':'FIGHT WITH YOUR ECHOES'}</b><span>{hud.language==='vi'?'Echo hút sự chú ý của boss và hỗ trợ tấn công.':'Echoes draw the boss’s attention and help you attack.'}</span></li><li><b>{hud.language==='vi'?'NÉ ĐÒN, RỒI PHẢN CÔNG':'DODGE, THEN STRIKE'}</b><span>{hud.language==='vi'?'Rời vùng báo đòn. Tấn công khi hắn vừa đập xuống và đang hồi sức.':'Leave marked attack zones. Counterattack during recovery after each slam.'}</span></li></ol>
-      <div className="boss-intro-stats">240 HP · {hud.language==='vi'?'4 ĐOẠN KHIÊN · 3 GIAI ĐOẠN':'4 SHIELD BARS · 3 PHASES'}</div><button autoFocus className="primary" onClick={()=>engine?.beginBossFight()}>{hud.language==='vi'?'BẮT ĐẦU TRẬN ĐẤU':'FACE THE GUARDIAN'} <ArrowRight size={20}/></button>
-    </section></div>}
+    {hud.bossIntroduction&&<BossIntro engine={engine} hud={hud}/>}
 
     <div className="hud-top"><div className="level-card"><small>{hud.levelName}{hud.training?' · DEV':' / 06'}</small><strong>{hud.levelSubtitle}</strong><span>{Math.floor(hud.elapsedLevelTime / 60).toString().padStart(2,'0')}:{Math.floor(hud.elapsedLevelTime % 60).toString().padStart(2,'0')} <i/> <span className="player-health" role="meter" aria-label={hud.language==='vi'?'Máu nhân vật':'Player health'} aria-valuenow={hud.health} aria-valuemin={0} aria-valuemax={hud.maxHealth??100}><b style={{width:`${hud.health/(hud.maxHealth??100)*100}%`}}/><strong>{hud.health} / {hud.maxHealth??100} HP</strong></span></span>
       {(hud.enemiesRemaining??0)>0&&<small>{hud.language==='vi'?`QUÁI CANH ĐƯỜNG · ${hud.enemiesRemaining}`:`TRAIL ENEMIES · ${hud.enemiesRemaining}`}</small>}
