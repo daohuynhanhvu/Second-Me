@@ -17,6 +17,7 @@ import { drawComboHero, drawComboEffects, comboPose } from './comboSprites.ts';
 import { drawTimeRelic } from './timeRelic.ts';
 import { drawPillars, drawCombatHits } from './bossFeedback.ts';
 import {drawTripleFrost} from './tripleFrost.ts';
+import { drawVfx, drawHexShield } from './vfx.ts';
 let echoCanvas:HTMLCanvasElement|undefined;
 export const ECHO_COLORS=['#67e8f9','#c084fc','#fbbf24','#fb7185','#a3e635','#f9a8d4'];
 
@@ -128,6 +129,7 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
     for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.fillRect(c.x+Math.cos(a)*53-2,c.y+Math.sin(a)*34-2,4,4);}
     ctx.restore();
   }
+  drawVfx(ctx, game.vfx, game.player, true);    // on the ground, under the hero: heal ring, time clock
   if(game.characterClass==='mechanical' && (!game.exitTravelRemaining || game.exitTravelRemaining>.35))drawMechanicalSprite(ctx,game.player.x,game.player.y,game.player.direction,game.player.isMoving,false,time,game.attackFlash>0);
   for(const zone of game.frostZones)drawBossFrostZone(ctx,zone.x,zone.y,zone.radius,zone.struck,time,game.reducedMotion,Math.max(0,-zone.timer));
   if(game.overdrive>0){ctx.strokeStyle='#ffac52';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(game.player.x,game.player.y+4,23,10,0,0,Math.PI*2);ctx.stroke();}
@@ -159,7 +161,9 @@ export function renderAdventure(ctx: CanvasRenderingContext2D, game: GameEngine,
   }
   if(game.skillDrop)drawSkillPickup(ctx,game.skillDrop,time,game.language==='vi',Math.hypot(game.player.x-game.skillDrop.x,game.player.y-game.skillDrop.y)<180,game.reducedMotion);
   if(game.combatFlash) {const f=game.combatFlash;ctx.save();ctx.globalAlpha=Math.min(1,f.time*2);ctx.strokeStyle=f.kind==='fire'?'#ff8b4b':f.kind==='lightning'?'#d9f8ff':'#dfd29c';ctx.lineWidth=7;ctx.beginPath();ctx.arc(f.x,f.y,65*(1-f.time)+18,0,Math.PI*2);ctx.stroke();ctx.restore();}
-  if(game.stoneShield>0 || game.armorShield>0) {ctx.strokeStyle=game.stoneShield>0?'#aeb6a3':'#e2d099';ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}
+  // A picked-up shield: the hex bubble (vfx.ts), or the plain ring while its sheet is still loading.
+  if(!drawHexShield(ctx,game.player.x,game.player.y-14,game.stoneShield>0||game.armorShield>0,time,game.reducedMotion)) {ctx.strokeStyle=game.stoneShield>0?'#aeb6a3':'#e2d099';ctx.lineWidth=4;ctx.beginPath();ctx.arc(game.player.x,game.player.y-9,31,0,Math.PI*2);ctx.stroke();}
+  drawVfx(ctx, game.vfx, game.player, false);   // over the hero: pickup effects
   if (game.invulnerability > 0) {
     ctx.beginPath(); ctx.arc(game.player.x, game.player.y, 24, 0, Math.PI * 2);
     ctx.strokeStyle = '#ecc99d'; ctx.globalAlpha = .5 + Math.sin(time * 25) * .3; ctx.lineWidth = 2; ctx.stroke();

@@ -435,3 +435,24 @@ test('touch stick moves exactly like the keys, at any stick deflection, and keys
   assert.deepEqual(after((e,k)=>{e.setTouchMove(-40,0);k.add('KeyD');}),keysRight);
   assert.deepEqual(after(e=>e.setTouchMove(0,0)),{dx:0,dy:0,dir:after(e=>e.setTouchMove(0,0)).dir});
 });
+
+test('sprite effects start with their triggers and end by themselves', t => {
+  mockDocument(t);
+  const {engine,advance}=setup();
+  engine.currentLevelIdx=5;engine.characterClass='swordsman';engine.restartLevel();engine.beginBossFight();
+  const kinds=()=>engine.vfx.map(fx=>fx.kind);
+  const collect=(kind:string)=>(engine as unknown as {collectCombatSkill(kind:string):void}).collectCombatSkill(kind);
+  assert.deepEqual(kinds(),[]);
+  collect('stone');assert.deepEqual(kinds(),['shieldPickup'],'a shield pickup: the cross shield');
+  assert.ok(engine.stoneShield>0,'and the shield itself is up (the hex bubble follows this state)');
+  collect('armor');assert.deepEqual(kinds(),['shieldPickup','shieldPickup']);
+  collect('fire');assert.deepEqual(kinds().slice(2),['sparkle'],'a damage pickup: sparkles');
+  collect('haste');assert.equal(engine.vfx.length,3,'haste is neither: no new sprite');
+  engine.useSkill();assert.equal(kinds().at(-1),'healRing','Kael heals in Sanctuary: the ground ring, where he cast it');
+  const ring=engine.vfx.at(-1)!;assert.deepEqual([ring.x,ring.y,!!ring.follow],[engine.player.x,engine.player.y,false]);
+  engine.campaign.timeItems=1;
+  if(engine.legTimeRemaining===null)engine.legTimeRemaining=10;
+  assert.equal(engine.useTimeItem(),true);assert.equal(kinds().at(-1),'clock');assert.equal(engine.vfx.at(-1)!.follow,true);
+  advance(2);assert.deepEqual(kinds(),[],'all of them are over within two seconds');
+  collect('stone');engine.restartLevel();assert.deepEqual(kinds(),[],'a restart clears them');
+});

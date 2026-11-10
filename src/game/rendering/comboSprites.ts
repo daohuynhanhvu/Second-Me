@@ -8,6 +8,7 @@
 import sprites from '../data/comboSprites.json';
 import type { GameEngine } from '../GameEngine.ts';
 import { COMBO_HITS, type ComboHero } from '../logic/combo.ts';
+import { drawSlash } from './vfx.ts';
 
 interface Sheet { file: string; frameW: number; frameH: number; anchorX: number; anchorY: number; anims: Record<string, number[]> }
 const SHEETS: Record<ComboHero, Sheet> = { swordsman: sprites.kael, mage: sprites.aeris };
@@ -65,6 +66,8 @@ export function drawComboEffects(ctx: CanvasRenderingContext2D, game: GameEngine
   for (const fx of game.comboFx) {
     const k = 1 - fx.life / fx.max;                     // 0 → 1 over the effect
     ctx.globalAlpha = Math.max(0, 1 - k);
+    // Kael's swings use the crescent sheet (vfx.ts); the plain arc below is the spin and the loading fallback.
+    if (fx.kind === 'arc' && drawSlash(ctx, fx.x, fx.y, fx.angle, fx.radius, k, !!fx.flip)) continue;
     if (fx.kind === 'arc' || fx.kind === 'spin') {
       const r = fx.radius * (0.85 + 0.15 * k);
       const from = fx.kind === 'spin' ? fx.angle - Math.PI * 2 * Math.min(1, k * 1.6) : fx.angle - 1.15;

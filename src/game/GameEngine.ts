@@ -48,6 +48,7 @@ import { voice, type VoiceRole } from './logic/voice.ts';
 import { music, type MusicScene } from './logic/music.ts';
 import { Combo, COMBO_HITS, comboDamage, hitDuration, type ComboHero } from './logic/combo.ts';
 import { preloadComboSprites, comboPose } from './rendering/comboSprites.ts';
+import { vfxSeconds, type Vfx, type VfxKind } from './rendering/vfx.ts';
 
 /** A spell from Aeris's combo in flight: it moves, and strikes what it touches. */
 export interface ComboShot { x: number; y: number; vx: number; vy: number; life: number; radius: number; amount: number; heavy: boolean; pierce: boolean; group: Set<object> }
@@ -265,6 +266,9 @@ export class GameEngine {
   public attackFlash = 0;
   public attackAngle = 0;
   public summonEffects: {x:number;y:number;life:number}[] = [];
+  /** One-shot sprite effects (rendering/vfx.ts): pickups, Kael's Sanctuary ring, the time potion's clock. */
+  public vfx: Vfx[] = [];
+  private startVfx(kind: VfxKind, follow = false) { this.vfx.push({ kind, x: this.player.x, y: this.player.y, age: 0, follow }); }
   public exitTravelRemaining = 0;
   private exitOpenedAt: number | null = null;
   public combatHits: { x: number; y: number; damage: number; life: number; broken: boolean }[] = [];
@@ -515,7 +519,7 @@ export class GameEngine {
   public selectClass(value: CharacterClass) { if (this.screen !== 'lobby' && this.screen !== 'characters') return; if(value === 'mechanical' && (!MECHANICAL_ENABLED || !this.campaign.mechanicalOwned)) return; this.characterClass = value; this.saveSettings(); this.notifyHUD(); }
   public get weapon(): 'staff' | 'sword' { return this.characterClass === 'mage' ? 'staff' : 'sword'; }
   public canUseTimeItem() {return !this.orientationBlocked&&this.screen==='playing'&&this.legTimeRemaining!==null&&this.timeItemsUsedThisLevel<5&&this.campaign.timeItems>0&&!this.runeEditing;}
-  public useTimeItem() { if (!this.canUseTimeItem() || !this.campaign.useTimeItem()) return false; this.timeItemsUsedThisLevel++; this.legTimeRemaining = (this.legTimeRemaining??0)+2; this.showBanner(this.language==='vi'?`+2 giây · Thêm một chút (${this.timeItemsUsedThisLevel}/5)`:`+2s · A Little More (${this.timeItemsUsedThisLevel}/5)`); this.notifyHUD(); return true; }
+  public useTimeItem() { if (!this.canUseTimeItem() || !this.campaign.useTimeItem()) return false; this.timeItemsUsedThisLevel++; this.legTimeRemaining = (this.legTimeRemaining??0)+2; this.startVfx('clock',true); this.showBanner(this.language==='vi'?`+2 giây · Thêm một chút (${this.timeItemsUsedThisLevel}/5)`:`+2s · A Little More (${this.timeItemsUsedThisLevel}/5)`); this.notifyHUD(); return true; }
 
   public stop() {
     if (this.animFrameId !== null) {
@@ -598,7 +602,7 @@ export class GameEngine {
     this.hurtFlash=0;this.incomingHits=[];
     this.invulnerability = this.attackCooldown = this.attackFlash = this.dodgeCooldown = this.dodgeTime = 0;
     this.combatHits = [];
-    this.summonEffects = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
+    this.summonEffects = []; this.vfx = []; this.exitTravelRemaining = 0; this.exitOpenedAt = null;
     this.boss = this.currentLevel.id === 6 ? createBoss() : null;
     this.bossIntroduction = !!this.boss;
     this.enemies=createEnemies(this.currentLevel);
@@ -988,6 +992,8 @@ export class GameEngine {
     };
     this.showBanner(names[kind][this.language==='vi'?1:0],3);
     this.combatFlash={x:this.player.x,y:this.player.y,kind,time:.65};
+    if(kind==='stone'||kind==='armor')this.startVfx('shieldPickup',true);
+    else if(kind!=='haste')this.startVfx('sparkle');
     if(kind==='stone')this.stoneShield=SHIELD.stone;
     else if(kind==='armor')this.armorShield=SHIELD.armor;
     else if(kind==='haste')this.hasteTime=6;
@@ -1108,7 +1114,7 @@ export class GameEngine {
       const cx = px + ux * sw.reach, cy = py + uy * sw.reach;
       this.damageArea(cx, cy, sw.radius, amount, group, sw.max, !!hit.heavy);
       if (step === 2) this.comboFx.push({ kind: 'spin', x: px, y: py + 8, angle, radius: sw.radius, life: 0.3, max: 0.3 });
-      else this.comboFx.push({ kind: 'arc', x: px + ux * 18, y: py + uy * 18, angle, radius: sw.radius * 0.75, life: 0.22, max: 0.22, heavy: hit.heavy, flip: step === 1 });
+      else this.comboFx.push({ kind: 'arc', x: px + ux * 18, y: py + uy * 18, angle, radius: sw.radius * 0.75, life: 0.3, max: 0.3, heavy: hit.heavy, flip: step === 1 });
       if (hit.heavy) { this.comboFx.push({ kind: 'impact', x: cx, y: cy, angle, radius: 46, life: 0.35, max: 0.35 }); sounds.playFinisher(); }
     } else {
       const shot = (a: number, speed: number, radius: number, pierce: boolean, fromX = px + Math.cos(a) * 18, fromY = py - 4 + Math.sin(a) * 18) =>
@@ -1190,6 +1196,7 @@ export class GameEngine {
     } else if(this.characterClass === 'swordsman') {
       this.recorder.recordEvent({kind:'skill',x:this.player.x,y:this.player.y,targetX:this.player.x,targetY:this.player.y});
       this.lightCircle = {x:this.player.x,y:this.player.y,life:5,heal:0};
+      this.startVfx('healRing');
       this.skillCooldown = 9;
     } else {
       this.overdrive = 5;
@@ -1788,6 +1795,8 @@ export class GameEngine {
     }
     for (const effect of this.summonEffects) effect.life -= dt;
     this.summonEffects = this.summonEffects.filter(effect=>effect.life>0);
+    for (const fx of this.vfx) fx.age += dt;
+    this.vfx = this.vfx.filter(fx => fx.age < vfxSeconds(fx.kind));
     if (this.bossDeathPending) {
       this.bossDeathElapsed += dt;
       if (this.bossDeathElapsed >= 1.05) {
