@@ -85,7 +85,7 @@ export default function AdventureApp({ prepare }: { prepare?: (engine: GameEngin
     {(hud.screen === 'ending' || hud.screen === 'defeat') && <EndScreen engine={engine} hud={hud}/>}
     {/* Lobby and play have it in their toolbars; the loading transition stays clean, and the forge panel fills a
         phone screen corner to corner, so no free corner there (F still works everywhere). */}
-    {!['lobby', 'playing', 'paused', 'loading', 'forge'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
+    {!['lobby', 'playing', 'paused', 'loading', 'forge', 'shop'].includes(hud.screen) && <FullscreenButton floating vi={hud.language === 'vi'}/>}
     {hud.screen === 'paused' && <PauseMenu engine={engine} hud={hud}/>}
 
   </div></main>);
