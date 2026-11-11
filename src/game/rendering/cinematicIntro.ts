@@ -1,4 +1,5 @@
 import { getWizardSheet } from './wizardSprite.ts';
+import { drawSlash, loadVfx } from './vfx.ts';
 import { drawPfx, preloadPfx, type PfxDraw, type PfxName } from './pixelfx.ts';
 import { INTRO_VOICE } from '../logic/voice.ts';
 import { INTRO, BOSS_STEPS, clamp01, lerp, easeOutCubic, easeInCubic, easeInOutCubic, seg } from '../logic/introTimeline.ts';
@@ -47,7 +48,7 @@ class PixelLayer {
 
 /** pixelfx effects the film uses (INTRO_PLAN.md), loaded while the studio card is up. */
 const INTRO_PFX: PfxName[] = ['god-rays', 'fireflies', 'rune-circle', 'fog', 'magic-circle-cast', 'halo', 'snow',
-  'heavy-landing', 'frost-nova', 'blizzard', 'sword-slash', 'crit-hit', 'spell-charge', 'magic-missile', 'parry', 'collect-burst',
+  'heavy-landing', 'frost-nova', 'blizzard', 'ice-lance', 'shield-block', 'crit-hit', 'spell-charge', 'magic-missile', 'parry', 'collect-burst',
   'shooting-stars', 'pixel-dissolve', 'shatter-wipe', 'star-iris'];
 
 export class CinematicIntro {
@@ -74,7 +75,7 @@ export class CinematicIntro {
     this.sold = { Idle: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Walk: sheet('assets/soldier/Kael_Walk.png', 256, 256, 8, 8), Attack01: sheet('assets/soldier/Kael_Attack.png', 256, 256, 8, 8) };
     this.runeSheet = sheet('assets/magic-effects/rune.png', 32, 32, 18, 18);
     this.buildVignette(); this.buildMist(); this.buildLogo();
-    preloadPfx(INTRO_PFX);
+    preloadPfx(INTRO_PFX);loadVfx();
   }
 
   // ---------- one-time builds ----------
@@ -356,9 +357,12 @@ export class CinematicIntro {
     this.actor(g,'aeris',mageX,y,0,'idle',alpha);
     this.actor(g,'kael',kaelX,y,clock,clip,alpha);
     const slash=seg(t,C.slash,C.impact+.2);
-    if(!this.pfx(f,'sword-slash',t-C.slash,kaelX,y,{alpha})&&slash>0&&slash<1){
-      f.save();f.globalAlpha=alpha*(1-slash);f.strokeStyle='#fff0bd';f.lineWidth=3;
-      f.beginPath();f.arc(kaelX+12,y-28,34,-1.8,-1.8+slash*3);f.stroke();f.restore();
+    // Kael's own sword arc from the game (vfx-slash, 7 frames), swung right at the unseen enemy.
+    if(slash>0&&slash<1){
+      f.save();f.globalAlpha=alpha;
+      const drawn=drawSlash(f,kaelX+10,y-26,0,34,seg(t,C.slash,C.slash+.28),false);
+      if(!drawn){f.globalAlpha=alpha*(1-slash);f.strokeStyle='#fff0bd';f.lineWidth=3;f.beginPath();f.arc(kaelX+12,y-28,34,-1.8,-1.8+slash*3);f.stroke();}
+      f.restore();
     }
     this.once('mist-impact',C.impact,t,()=>{this.burst(995,455,28,150,COL.ice,.6,160);this.shake(t,3,7);});
     this.pfx(f,'crit-hit',t-C.impact,995/px,(455+44)/px,{alpha});
@@ -375,19 +379,17 @@ export class CinematicIntro {
     }
     this.once('mist-clash',C.clash,t,()=>{this.burst(1040,400,35,190,COL.ice,.8,60);this.shake(t,4,6);});
     this.pfx(f,'parry',t-C.clash,1040/px,(400+56)/px,{alpha});
-    // The unseen enemy retaliates. Kael guards while an Echo catches the returning frost.
-    const wave=seg(t,21.12,21.65);
+    // The unseen enemy retaliates. Three ice lances fly in from the right and break on Kael's guard (pixelfx shield-block)
+    // while an Echo catches the returning frost. The lances' tips stop on the dome; the guard rises as the first lands.
     if(t>=21.12){
-      const x=lerp(1120,790,wave)/px;
-      for(let i=0;i<6;i++){
-        const sx=x+i*8,sy=y-30+Math.sin(i*2.4)*16;
-        f.save();f.globalAlpha=alpha*(1-wave*.6);f.fillStyle=i%2?'#c2f0fa':'#74bdd9';
-        f.beginPath();f.moveTo(sx-4,sy);f.lineTo(sx+3,sy-2);f.lineTo(sx+5,sy);f.lineTo(sx+1,sy+2);f.closePath();f.fill();f.restore();
+      const LANCE=.38,guard=kaelX+16,tip=guard+39;
+      for(let i=0;i<3;i++){
+        const start=21.12+i*.08,k=seg(t,start,start+LANCE);
+        this.once(`guard-hit-${i}`,start+LANCE,t,()=>this.burst(tip*px,(y-20-i*12)*px,7,80,COL.ice,.35,60));
+        if(k>0&&k<1)this.pfx(f,'ice-lance',t-start,lerp(1180/px,tip,k),y-14-i*12,{angle:Math.PI,scale:.7,alpha});
       }
+      this.pfx(f,'shield-block',t-(21.12+LANCE),guard,y+4,{scale:1.2,alpha});
       this.actor(g,'aeris',650/px,y,0,'idle',alpha*.4,true);
-      f.save();f.globalAlpha=alpha*wave;f.strokeStyle='#b7e9f5';f.lineWidth=2;
-      f.beginPath();f.arc(kaelX+18,y-30,26,-1.05,1.05);f.stroke();f.restore();
-      for(let i=0;i<5;i++)this.star(f,kaelX+44+i*3,y-30+Math.sin(i*3)*13,0,COL.ice,alpha*wave*.8);
     }
   }
 
