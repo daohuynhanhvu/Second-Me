@@ -7,7 +7,7 @@ import './JourneyCamp.css';
 import './JourneyCampV2.css';
 import './JourneyCampScene.css';
 import './JourneyCampPixel.css';
-import { JourneyAmbience } from './JourneyAmbience.tsx';
+import { JourneyAmbience, FxCanvas } from './JourneyAmbience.tsx';
 import { translate } from '../i18n.ts';
 
 // Traced in the painting's native 1536x1024 coordinates, including each bend.
@@ -49,7 +49,7 @@ export function JourneyCamp({engine,hud,complete,next,traveler}:{engine:GameEngi
     <aside className="journey-camp integrated-camp">
       <header className="rest-heading"><span><Flame size={17}/>{vi?'TRẠI NGHỈ ECHO':'ECHO CAMP'}</span><span>{count} / 6</span></header>
       <div className={`rest-scene${hud.reducedMotion?' rest-still':''}`}>
-        <div className="rest-firelight" aria-hidden="true"/><div className="rest-embers" aria-hidden="true"><i/><i/><i/></div>
+        <div className="rest-firelight" aria-hidden="true"/><FxCanvas name="campfire" still={hud.reducedMotion} className="rest-fx"/><div className="rest-embers" aria-hidden="true"><i/><i/><i/></div>
         <button className="rest-hero" onClick={()=>engine?.openCharacters()} aria-label={vi?'Đổi nhân vật':'Change character'}><span>{traveler??<Users size={50}/>}</span></button>
         <div className="rest-scene-caption"><strong>{hud.characterClass==='swordsman'?'Kael':hud.characterClass==='mechanical'?'Rivet':'Aeris'}</strong><button onClick={()=>engine?.openCharacters()}>{vi?'Đổi nhân vật':'Change hero'} <ArrowRight size={14}/></button></div>
       </div>

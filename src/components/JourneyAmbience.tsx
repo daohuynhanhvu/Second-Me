@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, type CSSProperties } from 'react';
 import { PFX, drawPfx, type PfxName, type PfxSheet } from '../game/rendering/pixelfx.ts';
 
-/** A looping pixelfx drawn on the map at native 1536x1024 coordinates, its pivot on (x, y). Nothing until the sheet is cut. */
-function MapFx({name,x,y,still}:{name:string;x:number;y:number;still?:boolean}){
+/** A looping pixelfx on a canvas the size of its sheet, its pivot at (pivot.x, pivot.y). Nothing until the sheet is cut. */
+export function FxCanvas({name,still,className,style}:{name:string;still?:boolean;className?:string;style?:CSSProperties}){
  const ref=useRef<HTMLCanvasElement>(null),s=(PFX as Record<string,PfxSheet|undefined>)[name];
  useEffect(()=>{
   const c=ref.current,ctx=c?.getContext('2d');if(!c||!ctx||!s)return;
@@ -10,7 +10,12 @@ function MapFx({name,x,y,still}:{name:string;x:number;y:number;still?:boolean}){
   draw();if(still)return;
   const id=setInterval(draw,1000/s.fps);return ()=>clearInterval(id);
  },[name,s,still]);
- return s?<canvas ref={ref} className="map-fx" width={s.w} height={s.h} style={{left:`${(x-s.pivot[0])/15.36}%`,top:`${(y-s.pivot[1])/10.24}%`,width:`${s.w/15.36}%`}}/>:null;
+ return s?<canvas ref={ref} className={className} width={s.w} height={s.h} style={style}/>:null;
+}
+/** The same, placed on the painted map at native 1536x1024 coordinates with its pivot on (x, y). */
+function MapFx({name,x,y,still}:{name:string;x:number;y:number;still?:boolean}){
+ const s=(PFX as Record<string,PfxSheet|undefined>)[name];
+ return s?<FxCanvas name={name} still={still} className="map-fx" style={{left:`${(x-s.pivot[0])/15.36}%`,top:`${(y-s.pivot[1])/10.24}%`,width:`${s.w/15.36}%`}}/>:null;
 }
 
 const at = (x:number,y:number,delay:number,duration=4):CSSProperties => ({
@@ -55,7 +60,7 @@ export function JourneyAmbience({still}:{still?:boolean}){
    {Array.from({length:7},(_,i)=><i key={`ember-${i}`} className="map-ember" style={at(207+(i*7)%22,708+(i%3)*3,i*.47,2.7+i%3*.3)}/>)}
    {Array.from({length:7},(_,i)=><i key={`leaf-${i}`} className="map-leaf" style={at(820+(i*43)%255,190+(i*31)%180,i*1.13,7+i%3)}/>)}
    <i className="map-portal-breath" style={at(1367,130,0,4)}/>
-   <MapFx name="portal" x={1367} y={150} still={still}/><MapFx name="campfire" x={238} y={692} still={still}/>
+   <MapFx name="portal" x={1367} y={150} still={still}/>
    <i className="map-cloud map-cloud-one"/><i className="map-cloud map-cloud-two"/><i className="map-cloud map-cloud-three"/>
    <i className="map-mist map-mist-one"/><i className="map-mist map-mist-two"/>
  </div>;
