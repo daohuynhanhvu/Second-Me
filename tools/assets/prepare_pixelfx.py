@@ -20,7 +20,7 @@ IDS = ('impacts/hit-spark impacts/crit-hit impacts/shield-block impacts/parry im
        'holy/smite holy/divine-shield arcane/spell-charge arcane/mana-burst arcane/blink-out arcane/blink-in '
        'arcane/arcane-beam arcane/time-stop ice/frost-nova ice/ice-lance ice/icicle-fall ice/ice-shatter '
        'ice/blizzard-vortex status/rage status/haste status/burning status/frozen fire/fireball '
-       'lightning/lightning-strike').split()
+       'lightning/lightning-strike arcane/portal fire/campfire').split()
 
 # The intro film (INTRO_PLAN.md). Full-screen weather is only needed for one scene, not its whole 8-12 s loop:
 # `seconds` keeps the start, `step` keeps every n-th frame (15 fps), `bottom` cuts off the strip of ground each

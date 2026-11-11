@@ -402,6 +402,32 @@
    227
   ]
  },
+ "portal": {
+  "id": "arcane/portal",
+  "w": 150,
+  "h": 114,
+  "frames": 72,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 8,
+  "pivot": [
+   75,
+   105
+  ]
+ },
+ "campfire": {
+  "id": "fire/campfire",
+  "w": 120,
+  "h": 100,
+  "frames": 90,
+  "fps": 30.0,
+  "loop": true,
+  "columns": 9,
+  "pivot": [
+   60,
+   85
+  ]
+ },
  "god-rays": {
   "id": "weather/god-rays",
   "w": 320,

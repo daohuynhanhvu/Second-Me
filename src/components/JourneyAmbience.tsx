@@ -1,4 +1,17 @@
-import { useId, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, type CSSProperties } from 'react';
+import { PFX, drawPfx, type PfxName, type PfxSheet } from '../game/rendering/pixelfx.ts';
+
+/** A looping pixelfx drawn on the map at native 1536x1024 coordinates, its pivot on (x, y). Nothing until the sheet is cut. */
+function MapFx({name,x,y,still}:{name:string;x:number;y:number;still?:boolean}){
+ const ref=useRef<HTMLCanvasElement>(null),s=(PFX as Record<string,PfxSheet|undefined>)[name];
+ useEffect(()=>{
+  const c=ref.current,ctx=c?.getContext('2d');if(!c||!ctx||!s)return;
+  const t0=performance.now(),draw=()=>{ctx.clearRect(0,0,s.w,s.h);drawPfx(ctx,name as PfxName,still?0:(performance.now()-t0)/1000,s.pivot[0],s.pivot[1]);};
+  draw();if(still)return;
+  const id=setInterval(draw,1000/s.fps);return ()=>clearInterval(id);
+ },[name,s,still]);
+ return s?<canvas ref={ref} className="map-fx" width={s.w} height={s.h} style={{left:`${(x-s.pivot[0])/15.36}%`,top:`${(y-s.pivot[1])/10.24}%`,width:`${s.w/15.36}%`}}/>:null;
+}
 
 const at = (x:number,y:number,delay:number,duration=4):CSSProperties => ({
   left:`${x/1536*100}%`,top:`${y/1024*100}%`,animationDelay:`${-delay}s`,animationDuration:`${duration}s`,
@@ -7,7 +20,7 @@ const lanterns=[[253,627],[375,488],[530,479],[766,497],[780,347],[1046,427],[13
 const water=[[1494,623],[1460,677],[1389,712],[1299,733],[1245,766],[1190,815],[1042,810],[1017,870],[944,919],[865,938],[804,987]];
 
 /** A fixed number of compositor-animated details, anchored to the painted scenery. */
-export function JourneyAmbience(){
+export function JourneyAmbience({still}:{still?:boolean}){
  const waterId=`river-${useId().replace(/:/g,'')}`;
  const upper='M1494 642 C1498 669 1467 685 1436 701 S1381 717 1347 725 S1309 744 1274 752 S1259 787 1228 800 L1186 814';
  const lower='M1083 809 C1056 788 1027 803 1022 826 S1022 861 994 881 S952 914 917 923 S862 935 837 952 S804 984 795 1024';
@@ -42,6 +55,8 @@ export function JourneyAmbience(){
    {Array.from({length:7},(_,i)=><i key={`ember-${i}`} className="map-ember" style={at(207+(i*7)%22,708+(i%3)*3,i*.47,2.7+i%3*.3)}/>)}
    {Array.from({length:7},(_,i)=><i key={`leaf-${i}`} className="map-leaf" style={at(820+(i*43)%255,190+(i*31)%180,i*1.13,7+i%3)}/>)}
    <i className="map-portal-breath" style={at(1367,130,0,4)}/>
+   <MapFx name="portal" x={1367} y={150} still={still}/><MapFx name="campfire" x={238} y={692} still={still}/>
+   <i className="map-cloud map-cloud-one"/><i className="map-cloud map-cloud-two"/><i className="map-cloud map-cloud-three"/>
    <i className="map-mist map-mist-one"/><i className="map-mist map-mist-two"/>
  </div>;
 }

@@ -39,3 +39,38 @@
 .journey-lobby .integrated-camp .rest-scene-caption button{width:112px;min-height:34px;justify-content:center;padding:4px 0;box-sizing:border-box;white-space:nowrap}
 .journey-lobby .integrated-camp .camp-continue{box-sizing:border-box;width:100%;margin:0;align-items:center}
 @media(max-height:480px){.journey-lobby .integrated-camp .rest-kit{grid-template-columns:minmax(0,1fr) 104px;gap:6px}.journey-lobby .integrated-camp .rest-prepare{width:104px;min-height:34px;font-size:15px}.journey-lobby .integrated-camp .rest-scene{margin-bottom:40px}.journey-lobby .integrated-camp .rest-scene-caption{top:100%;bottom:auto;transform:none;grid-template-columns:minmax(0,1fr) 104px;grid-template-rows:32px;padding-top:0}.journey-lobby .integrated-camp .rest-scene-caption>span{display:none}.journey-lobby .integrated-camp .rest-scene-caption strong{font-size:22px;line-height:1}.journey-lobby .integrated-camp .rest-scene-caption button{width:104px;min-height:32px;font-size:15px;padding:3px 0}}
+
+/* Map life: the hero stands on the current clearing, the trail ahead of it flows, and the specks are big enough to see. */
+.map-traveler{position:absolute;z-index:3;width:0;height:0;pointer-events:none}
+.map-traveler>span{position:absolute;left:-26px;bottom:10px;width:52px;height:52px;display:block;filter:drop-shadow(0 3px 0 #0a1a0e99);animation:traveler-idle 1.6s ease-in-out infinite}
+.map-traveler.is-walking>span{animation:traveler-walk .34s ease-in-out infinite}
+.map-traveler>span>*,.map-traveler canvas{width:52px!important;height:52px!important;image-rendering:pixelated}
+@keyframes traveler-idle{50%{transform:translateY(-2px)}}
+@keyframes traveler-walk{50%{transform:translateY(-6px)}}
+.journey-path .trail-live{animation:trail-flow .9s linear infinite;opacity:1;stroke:#ffe9a8}
+@keyframes trail-flow{to{stroke-dashoffset:-15}}
+.map-firefly{width:4px;height:4px}.map-snow{width:4px;height:4px}.map-leaf{width:6px;height:4px}.map-ember{width:3px;height:5px}
+.map-lantern{width:36px;height:36px;margin:-18px}
+.map-still .map-traveler>span,.map-still .trail-live{animation:none}
+@media(prefers-reduced-motion:reduce){.map-traveler>span,.journey-path .trail-live{animation:none}}
+
+/* Number badge: a carved rune stone with stepped corners instead of a round coin. Cleared = lit gold, current = pulsing. */
+.journey-lobby .journey-stop .stop-medallion{border:0;border-radius:0;width:46px;height:46px;font-size:26px;line-height:1;color:#d9e5b8;background:#2d4a30;
+ clip-path:polygon(0 6px,6px 6px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 6px) calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 6px),0 calc(100% - 6px));
+ box-shadow:none;filter:drop-shadow(0 3px 0 #050d08cc)}
+.journey-lobby .journey-stop .stop-medallion:before{content:'';position:absolute;inset:3px;background:#16291b;clip-path:inherit;z-index:-1}
+.journey-lobby .journey-stop .stop-medallion{position:relative;isolation:isolate;text-shadow:0 2px 0 #0b160e}
+.journey-lobby .journey-stop.is-done .stop-medallion{color:#2a1d08;background:#e2b84f;text-shadow:0 1px 0 #fff3b8}
+.journey-lobby .journey-stop.is-done .stop-medallion:before{background:#b98d2a}
+.journey-lobby .journey-stop.is-current .stop-medallion{color:#fff3c4;background:#e2b84f;animation:badge-pulse 1.4s steps(2) infinite}
+.journey-lobby .journey-stop.is-boss .stop-medallion{color:#c9f4ff;background:#7fd0dc}.journey-stop.is-boss .stop-medallion:before{background:#173c48}
+.journey-lobby .journey-stop[aria-disabled=true] .stop-medallion{color:#6f8575;background:#33473a}
+@keyframes badge-pulse{50%{background:#fff0a8}}
+
+/* pixelfx on the painting, and cloud shadows drifting over it. */
+.map-fx{position:absolute;height:auto;image-rendering:pixelated;pointer-events:none}
+.map-cloud{position:absolute;left:-40%;width:34%;height:22%;background:radial-gradient(ellipse at 50% 50%,#04120a38 0,#04120a22 45%,transparent 70%);animation:cloud-drift 70s linear infinite;will-change:transform}
+.map-cloud-one{top:8%}.map-cloud-two{top:42%;width:28%;height:18%;animation-duration:95s;animation-delay:-40s}.map-cloud-three{top:70%;width:38%;height:24%;animation-duration:120s;animation-delay:-85s}
+@keyframes cloud-drift{to{transform:translateX(420%)}}
+.map-still .map-cloud,.map-still .stop-medallion{animation:none}
+@media(prefers-reduced-motion:reduce){.map-cloud,.journey-stop .stop-medallion{animation:none}}
