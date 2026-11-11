@@ -35,6 +35,8 @@ export interface PfxDraw {
   /** Mirrors left-right (for effects that are not turned). */
   mirror?: boolean;
   scale?: number;
+  /** Extra vertical stretch about the pivot (a floor ring made taller to fit its stones). */
+  scaleY?: number;
   alpha?: number;
 }
 
@@ -48,7 +50,7 @@ export function drawPfx(ctx: CanvasRenderingContext2D, name: PfxName, age: numbe
   if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
   ctx.translate(Math.round(x), Math.round(y));
   if (o.angle !== undefined) { ctx.rotate(o.angle); if (Math.cos(o.angle) < 0) ctx.scale(1, -1); }
-  ctx.scale(o.mirror ? -k : k, k);
+  ctx.scale(o.mirror ? -k : k, k * (o.scaleY ?? 1));
   ctx.drawImage(img, (frame % s.columns) * s.w, Math.floor(frame / s.columns) * s.h, s.w, s.h, -s.pivot[0], -s.pivot[1], s.w, s.h);
   ctx.restore();
   return true;

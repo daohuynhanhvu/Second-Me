@@ -315,8 +315,8 @@ export class CinematicIntro {
       this.weather(f,'fireflies',.8,5.2,t,.8,170);
       // The stone circle wakes: a rune circle on it, flaring on each of the three rune beats.
       const beat=Math.max(...[C.rune1,C.rune2,C.rune3].map(at=>Math.max(0,1-Math.abs(t-at)/.45)));
-      // The ring is centred on the stone circle (390, 178 in art px) and sized to its inner ring.
-      if(!this.pfx(f,'rune-circle',t-.9,390,184,{scale:2,alpha:(.5+.5*beat)*open*out})&&ready(this.runeSheet.img)){
+      // The ring covers the stone circle: its drawn bottom edge stays put, its top is stretched up to the top stones.
+      if(!this.pfx(f,'rune-circle',t-.9,392,170,{scale:2,scaleY:1.15,alpha:(.5+.5*beat)*open*out})&&ready(this.runeSheet.img)){
         f.save();f.globalAlpha=.55*open*out;
         f.drawImage(this.runeSheet.img,Math.floor(t*8)%18*32,0,32,32,x-30,y-16,60,32);f.restore();
       }
