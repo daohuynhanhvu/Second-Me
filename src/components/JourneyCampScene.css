@@ -74,3 +74,6 @@
 @keyframes cloud-drift{to{transform:translateX(420%)}}
 .map-still .map-cloud,.map-still .stop-medallion{animation:none}
 @media(prefers-reduced-motion:reduce){.map-cloud,.journey-stop .stop-medallion{animation:none}}
+
+/* pixelfx campfire over the painted fire in the camp scene: its pivot (60, 85 of 120x100) sits on the fire's base. */
+.rest-fx{position:absolute;left:56%;top:90%;width:41%;height:auto;aspect-ratio:120/100;transform:translate(-50%,-85%);image-rendering:pixelated;pointer-events:none;z-index:1}
